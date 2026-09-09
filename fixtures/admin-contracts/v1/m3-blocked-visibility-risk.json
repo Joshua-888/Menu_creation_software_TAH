@@ -1,0 +1,26 @@
+{
+  "milestone": "3",
+  "status": "BLOCKED",
+  "code": "CANARY_PUBLIC_VISIBILITY_RISK",
+  "m2cCommit": "043ad26",
+  "target": {
+    "host": "veronipizza.dk",
+    "restaurant": "Veroni Pizza",
+    "adminMenu": "https://veronipizza.dk/admin/menu"
+  },
+  "preflight": {
+    "targetLock": "PASS",
+    "productCount": 0,
+    "categoryCount": 10,
+    "existingCategoriesObserved": true,
+    "createFormActiveDefaultChecked": true,
+    "mutationsExecuted": 0
+  },
+  "decision": "STOP_BEFORE_FIRST_WRITE",
+  "notes": [
+    "Live Veroni /admin/menu/create #active defaults to checked=true value=1.",
+    "Per M3 §4, first canary write is forbidden until inactive-by-default is proven or an explicitly approved uncheck protocol exists.",
+    "No real menu items created or modified.",
+    "WritePlan/DRY_RUN/target-lock infrastructure landed under hard safety gates."
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "milestone": "M3E",
+  "host": "veronipizza.dk",
+  "canaryDatabaseId": "18",
+  "opdaterSubmitted": true,
+  "result": "VERIFIED",
+  "certified": {
+    "updateExistingProductForm": "CERTIFIED",
+    "updatePersistBoundary": "CERTIFIED"
+  },
+  "stillUncertified": [
+    "updateProduct",
+    "setProductHidden",
+    "setProductAvailable",
+    "createProduct"
+  ],
+  "evidence": {
+    "businessFieldDiffs": [],
+    "listStatusAfter": "Skjult",
+    "publicVisibleAfter": false,
+    "editActiveAfterStillChecked": true,
+    "note": "Hidden→hidden update; edit #active render remains inconsistent with list/storefront"
+  }
+}

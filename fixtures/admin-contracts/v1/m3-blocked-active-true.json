@@ -1,0 +1,22 @@
+{
+  "milestone": "3-resume",
+  "status": "BLOCKED",
+  "code": "CRITICAL_ACTIVE_TRUE_AFTER_CREATE",
+  "m2cCommit": "043ad26",
+  "humanInterventionRequired": true,
+  "createdDespiteInterceptAbort": true,
+  "canary": {
+    "name": "__TAH_CANARY_PRODUCT_M3__",
+    "menuNumber": "99001",
+    "databaseId": "18",
+    "editPath": "/admin/menu/18/edit",
+    "adminListStatus": "Skjult",
+    "activeCheckboxOnEdit": true,
+    "publicVisible": false,
+    "category": { "databaseId": "1", "name": "Pizza" }
+  },
+  "inactiveRequestSemantics": "ACTIVE_OMITTED_WHEN_UNCHECKED",
+  "serverPersistenceNote": "Omitting active in multipart POST still yielded #active checked=true on edit read-back. Do not treat omitted-active as certified inactive persistence.",
+  "noFurtherWrites": true,
+  "noDeleteAttempted": true
+}

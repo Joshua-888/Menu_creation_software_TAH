@@ -68,6 +68,8 @@ describe("M2B AdminContract evidence levels", () => {
     expect(caps.read.listProducts).toBe("CERTIFIED");
     expect(caps.write.createProduct).toBe("UNCERTIFIED");
     expect(caps.write.updateProduct).toBe("UNCERTIFIED");
+    expect(caps.write.setProductHidden).toBe("UNCERTIFIED");
+    expect(caps.write.setProductAvailable).toBe("UNCERTIFIED");
     expect(() => assertNoWriteCapabilitiesCertified(caps)).not.toThrow();
     expect(
       isMilestone3WriteReady({
@@ -165,6 +167,18 @@ describe("M2B readProduct edit-form isolation", () => {
   it("reads update form fields and ignores delete form", async () => {
     const browser = await chromium.launch({ headless: true });
     const page = await browser.newPage();
+    await page.route("**/admin/menu", async (route) => {
+      const path = new URL(route.request().url()).pathname;
+      if (path === "/admin/menu" || path === "/admin/menu/") {
+        await route.fulfill({
+          status: 200,
+          contentType: "text/html",
+          body: readFileSync(listFixture, "utf8"),
+        });
+        return;
+      }
+      await route.continue();
+    });
     await page.route("**/admin/menu/1/edit", async (route) => {
       await route.fulfill({
         status: 200,
@@ -175,7 +189,7 @@ describe("M2B readProduct edit-form isolation", () => {
 
     const adapter = new TahAdminAdapterV1({
       page,
-      baseUrl: "https://example.test",
+      baseUrl: "https://newwaypizzaringsted.dk",
     });
     const product = await adapter.readProduct("1");
 
@@ -183,7 +197,10 @@ describe("M2B readProduct edit-form isolation", () => {
     expect(product.menuNumber).toBe("0");
     expect(product.name).toBe("Sample Bread");
     expect(product.basePriceOre).toBe(9900);
+    expect(product.activeCheckbox).toBe(true);
     expect(product.active).toBe(true);
+    expect(product.activeSemantics).toBe("CHECKED_MEANS_AVAILABLE");
+    expect(product.listAvailability).toBe("AVAILABLE");
     expect(product.categoryIds).toEqual(["1"]);
     expect(product.formMethodOverride?.toLowerCase()).toBe("put");
     expect(product.formAction).toBe("/admin/menu/1");

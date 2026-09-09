@@ -23,7 +23,12 @@ export {
   M2B_ADAPTER_CAPABILITIES,
   DEFAULT_ADAPTER_CAPABILITIES,
   assertNoWriteCapabilitiesCertified,
+  assertVisibilityWriteCapabilitiesUncertified,
+  assertUpdateProductSeparatelyUncertified,
+  mayCertifyVisibilityWrite,
+  visibilityWriteVerifiedFromFormOnly,
   isMilestone3WriteReady,
+  isMilestone3CanaryExecutable,
   type AdapterCapabilities,
   type CapabilityStatus,
   type ContractEvidenceLevel,
@@ -69,3 +74,79 @@ export {
   resolveAdapterForProbe,
   assertCertifiedForProductionWrites,
 } from "./adapters/registry.js";
+
+export {
+  VERONI_CANARY_TARGET,
+  CANARY_NAMES,
+  type CanaryWritePlan,
+  type WritePlanOperation,
+  type WriteOpState,
+  type ActiveDefaultGateResult,
+  type BaselineResult,
+  type TargetLockResult,
+} from "./write/types.js";
+
+export { assertVeroniTargetLock, blockWriteUnlessTargetLocked } from "./write/targetLock.js";
+export {
+  evaluateActiveDefaultGate,
+  evaluateEmptyProductBaseline,
+} from "./write/safetyGates.js";
+export {
+  createCanaryWritePlan,
+  createInactiveProductWritePlan,
+  assertWritePlanImmutable,
+  assertWritePlanExactlyOneCreateProduct,
+  selectExistingCategoryDeterministic,
+} from "./write/writePlan.js";
+export {
+  runCanaryDryRun,
+  runInactiveProductDryRun,
+  executeCanaryWritePlan,
+} from "./write/canaryRunner.js";
+export {
+  canTransition,
+  transitionWriteState,
+  assertVerificationPath,
+  assertEditPathRequiresOpdater,
+  persistBoundaryForAction,
+} from "./write/stateMachine.js";
+export {
+  parseFormBody,
+  sanitizeCreatePayload,
+  assertInactiveCreatePayloadSafe,
+  type SanitizedCreatePayload,
+} from "./write/payloadInspect.js";
+export {
+  inspectFormSubmission,
+  assertPayloadHasNoActiveTrue,
+  type InspectedFormPayload,
+  type InspectedFormField,
+} from "./write/formInspect.js";
+export {
+  fillInactiveProductCreateForm,
+  assertActiveUnchecked,
+  assertPageIsVeroniAdmin,
+} from "./write/formFill.js";
+export {
+  buildAdminContractFingerprint,
+  normalizeFingerprintParts,
+  TAH_V1_STRUCTURE_FINGERPRINT_INPUT,
+  type FingerprintInput,
+} from "./contracts/fingerprint.js";
+export {
+  interpretActiveState,
+  mapListStatusText,
+  resolveActiveReadSemantics,
+  intendedAvailabilityFromActiveCheckbox,
+  formModifiedCountsAsWritten,
+  NEW_WAY_ACTIVE_READ_SEMANTICS,
+  VERONI_ACTIVE_READ_SEMANTICS,
+  ACTIVE_CHECKBOX_PERSIST_REQUIRES_OPDATER,
+  ACTIVE_INTENDED_MAPPING,
+  EDIT_PERSIST_REQUIRES_OPDATER,
+  VISIBILITY_WRITE_CERTIFICATION_CHECKLIST,
+  isVisibilityWriteRoundTripComplete,
+  type ActiveReadSemantics,
+  type ActiveObservationLayer,
+  type ScopedSemanticEvidence,
+} from "./contracts/activeSemantics.js";

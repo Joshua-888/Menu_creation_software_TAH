@@ -1,0 +1,29 @@
+{
+  "milestone": "M3D",
+  "host": "veronipizza.dk",
+  "canary": {
+    "databaseId": "18",
+    "menuNumber": "99001",
+    "name": "__TAH_CANARY_PRODUCT_M3__"
+  },
+  "surfaces": {
+    "adminListStatus": "Skjult",
+    "editActiveCheckbox": {
+      "htmlCheckedAttribute": true,
+      "domChecked": true,
+      "defaultChecked": true,
+      "value": "1",
+      "serverRendered": true
+    },
+    "showHeading": "- Aktiv",
+    "publicVisible": false
+  },
+  "VERONI_ACTIVE_SEMANTICS": "EDIT_CHECKBOX_NOT_AUTHORITATIVE",
+  "notes": [
+    "Edit #active is not treated as customer-availability truth on Veroni",
+    "List status + public absence preferred for availability reads",
+    "No hostname invert hack",
+    "Why checkbox still checked while Skjult remains unexplained (possible multi-signal server rule or template quirk)"
+  ],
+  "m3Resume": "BLOCKED"
+}

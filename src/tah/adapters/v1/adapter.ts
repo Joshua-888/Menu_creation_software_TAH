@@ -12,6 +12,7 @@ import {
   normalizeWhitespace,
   parseAdminPriceToOre,
 } from "../../normalize/destination.js";
+import { interpretActiveState } from "../../contracts/activeSemantics.js";
 import {
   parseDatabaseIdFromPath,
   probeAdminContract,
@@ -72,7 +73,19 @@ export type DestinationProduct = {
   description: string | null;
   basePriceRaw: string | null;
   basePriceOre: number | null;
+  /**
+   * Raw edit-form #active checkbox (DOM checked) = EDIT_CONTROL_STATE only.
+   * Not storefront visibility; Opdater submit required to persist (HUMAN_CONFIRMED).
+   */
+  activeCheckbox: boolean | null;
+  /**
+   * Customer-availability interpretation when scoped semantics allow;
+   * null when UNKNOWN / unsafe to infer from checkbox alone.
+   * Prefer list / storefront over temporary DOM checkbox.
+   */
   active: boolean | null;
+  activeSemantics: string;
+  listAvailability?: "AVAILABLE" | "HIDDEN" | "UNKNOWN";
   categoryIds: string[];
   variants: DestinationVariant[];
   ingredients: DestinationIngredient[];
@@ -196,6 +209,20 @@ export class TahAdminAdapterV1 implements TahAdminAdapter {
 
   async readProduct(destinationId: string): Promise<DestinationProduct> {
     const { page, baseUrl } = this.options;
+    const host = (() => {
+      try {
+        return new URL(baseUrl).host;
+      } catch {
+        return undefined;
+      }
+    })();
+
+    // List status is often a stronger availability signal than edit #active
+    // (M3D Veroni: Skjult + public absent while #active is server-checked).
+    const listRows = await this.listProducts();
+    const listRow = listRows.find((p) => p.databaseId === destinationId);
+    const listStatusText = listRow?.statusText ?? null;
+
     const editPath = menuEditPath(destinationId);
     const response = await page.goto(new URL(editPath, baseUrl).toString(), {
       waitUntil: "domcontentloaded",
@@ -214,6 +241,13 @@ export class TahAdminAdapterV1 implements TahAdminAdapter {
       categoryCheckboxes: V1_SELECTORS.categoryCheckboxes,
     });
 
+    const activeCheckbox = checkboxToBoolean(data.active);
+    const interpreted = interpretActiveState({
+      ...(host ? { host } : {}),
+      activeCheckbox,
+      listStatusText,
+    });
+
     return {
       databaseId: destinationId,
       editPath,
@@ -222,7 +256,10 @@ export class TahAdminAdapterV1 implements TahAdminAdapter {
       description: normalizeWhitespace(data.description),
       basePriceRaw: data.basePriceRaw,
       basePriceOre: parseAdminPriceToOre(data.basePriceRaw),
-      active: checkboxToBoolean(data.active),
+      activeCheckbox,
+      active: interpreted.customerAvailable,
+      activeSemantics: interpreted.semantics.value,
+      listAvailability: interpreted.listAvailability,
       categoryIds: data.categoryIds,
       variants: data.variants.map((v) => ({
         ...v,

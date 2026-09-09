@@ -158,6 +158,8 @@ export function extractVisibleProductFields() {
     description: q("#description"),
     basePrice: q("#price"),
     active: root.querySelector("#active")?.checked ?? null,
+    activeHasCheckedAttr: root.querySelector("#active")?.hasAttribute("checked") ?? null,
+    activeDefaultChecked: root.querySelector("#active")?.defaultChecked ?? null,
     variantNames: [
       ...root.querySelectorAll("tr.variant-form input.variant-name"),
     ].map((el) => el.value),
@@ -183,5 +185,35 @@ export function extractVisibleProductFields() {
       const m = /category-(\d+)/i.exec(el.id || "");
       return m?.[1] || el.value;
     }),
+  };
+}
+
+/**
+ * Zero-network successful-control serialization (FormData).
+ * Unchecked checkboxes are omitted. CSRF-like names filtered by caller too.
+ */
+export function serializeSuccessfulControlsInPage(formSelector) {
+  const SENSITIVE_RE = /token|csrf|password|cookie|session/i;
+  const form = document.querySelector(formSelector);
+  if (!form) {
+    return { action: null, method: null, fields: [], asObject: {} };
+  }
+  const fd = new FormData(form);
+  const fields = [];
+  const asObject = {};
+  for (const [name, value] of fd.entries()) {
+    if (SENSITIVE_RE.test(name)) continue;
+    if (typeof value !== "string") continue;
+    fields.push({ name, value });
+    const existing = asObject[name];
+    if (existing === undefined) asObject[name] = value;
+    else if (Array.isArray(existing)) existing.push(value);
+    else asObject[name] = [existing, value];
+  }
+  return {
+    action: (form.getAttribute("action") || "").replace(/^https?:\/\/[^/]+/i, "") || null,
+    method: (form.getAttribute("method") || "GET").toUpperCase(),
+    fields,
+    asObject,
   };
 }

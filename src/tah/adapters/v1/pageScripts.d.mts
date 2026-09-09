@@ -53,12 +53,21 @@ export type VisibleProductFields = {
   description: string | null;
   basePrice: string | null;
   active: boolean | null;
+  activeHasCheckedAttr: boolean | null;
+  activeDefaultChecked: boolean | null;
   variantNames: string[];
   variantPrices: string[];
   ingredientNames: string[];
   additionNames: string[];
   additionPrices: string[];
   categoryIds: string[];
+};
+
+export type SerializedFormPayload = {
+  action: string | null;
+  method: string | null;
+  fields: Array<{ name: string; value: string }>;
+  asObject: Record<string, string | string[]>;
 };
 
 export function extractProductListRows(): ProductListRow[];
@@ -73,3 +82,6 @@ export function extractProductEdit(selectors: {
   categoryCheckboxes: string;
 }): ProductEditExtract;
 export function extractVisibleProductFields(): VisibleProductFields;
+export function serializeSuccessfulControlsInPage(
+  formSelector: string,
+): SerializedFormPayload;

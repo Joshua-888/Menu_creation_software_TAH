@@ -131,7 +131,22 @@ export const ADMIN_CONTRACT_V1 = {
     activeReadSemantics: ev(
       "CHECKED_MEANS_AVAILABLE" as const,
       "TESTED",
-      "M2C live: #active checked matches admin list Status Tilgængelig on sampled products; not toggled.",
+      "SCOPED NEW WAY TESTED. HUMAN_CONFIRMED intended mapping globally: checked Aktiv?=AVAILABLE, unchecked=HIDDEN. Veroni product 18 READ: EDIT_CHECKBOX_NOT_AUTHORITATIVE (list Skjult + public absent while edit #active server-checked) — likely render inconsistency; prefer list/storefront; do not flip checkbox by hostname. Persist always requires Opdater.",
+    ),
+    activeIntendedMapping: ev(
+      "CHECKED_MEANS_AVAILABLE" as const,
+      "HUMAN_CONFIRMED",
+      "Existing products: checked Aktiv? = intended VISIBLE/AVAILABLE; unchecked = intended HIDDEN. Form intent only until Opdater.",
+    ),
+    activePersistRequiresOpdater: ev(
+      "CHECKBOX_CHANGE_REQUIRES_OPDATER_SUBMIT" as const,
+      "HUMAN_CONFIRMED",
+      "Any #active change persists only after Opdater. EDIT_CONTROL_STATE ≠ PERSISTED_PRODUCT_STATE ≠ STOREFRONT_VISIBILITY.",
+    ),
+    editPersistRequiresOpdater: ev(
+      "ALL_EDIT_FIELDS_REQUIRE_OPDATER_SUBMIT" as const,
+      "HUMAN_CONFIRMED",
+      "All existing-product field edits (menu_number, name, description, price, variants, ingredients, additions, categories, image, active) persist only via Opdater. Create uses Skab. Lifecycle: PRE_UPDATE → FORM_MODIFIED → UPDATE_SUBMITTED → WRITTEN → READ_BACK → VERIFIED.",
     ),
   },
   idStrategy: {
@@ -162,8 +177,16 @@ export const ADMIN_CONTRACT_V1 = {
     ),
   },
   createVsEdit: {
-    createSubmit: ev("Skab on POST /admin/menu", "OBSERVED"),
-    editSubmit: ev("Opdater on POST /admin/menu/{id} _method=PUT", "OBSERVED"),
+    createSubmit: ev(
+      "Skab on POST /admin/menu",
+      "OBSERVED",
+      "HUMAN_CONFIRMED create persist boundary — CREATE only; does not certify UPDATE",
+    ),
+    editSubmit: ev(
+      "Opdater on POST /admin/menu/{id} _method=PUT",
+      "TESTED",
+      "M3E Veroni canary 18: ONE Opdater with #active omitted; business fields preserved; list Skjult; public absent. updateExistingProductForm CERTIFIED; setProductHidden still UNCERTIFIED (no AVAILABLE→HIDDEN transition).",
+    ),
     editHasPersistentRowIds: ev(
       true,
       "OBSERVED",
@@ -344,6 +367,8 @@ export const ADMIN_CONTRACT_V1 = {
       confidence: "HIGH",
       stability: "STABLE",
       evidence: "OBSERVED",
+      notes:
+        "EDIT_CONTROL_STATE only until Opdater. HUMAN_CONFIRMED: clicking Aktiv? does not by itself change storefront visibility.",
     },
     saveCreate: {
       field: "saveControl",
@@ -361,7 +386,8 @@ export const ADMIN_CONTRACT_V1 = {
       confidence: "HIGH",
       stability: "MODERATE",
       evidence: "OBSERVED",
-      notes: "DETECT ONLY",
+      notes:
+        "DETECT ONLY until visibility write certification. HUMAN_CONFIRMED persist gate for #active and other edit fields.",
     },
     menuCreateLink: {
       field: "menuCreateLink",
@@ -387,6 +413,8 @@ export const ADMIN_CONTRACT_V1 = {
     "No data-admin-contract-version marker found.",
     "M2B certified READ against NEW WAY; WRITE remains UNCERTIFIED.",
     "variantPriceSemantics=SURCHARGE (TESTED).",
+    "M3 Veroni canary BLOCKED: create #active defaults checked (CANARY_PUBLIC_VISIBILITY_RISK).",
+    "HUMAN_CONFIRMED: intended Aktiv? mapping checked=AVAILABLE / unchecked=HIDDEN; all edit fields require Opdater; Skab≠Opdater; updateExistingProductForm CERTIFIED (M3E canary 18 Opdater+read-back, hidden→hidden); updateProduct / setProductHidden / setProductAvailable remain UNCERTIFIED.",
   ],
 } as const;
 

@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="da">
+  <head>
+    <meta charset="utf-8" />
+    <title>Admin — Veroni canary edit #active checked (M3D)</title>
+  </head>
+  <body>
+    <form action="/admin/menu/18" method="POST" id="product-update">
+      <input type="hidden" name="_method" value="put" />
+      <input type="hidden" name="_token" value="SECRET_CSRF_TOKEN" />
+      <input id="menu_number" name="menu_number" value="99001" />
+      <input id="name" name="name" value="__TAH_CANARY_PRODUCT_M3__" />
+      <textarea id="description" name="description">Automated TakeAwayHero inactive canary test</textarea>
+      <input id="price" name="price" value="99" />
+      <input type="checkbox" name="categories[]" id="category-1" value="1" checked />
+      <table id="variant-list">
+        <tr class="variant-form">
+          <td>
+            <input type="hidden" name="variants[0][id]" value="901" />
+            <input class="variant-name" name="variants[0][name]" value="Alm." />
+            <input class="variant-price" name="variants[0][price]" value="0" />
+          </td>
+        </tr>
+      </table>
+      <table id="ingredient-list">
+        <tr class="ingredient-form">
+          <td>
+            <input type="hidden" name="ingredients[0][id]" value="801" />
+            <input class="ingredient-name" name="ingredients[0][name]" value="Test ingredient A" />
+          </td>
+        </tr>
+        <tr class="ingredient-form">
+          <td>
+            <input type="hidden" name="ingredients[1][id]" value="802" />
+            <input class="ingredient-name" name="ingredients[1][name]" value="Test ingredient B" />
+          </td>
+        </tr>
+      </table>
+      <label for="active">Aktiv?</label>
+      <!-- Server-rendered checked attribute — matches live Veroni M3D evidence -->
+      <input name="active" checked value="1" type="checkbox" id="active" />
+      <button type="submit">Opdater</button>
+    </form>
+    <form action="/admin/menu/18" method="POST">
+      <input type="hidden" name="_method" value="delete" />
+      <button type="submit">Slet</button>
+    </form>
+  </body>
+</html>

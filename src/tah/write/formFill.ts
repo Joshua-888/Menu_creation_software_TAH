@@ -1,0 +1,100 @@
+import type { Page } from "playwright";
+import { assertVeroniTargetLock } from "./targetLock.js";
+import { VERONI_CANARY_TARGET } from "./types.js";
+
+export type FillInactiveProductInput = {
+  menuNumber: string;
+  name: string;
+  description: string;
+  /** Kroner string for #price, e.g. "99" */
+  basePriceKr: string;
+  categoryDatabaseId: string;
+  variants: Array<{ name: string; priceKr: string }>;
+  ingredients: string[];
+};
+
+export async function assertPageIsVeroniAdmin(page: Page): Promise<void> {
+  const host = new URL(page.url()).host;
+  const lock = assertVeroniTargetLock({
+    hostname: host,
+    restaurantName: VERONI_CANARY_TARGET.restaurantName,
+    url: page.url(),
+  });
+  if (!lock.ok) {
+    throw new Error(`ADMIN_WRITE_BLOCKED: ${lock.reason}`);
+  }
+  if (!page.url().includes("/admin/")) {
+    throw new Error(`ADMIN_WRITE_BLOCKED: not on Veroni admin route: ${page.url()}`);
+  }
+}
+
+/**
+ * Fill create form and force #active unchecked. Does not submit.
+ */
+export async function fillInactiveProductCreateForm(
+  page: Page,
+  input: FillInactiveProductInput,
+): Promise<void> {
+  await assertPageIsVeroniAdmin(page);
+  await page.locator("#menu_number").fill(input.menuNumber);
+  await page.locator("#name").fill(input.name);
+  await page.locator("#description").fill(input.description);
+  await page.locator("#price").fill(input.basePriceKr);
+
+  // Variants: first row exists; add more if needed
+  for (let i = 0; i < input.variants.length; i++) {
+    if (i > 0) {
+      await page.locator("#add-variant").click();
+      await page.waitForTimeout(200);
+    }
+    const row = page.locator("tr.variant-form").nth(i);
+    await row.locator("input.variant-name").fill(input.variants[i]!.name);
+    await row.locator("input.variant-price").fill(input.variants[i]!.priceKr);
+  }
+
+  // Ingredients start empty — add rows
+  for (let i = 0; i < input.ingredients.length; i++) {
+    await page.locator("#add-ingredient").click();
+    await page.waitForTimeout(200);
+    const row = page.locator("tr.ingredient-form").nth(i);
+    await row.locator("input.ingredient-name").fill(input.ingredients[i]!);
+  }
+
+  // Categories: check only the selected id
+  const boxes = page.locator("input[type='checkbox'][name='categories[]']");
+  const count = await boxes.count();
+  for (let i = 0; i < count; i++) {
+    const box = boxes.nth(i);
+    const id = await box.getAttribute("id");
+    const value = await box.getAttribute("value");
+    const match =
+      id === `category-${input.categoryDatabaseId}` ||
+      value === input.categoryDatabaseId;
+    if (match) {
+      if (!(await box.isChecked())) await box.check();
+    } else if (await box.isChecked()) {
+      await box.uncheck();
+    }
+  }
+
+  const active = page.locator("#active");
+  if (!(await active.count())) {
+    throw new Error("ADMIN_WRITE_BLOCKED: #active missing");
+  }
+  if (await active.isChecked()) {
+    await active.uncheck();
+  }
+  if (await active.isChecked()) {
+    throw new Error("ADMIN_WRITE_BLOCKED: failed to uncheck #active");
+  }
+}
+
+export async function assertActiveUnchecked(page: Page): Promise<void> {
+  const active = page.locator("#active");
+  if (!(await active.count())) {
+    throw new Error("ADMIN_WRITE_BLOCKED: #active missing before submit");
+  }
+  if (await active.isChecked()) {
+    throw new Error("ADMIN_WRITE_BLOCKED: #active is checked before submit");
+  }
+}

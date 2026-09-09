@@ -59,7 +59,7 @@ Extraction never writes to TakeAwayHero. Browser automation never makes menu-bus
 | **M7** | Admin drift / repair / adapter certification | Canary until certified |
 | **M8** | Production hardening | After certification |
 
-**Current stop:** Milestone 2C complete (non-default variant SURCHARGE proven + live `readProduct` on NEW WAY). Do **not** start Milestone 3 without explicit approval.
+**Current stop:** Milestone 3 **BLOCKED** — canary product `databaseId=18` (`__TAH_CANARY_PRODUCT_M3__`) persisted with `#active` checked despite unchecked/omitted submit. Publicly not visible (`Skjult`). **Human intervention required.** No further canary writes. Do **not** import Veroni PDF / do not start M4.
 
 ## Architecture locks (pre-M1)
 
