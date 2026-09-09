@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="da">
+  <head>
+    <meta charset="utf-8" />
+    <title>Admin — edit form fixture (M2B)</title>
+  </head>
+  <body>
+    <form action="/admin/logout" method="POST">
+      <button type="submit">Sign out</button>
+    </form>
+    <form action="/admin/menu/1" method="POST">
+      <input type="hidden" name="_method" value="delete" />
+      <button type="submit">Slet</button>
+    </form>
+    <form id="product-update-form" action="/admin/menu/1" method="POST">
+      <input type="hidden" name="_method" value="put" />
+      <label>Menunummer:<input id="menu_number" name="menu_number" value="0" /></label>
+      <label>Navn:<input id="name" name="name" value="Sample Bread" /></label>
+      <label
+        >Beskrivelse:<textarea id="description" name="description">
+With garlic</textarea
+      ></label>
+      <h3>Varianter:</h3>
+      <button type="button" id="add-variant">+</button>
+      <table>
+        <tbody id="variant-list">
+          <tr class="variant-form" id="variant-0">
+            <td>
+              <input type="hidden" name="variants[0][id]" value="101" />
+              <input class="variant-name" name="variants[0][name]" value="Alm" />
+            </td>
+            <td>
+              <input
+                class="variant-price"
+                name="variants[0][price]"
+                type="number"
+                value="0"
+              />
+            </td>
+          </tr>
+          <tr class="variant-form" id="variant-1">
+            <td>
+              <input type="hidden" name="variants[1][id]" value="102" />
+              <input class="variant-name" name="variants[1][name]" value="Deep" />
+            </td>
+            <td>
+              <input
+                class="variant-price"
+                name="variants[1][price]"
+                type="number"
+                value="20"
+              />
+            </td>
+          </tr>
+          <tr class="variant-form" id="variant-2">
+            <td>
+              <input type="hidden" name="variants[2][id]" value="103" />
+              <input class="variant-name" name="variants[2][name]" value="Fam" />
+            </td>
+            <td>
+              <input
+                class="variant-price"
+                name="variants[2][price]"
+                type="number"
+                value="110"
+              />
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <h3>Ingredienser:</h3>
+      <button type="button" id="add-ingredient">+</button>
+      <table>
+        <tbody id="ingredient-list">
+          <tr class="ingredient-form">
+            <td>
+              <input type="hidden" name="ingredients[0][id]" value="201" />
+              <input
+                class="ingredient-name"
+                name="ingredients[0][name]"
+                value="Bread"
+              />
+            </td>
+          </tr>
+          <tr class="ingredient-form">
+            <td>
+              <input type="hidden" name="ingredients[1][id]" value="202" />
+              <input
+                class="ingredient-name"
+                name="ingredients[1][name]"
+                value="Cheese"
+              />
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <label>Pris:<input id="price" name="price" type="number" value="99" /></label>
+      <h3>Tilbehør:</h3>
+      <button type="button" id="add-addition">+</button>
+      <table>
+        <tbody id="addition-list">
+          <tr class="addition-form">
+            <td>
+              <input type="hidden" name="additions[0][id]" value="301" />
+              <input
+                class="addition-name"
+                name="additions[0][name]"
+                value="Extra topping"
+              />
+            </td>
+            <td>
+              <input
+                class="addition-price"
+                name="additions[0][price]"
+                type="number"
+                value="17"
+              />
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <input type="checkbox" name="categories[]" id="category-1" value="1" checked />
+      <label for="category-1">Almindelig Pizza</label>
+      <label>Billede:<input id="image" name="image" type="file" /></label>
+      <label
+        >Aktiv?<input id="active" name="active" type="checkbox" value="1" checked
+      /></label>
+      <button type="submit">Opdater</button>
+    </form>
+  </body>
+</html>

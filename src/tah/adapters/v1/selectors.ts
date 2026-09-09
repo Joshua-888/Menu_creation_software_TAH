@@ -12,6 +12,7 @@ export const V1_SELECTORS = {
   addVariant: "#add-variant",
   variantName: "input.variant-name",
   variantPrice: "input.variant-price",
+  variantIdHidden: "tr.variant-form input[name*='[id]']",
   ingredientList: "#ingredient-list",
   addIngredient: "#add-ingredient",
   ingredientName: "input.ingredient-name",
@@ -24,6 +25,24 @@ export const V1_SELECTORS = {
   blueprintVariant: "#blueprint-variant",
   blueprintIngredient: "#blueprint-ingredient",
   blueprintAddition: "#blueprint-addition",
+  /** Prefer update form that owns product fields; ignore delete/logout forms. */
+  productUpdateForm: "form:has(#menu_number)",
+  productEditLink: "a[href*='/admin/menu/'][href$='/edit']",
 } as const;
 
-export const V1_ROUTES = ADMIN_CONTRACT_V1.routes;
+/** Unwrapped route strings (contract stores Evidenced values). */
+export const V1_ROUTES = {
+  login: ADMIN_CONTRACT_V1.routes.login.value,
+  dashboard: ADMIN_CONTRACT_V1.routes.dashboard.value,
+  menuList: ADMIN_CONTRACT_V1.routes.menuList.value,
+  menuCreate: ADMIN_CONTRACT_V1.routes.menuCreate.value,
+  menuEditPattern: ADMIN_CONTRACT_V1.routes.menuEditPattern.value,
+  menuUpdateAction: ADMIN_CONTRACT_V1.routes.menuUpdateAction.value,
+  categoriesList: ADMIN_CONTRACT_V1.routes.categoriesList.value,
+  categoryEditPattern: ADMIN_CONTRACT_V1.routes.categoryEditPattern.value,
+  categoryShowPattern: ADMIN_CONTRACT_V1.routes.categoryShowPattern.value,
+} as const;
+
+export function menuEditPath(databaseId: string): string {
+  return `/admin/menu/${databaseId}/edit`;
+}

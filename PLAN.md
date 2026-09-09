@@ -50,6 +50,7 @@ Extraction never writes to TakeAwayHero. Browser automation never makes menu-bus
 | **M0** | Architecture, docs, Cursor memory, type-only contracts | No |
 | **M1** | Deterministic domain engine + tests | No |
 | **M2** | Playwright **read-only** discovery of the **exact supplied** admin URL + AdminContract probe | No (read-only inspection only) |
+| **M2B** | Populated admin READ certification (NEW WAY) — evidence levels, `readProduct`, variant surcharge proof | No (read-only) |
 | **M3** | WRITE + READ-BACK against **canary** restaurant only | Canary only |
 | **M4** | WritePlan, idempotency, resume, artifacts | Canary |
 | **M5** | Source extraction (HTML → PDF → image) | No new write path |
@@ -57,7 +58,7 @@ Extraction never writes to TakeAwayHero. Browser automation never makes menu-bus
 | **M7** | Admin drift / repair / adapter certification | Canary until certified |
 | **M8** | Production hardening | After certification |
 
-**Current stop:** Milestone 2 complete (read-only AdminContract v1). Do **not** start Milestone 3 without explicit approval.
+**Current stop:** Milestone 2B complete (populated READ certification on NEW WAY; login `https://newwaypizzaringsted.dk/login`). Do **not** start Milestone 3 without explicit approval.
 
 ## Architecture locks (pre-M1)
 

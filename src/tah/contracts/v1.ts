@@ -1,4 +1,10 @@
 import { z } from "zod";
+import type {
+  BasePriceSemantics,
+  ContractEvidenceLevel,
+  VariantPriceSemantics,
+} from "./evidence.js";
+import { M2B_ADAPTER_CAPABILITIES } from "./evidence.js";
 
 export const ADMIN_CONTRACT_VERSION = "1" as const;
 
@@ -16,6 +22,9 @@ export const SelectorSpecSchema = z.object({
   locator: z.string(),
   confidence: z.enum(["HIGH", "MEDIUM", "LOW"]),
   stability: z.enum(["STABLE", "MODERATE", "FRAGILE"]),
+  evidence: z
+    .enum(["OBSERVED", "TESTED", "INFERRED", "UNKNOWN"])
+    .default("INFERRED"),
   notes: z.string().optional(),
 });
 
@@ -58,41 +67,113 @@ export const DetailedProbeResultSchema = z.object({
 
 export type DetailedProbeResult = z.infer<typeof DetailedProbeResultSchema>;
 
+export type Evidenced<T> = {
+  value: T;
+  evidence: ContractEvidenceLevel;
+  notes?: string;
+};
+
+function ev<T>(
+  value: T,
+  evidence: ContractEvidenceLevel,
+  notes?: string,
+): Evidenced<T> {
+  return notes === undefined ? { value, evidence } : { value, evidence, notes };
+}
+
 /**
- * AdminContract v1 — derived from read-only inspection of
- * https://veronipizza.dk/admin/menu (and create/categories routes).
- * Sanitized: no customer menu content.
+ * AdminContract v1 — Veroni create-side discovery + NEW WAY populated read certification (M2B).
  */
 export const ADMIN_CONTRACT_V1 = {
   version: ADMIN_CONTRACT_VERSION,
   platform: "TakeAwayHero",
   adminVersionMarker: "ADMIN_VERSION_MARKER_NOT_FOUND" as const,
+  capabilities: M2B_ADAPTER_CAPABILITIES,
   routes: {
-    login: "/login",
-    dashboard: "/admin/dashboard",
-    menuList: "/admin/menu",
-    menuCreate: "/admin/menu/create",
-    /** Laravel-style resource; verified pattern via categories; product edit 404 when ID missing. */
-    menuEditPattern: "/admin/menu/{databaseId}/edit",
-    categoriesList: "/admin/categories",
-    categoryEditPattern: "/admin/categories/{databaseId}/edit",
-    categoryShowPattern: "/admin/categories/{databaseId}",
+    login: ev(
+      "/login",
+      "OBSERVED",
+      "NEW WAY full URL: https://newwaypizzaringsted.dk/login",
+    ),
+    dashboard: ev("/admin/dashboard", "OBSERVED"),
+    menuList: ev("/admin/menu", "OBSERVED"),
+    menuCreate: ev("/admin/menu/create", "OBSERVED", "Veroni + NEW WAY"),
+    menuEditPattern: ev(
+      "/admin/menu/{databaseId}/edit",
+      "OBSERVED",
+      "Confirmed on NEW WAY populated products",
+    ),
+    menuUpdateAction: ev(
+      "POST /admin/menu/{databaseId} with _method=PUT",
+      "OBSERVED",
+      "Update form containing #menu_number; Opdater submit detected only",
+    ),
+    categoriesList: ev("/admin/categories", "OBSERVED"),
+    categoryEditPattern: ev("/admin/categories/{databaseId}/edit", "OBSERVED"),
+    categoryShowPattern: ev("/admin/categories/{databaseId}", "OBSERVED"),
+  },
+  semantics: {
+    variantPriceSemantics: ev(
+      "SURCHARGE" as VariantPriceSemantics,
+      "TESTED",
+      "NEW WAY: base+Alm(0)=public list price; Alm absolute 0 impossible. Products 1,2,12,4,18.",
+    ),
+    basePriceSemantics: ev(
+      "DEFAULT_BASE_PRODUCT_PRICE" as BasePriceSemantics,
+      "TESTED",
+      "Product #price is default/base; public list matches base + Alm surcharge 0.",
+    ),
+    additionPriceSemantics: ev(
+      "ABSOLUTE_ADDON_PRICE" as const,
+      "OBSERVED",
+      "additions[i][price] are topping/extra amounts (e.g. 17/29).",
+    ),
   },
   idStrategy: {
-    productDatabaseId:
-      "Numeric path segment in /admin/menu/{id}/edit — NOT the visible menu_number field",
-    categoryDatabaseId:
-      "Numeric path segment in /admin/categories/{id}/edit and option/checkbox values",
-    menuNumber:
-      "Display string on #menu_number / name=menu_number; supports alphanumeric (placeholder fx. 27 eller 15A)",
-    variantId: "DOM row id variant-{index}; form names variants[{i}][name|price] — index not durable DB id",
-    ingredientId: "DOM row id ingredient-{index}; form names ingredients[{i}][name]",
-    additionId: "DOM row id addition-{index}; form names additions[{i}][name|price] (Tilbehør)",
+    productDatabaseId: ev(
+      "Numeric path segment in /admin/menu/{id}/edit and form action /admin/menu/{id}",
+      "OBSERVED",
+    ),
+    categoryDatabaseId: ev(
+      "Numeric path /admin/categories/{id}/edit; checkbox id category-{id}",
+      "OBSERVED",
+    ),
+    menuNumber: ev(
+      "Display string #menu_number; may be alphanumeric; MUST NOT equal databaseId",
+      "OBSERVED",
+      "Examples: menuNumber 0 -> db 1; 45A -> db 4; 20 -> db 12",
+    ),
+    variantDatabaseId: ev(
+      "Hidden input variants[i][id] on edit rows",
+      "OBSERVED",
+    ),
+    ingredientDatabaseId: ev(
+      "Hidden input ingredients[i][id] when present on edit rows",
+      "OBSERVED",
+    ),
+    additionDatabaseId: ev(
+      "Hidden input additions[i][id] when present on edit rows",
+      "OBSERVED",
+    ),
+  },
+  createVsEdit: {
+    createSubmit: ev("Skab on POST /admin/menu", "OBSERVED"),
+    editSubmit: ev("Opdater on POST /admin/menu/{id} _method=PUT", "OBSERVED"),
+    editHasPersistentRowIds: ev(
+      true,
+      "OBSERVED",
+      "variants/ingredients/additions expose hidden [id] fields on edit",
+    ),
+    createUsesBlueprintsWithoutIds: ev(true, "OBSERVED"),
+    deleteFormAlsoPresentOnEditPage: ev(
+      true,
+      "OBSERVED",
+      "Readers must select update form with #menu_number, not delete form",
+    ),
   },
   restaurantContext: {
     strategy: "hostname",
-    notes:
-      "Compare page hostname to expected restaurant host (e.g. veronipizza.dk). Login heading includes Restaurant Login for https://{host}.",
+    notes: "Compare page hostname to expected restaurant host.",
   },
   selectors: {
     menuNumber: {
@@ -101,7 +182,8 @@ export const ADMIN_CONTRACT_V1 = {
       locator: "menu_number",
       confidence: "HIGH",
       stability: "STABLE",
-      notes: "Also getByLabel('Menunummer') / name=menu_number",
+      evidence: "OBSERVED",
+      notes: "Also getByLabel('Menunummer')",
     },
     productName: {
       field: "productName",
@@ -109,7 +191,8 @@ export const ADMIN_CONTRACT_V1 = {
       locator: "Navn",
       confidence: "HIGH",
       stability: "STABLE",
-      notes: "#name name=name",
+      evidence: "OBSERVED",
+      notes: "#name",
     },
     description: {
       field: "description",
@@ -117,7 +200,7 @@ export const ADMIN_CONTRACT_V1 = {
       locator: "Beskrivelse",
       confidence: "HIGH",
       stability: "STABLE",
-      notes: "#description textarea",
+      evidence: "OBSERVED",
     },
     basePrice: {
       field: "basePrice",
@@ -125,7 +208,8 @@ export const ADMIN_CONTRACT_V1 = {
       locator: "Pris",
       confidence: "HIGH",
       stability: "STABLE",
-      notes: "#price name=price type=number step=.01",
+      evidence: "OBSERVED",
+      notes: "DEFAULT_BASE_PRODUCT_PRICE",
     },
     categories: {
       field: "categories",
@@ -133,7 +217,7 @@ export const ADMIN_CONTRACT_V1 = {
       locator: "input[type='checkbox'][name='categories[]']",
       confidence: "HIGH",
       stability: "STABLE",
-      notes: "Ids category-{databaseId}",
+      evidence: "OBSERVED",
     },
     categoryFilter: {
       field: "categoryFilter",
@@ -141,7 +225,7 @@ export const ADMIN_CONTRACT_V1 = {
       locator: "category",
       confidence: "HIGH",
       stability: "STABLE",
-      notes: "select#category on menu list",
+      evidence: "OBSERVED",
     },
     variantList: {
       field: "variantStructure",
@@ -149,6 +233,7 @@ export const ADMIN_CONTRACT_V1 = {
       locator: "variant-list",
       confidence: "HIGH",
       stability: "STABLE",
+      evidence: "OBSERVED",
     },
     addVariant: {
       field: "addVariant",
@@ -156,7 +241,7 @@ export const ADMIN_CONTRACT_V1 = {
       locator: "add-variant",
       confidence: "HIGH",
       stability: "STABLE",
-      notes: "type=button — detect only; do not click in production writes without care",
+      evidence: "OBSERVED",
     },
     variantName: {
       field: "variantName",
@@ -164,6 +249,7 @@ export const ADMIN_CONTRACT_V1 = {
       locator: "input.variant-name[name^='variants[']",
       confidence: "HIGH",
       stability: "STABLE",
+      evidence: "OBSERVED",
     },
     variantPrice: {
       field: "variantPrice",
@@ -171,7 +257,16 @@ export const ADMIN_CONTRACT_V1 = {
       locator: "input.variant-price[name^='variants[']",
       confidence: "HIGH",
       stability: "STABLE",
-      notes: "Appears to be absolute variant price on form, not necessarily surcharge UI",
+      evidence: "OBSERVED",
+      notes: "SURCHARGE over base",
+    },
+    variantIdHidden: {
+      field: "variantDatabaseId",
+      type: "css",
+      locator: "tr.variant-form input[name*='[id]']",
+      confidence: "HIGH",
+      stability: "STABLE",
+      evidence: "OBSERVED",
     },
     ingredientList: {
       field: "ingredients",
@@ -179,6 +274,7 @@ export const ADMIN_CONTRACT_V1 = {
       locator: "ingredient-list",
       confidence: "HIGH",
       stability: "STABLE",
+      evidence: "OBSERVED",
     },
     addIngredient: {
       field: "addIngredient",
@@ -186,6 +282,7 @@ export const ADMIN_CONTRACT_V1 = {
       locator: "add-ingredient",
       confidence: "HIGH",
       stability: "STABLE",
+      evidence: "OBSERVED",
     },
     ingredientName: {
       field: "ingredientName",
@@ -193,7 +290,7 @@ export const ADMIN_CONTRACT_V1 = {
       locator: "input.ingredient-name[name^='ingredients[']",
       confidence: "HIGH",
       stability: "MODERATE",
-      notes: "Rows added dynamically from #blueprint-ingredient",
+      evidence: "OBSERVED",
     },
     additionList: {
       field: "addonStructure",
@@ -201,7 +298,7 @@ export const ADMIN_CONTRACT_V1 = {
       locator: "addition-list",
       confidence: "HIGH",
       stability: "STABLE",
-      notes: "Tilbehør uses additions[*] naming",
+      evidence: "OBSERVED",
     },
     addAddition: {
       field: "addAddition",
@@ -209,6 +306,7 @@ export const ADMIN_CONTRACT_V1 = {
       locator: "add-addition",
       confidence: "HIGH",
       stability: "STABLE",
+      evidence: "OBSERVED",
     },
     additionName: {
       field: "additionName",
@@ -216,6 +314,7 @@ export const ADMIN_CONTRACT_V1 = {
       locator: "input.addition-name[name^='additions[']",
       confidence: "HIGH",
       stability: "MODERATE",
+      evidence: "OBSERVED",
     },
     additionPrice: {
       field: "additionPrice",
@@ -223,6 +322,7 @@ export const ADMIN_CONTRACT_V1 = {
       locator: "input.addition-price[name^='additions[']",
       confidence: "HIGH",
       stability: "MODERATE",
+      evidence: "OBSERVED",
     },
     image: {
       field: "image",
@@ -230,6 +330,7 @@ export const ADMIN_CONTRACT_V1 = {
       locator: "image",
       confidence: "HIGH",
       stability: "STABLE",
+      evidence: "OBSERVED",
     },
     active: {
       field: "active",
@@ -237,7 +338,7 @@ export const ADMIN_CONTRACT_V1 = {
       locator: "Aktiv?",
       confidence: "HIGH",
       stability: "STABLE",
-      notes: "#active checkbox name=active value=1",
+      evidence: "OBSERVED",
     },
     saveCreate: {
       field: "saveControl",
@@ -245,7 +346,8 @@ export const ADMIN_CONTRACT_V1 = {
       locator: "Skab",
       confidence: "HIGH",
       stability: "MODERATE",
-      notes: "Create submit — DETECT ONLY in M2; never click",
+      evidence: "OBSERVED",
+      notes: "DETECT ONLY",
     },
     saveUpdate: {
       field: "saveUpdate",
@@ -253,7 +355,8 @@ export const ADMIN_CONTRACT_V1 = {
       locator: "Opdater",
       confidence: "HIGH",
       stability: "MODERATE",
-      notes: "Seen on category edit; product edit not live-verified (empty menu)",
+      evidence: "OBSERVED",
+      notes: "DETECT ONLY",
     },
     menuCreateLink: {
       field: "menuCreateLink",
@@ -261,16 +364,24 @@ export const ADMIN_CONTRACT_V1 = {
       locator: "Tilføj",
       confidence: "HIGH",
       stability: "MODERATE",
+      evidence: "OBSERVED",
+    },
+    productEditLink: {
+      field: "productEditLink",
+      type: "css",
+      locator: "a[href*='/admin/menu/'][href$='/edit']",
+      confidence: "HIGH",
+      stability: "STABLE",
+      evidence: "OBSERVED",
     },
   } satisfies Record<string, SelectorSpec>,
   menuListColumns: ["#", "image", "Navn", "Kategorier", "Pris", "Status", "Handlinger"],
   categoryListColumns: ["Navn", "Rækkefølge", "Antal varer", "Handlinger"],
   notes: [
-    "No data-testid attributes present on inspected pages.",
-    "No data-admin-contract-version / machine-readable admin version marker found.",
-    "Veroni menu listing had 0 product rows at discovery time — product edit/list actions not observed live.",
-    "Variant price inputs look like absolute prices in UI; domain surcharge conversion remains in domain engine.",
-    "CSRF via meta csrf-token and hidden _token — relevant for M3 writes only.",
+    "No data-testid attributes present.",
+    "No data-admin-contract-version marker found.",
+    "M2B certified READ against NEW WAY; WRITE remains UNCERTIFIED.",
+    "variantPriceSemantics=SURCHARGE (TESTED).",
   ],
 } as const;
 

@@ -1,0 +1,73 @@
+{
+  "milestone": "2B",
+  "restaurant": "NEW WAY",
+  "adminBase": "https://newwaypizzaringsted.dk",
+  "adminLogin": "https://newwaypizzaringsted.dk/login",
+  "readOnly": true,
+  "sanitized": true,
+  "notes": [
+    "Sanitized evidence fixture — structural IDs and pricing equations only.",
+    "Public list prices used to prove SURCHARGE; Alm absolute 0 is impossible."
+  ],
+  "idEvidence": [
+    { "menuNumber": "0", "databaseId": "1", "editRoute": "/admin/menu/1/edit" },
+    { "menuNumber": "2", "databaseId": "2", "editRoute": "/admin/menu/2/edit" },
+    { "menuNumber": "20", "databaseId": "12", "editRoute": "/admin/menu/12/edit" },
+    { "menuNumber": "45A", "databaseId": "4", "editRoute": "/admin/menu/4/edit" }
+  ],
+  "variantPriceSemantics": {
+    "value": "SURCHARGE",
+    "evidence": "TESTED",
+    "cases": [
+      {
+        "databaseId": "1",
+        "menuNumber": "0",
+        "baseAdmin": 99,
+        "publicListPriceKr": 99,
+        "variants": [
+          { "name": "Almindelig", "admin": 0, "basePlusAdmin": 99, "absolute": 0 },
+          { "name": "Deep pan", "admin": 20, "basePlusAdmin": 119, "absolute": 20 },
+          { "name": "Familie", "admin": 110, "basePlusAdmin": 209, "absolute": 110 }
+        ],
+        "proof": "publicListPrice == base + Alm(0); absolute Alm=0 cannot be public 99"
+      },
+      {
+        "databaseId": "2",
+        "menuNumber": "2",
+        "baseAdmin": 99,
+        "publicListPriceKr": 99,
+        "variants": [
+          { "name": "Alm", "admin": 0, "basePlusAdmin": 99, "absolute": 0 }
+        ]
+      },
+      {
+        "databaseId": "12",
+        "menuNumber": "20",
+        "baseAdmin": 99,
+        "publicListPriceKr": 99,
+        "note": "menuNumber 20 !== databaseId 12"
+      },
+      {
+        "databaseId": "4",
+        "menuNumber": "45A",
+        "baseAdmin": 109,
+        "variants": [
+          { "name": "Alm", "admin": 0, "basePlusAdmin": 109, "absolute": 0 },
+          { "name": "Fam", "admin": 110, "basePlusAdmin": 219, "absolute": 110 }
+        ]
+      }
+    ]
+  },
+  "createVsEdit": {
+    "createSubmit": "Skab",
+    "editSubmit": "Opdater",
+    "editMethodOverride": "put",
+    "editHasHiddenRowIds": true,
+    "deleteFormAlsoOnEditPage": true
+  },
+  "additionPriceSemantics": {
+    "value": "ABSOLUTE_ADDON_PRICE",
+    "evidence": "OBSERVED",
+    "sampleAdminPrices": [17, 29, 15, 12]
+  }
+}

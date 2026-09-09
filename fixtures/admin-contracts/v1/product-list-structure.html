@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="da">
+  <head>
+    <meta charset="utf-8" />
+    <title>Admin — product list fixture (M2B)</title>
+  </head>
+  <body>
+    <h4>Menu</h4>
+    <select id="category" name="category">
+      <option value="">Alle kategorier</option>
+      <option value="1">Almindelig Pizza</option>
+    </select>
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th></th>
+          <th>Navn</th>
+          <th>Kategorier</th>
+          <th>Pris</th>
+          <th>Status</th>
+          <th>Handlinger</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>0</td>
+          <td></td>
+          <td>
+            <div>
+              <span>Sample Bread</span>
+              <small>With garlic</small>
+            </div>
+          </td>
+          <td>Almindelig Pizza</td>
+          <td>99 kr.</td>
+          <td>Tilgængelig</td>
+          <td>
+            <a href="/admin/menu/1/edit">Rediger</a>
+            <a href="/admin/menu/1">Se</a>
+          </td>
+        </tr>
+        <tr>
+          <td>45A</td>
+          <td></td>
+          <td>
+            <div><span>Alpha Product</span></div>
+          </td>
+          <td>Special</td>
+          <td>109 kr.</td>
+          <td>Tilgængelig</td>
+          <td>
+            <a href="/admin/menu/4/edit">Rediger</a>
+            <a href="/admin/menu/4">Se</a>
+          </td>
+        </tr>
+        <tr>
+          <td>20</td>
+          <td></td>
+          <td>
+            <div><span>Numeric Display</span></div>
+          </td>
+          <td>Almindelig Pizza</td>
+          <td>99 kr.</td>
+          <td>Tilgængelig</td>
+          <td>
+            <a href="/admin/menu/12/edit">Rediger</a>
+            <a href="/admin/menu/12">Se</a>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <a href="/admin/menu/create">Tilføj</a>
+  </body>
+</html>

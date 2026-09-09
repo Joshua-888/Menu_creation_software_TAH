@@ -27,7 +27,10 @@ const drifted = join(
 
 describe("AdminContract v1 metadata", () => {
   it("documents id strategy separating menu numbers from database ids", () => {
-    expect(ADMIN_CONTRACT_V1.idStrategy.productDatabaseId).toMatch(/NOT/i);
+    expect(ADMIN_CONTRACT_V1.idStrategy.menuNumber.value).toMatch(/MUST NOT/i);
+    expect(ADMIN_CONTRACT_V1.idStrategy.productDatabaseId.evidence).toBe(
+      "OBSERVED",
+    );
     expect(ADMIN_CONTRACT_V1.adminVersionMarker).toBe(
       "ADMIN_VERSION_MARKER_NOT_FOUND",
     );

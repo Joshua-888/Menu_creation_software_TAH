@@ -2,20 +2,36 @@
   "version": "1",
   "platform": "TakeAwayHero",
   "adminVersionMarker": "ADMIN_VERSION_MARKER_NOT_FOUND",
-  "discoveredFrom": "https://veronipizza.dk/admin/menu (read-only discovery; no menu content copied)",
+  "discoveredFrom": {
+    "m2": "https://veronipizza.dk/admin/menu (create-side; empty menu)",
+    "m2b": "https://newwaypizzaringsted.dk (populated read certification)",
+    "m2bLogin": "https://newwaypizzaringsted.dk/login"
+  },
   "routes": {
     "login": "/login",
     "menuList": "/admin/menu",
     "menuCreate": "/admin/menu/create",
     "menuEditPattern": "/admin/menu/{databaseId}/edit",
+    "menuUpdateAction": "POST /admin/menu/{databaseId} with _method=PUT",
     "categoriesList": "/admin/categories",
     "categoryEditPattern": "/admin/categories/{databaseId}/edit"
+  },
+  "semantics": {
+    "variantPriceSemantics": "SURCHARGE",
+    "variantPriceEvidence": "TESTED",
+    "basePriceSemantics": "DEFAULT_BASE_PRODUCT_PRICE",
+    "additionPriceSemantics": "ABSOLUTE_ADDON_PRICE"
   },
   "idStrategy": {
     "menuNumberField": "menu_number",
     "productDatabaseId": "URL path /admin/menu/{id}/edit",
     "categoryDatabaseId": "URL path /admin/categories/{id}/edit and categories[] checkbox ids category-{id}",
-    "warning": "visible menu number MUST NOT be assumed equal to database id"
+    "warning": "visible menu number MUST NOT be assumed equal to database id",
+    "examples": [
+      { "menuNumber": "0", "databaseId": "1" },
+      { "menuNumber": "20", "databaseId": "12" },
+      { "menuNumber": "45A", "databaseId": "4" }
+    ]
   },
   "fields": {
     "menu_number": { "label": "Menunummer:", "id": "menu_number", "required": true },
@@ -26,31 +42,38 @@
       "listId": "variant-list",
       "addButtonId": "add-variant",
       "namePattern": "variants[$i][name]",
-      "pricePattern": "variants[$i][price]"
+      "pricePattern": "variants[$i][price]",
+      "idPatternEdit": "variants[$i][id]"
     },
     "ingredients": {
       "listId": "ingredient-list",
       "addButtonId": "add-ingredient",
-      "namePattern": "ingredients[$i][name]"
+      "namePattern": "ingredients[$i][name]",
+      "idPatternEdit": "ingredients[$i][id]"
     },
     "additions": {
       "label": "Tilbehør",
       "listId": "addition-list",
       "addButtonId": "add-addition",
       "namePattern": "additions[$i][name]",
-      "pricePattern": "additions[$i][price]"
+      "pricePattern": "additions[$i][price]",
+      "idPatternEdit": "additions[$i][id]"
     },
     "categories": { "name": "categories[]", "idPattern": "category-{id}" },
     "image": { "id": "image", "type": "file" },
     "active": { "label": "Aktiv?", "id": "active", "type": "checkbox" }
   },
   "saveControls": {
-    "create": { "role": "button", "name": "Skab", "detectOnlyInM2": true },
-    "update": { "role": "button", "name": "Opdater", "detectOnlyInM2": true }
+    "create": { "role": "button", "name": "Skab", "detectOnlyInM2B": true },
+    "update": { "role": "button", "name": "Opdater", "detectOnlyInM2B": true }
+  },
+  "capabilities": {
+    "read": "CERTIFIED (M2B)",
+    "write": "UNCERTIFIED"
   },
   "dataTestIdsPresent": false,
   "notes": [
-    "Sanitized contract fixture — no Veroni product names/prices stored.",
-    "Veroni recorded as future source-menu regression candidate (PDF), not global domain rules."
+    "Sanitized contract fixture — no full customer menu dumps.",
+    "Readers must use form containing #menu_number (ignore delete form on edit page)."
   ]
 }

@@ -4,7 +4,7 @@ import {
   type DetailedProbeResult,
   type ProbeCheckStatus,
 } from "../contracts/v1.js";
-import { V1_SELECTORS } from "../adapters/v1/selectors.js";
+import { V1_ROUTES, V1_SELECTORS } from "../adapters/v1/selectors.js";
 
 export type ProbeOptions = {
   page: Page;
@@ -13,6 +13,8 @@ export type ProbeOptions = {
   expectedRestaurantName?: string;
   /** When true, open /admin/menu/create for field detection then leave without submit. */
   inspectCreateForm?: boolean;
+  /** When true and edit links exist, open one edit page read-only (no submit). */
+  inspectEditForm?: boolean;
 };
 
 function passFail(ok: boolean): ProbeCheckStatus {
@@ -21,6 +23,7 @@ function passFail(ok: boolean): ProbeCheckStatus {
 
 /**
  * Read-only contract probe. Never clicks Skab/Opdater/Slet or submits menu forms.
+ * Distinguishes CREATE and EDIT contract surfaces.
  */
 export async function probeAdminContract(
   options: ProbeOptions,
@@ -38,7 +41,7 @@ export async function probeAdminContract(
       }
     })();
 
-  const menuUrl = new URL(ADMIN_CONTRACT_V1.routes.menuList, baseUrl).toString();
+  const menuUrl = new URL(V1_ROUTES.menuList, baseUrl).toString();
   await page.goto(menuUrl, { waitUntil: "domcontentloaded" });
 
   const actualHost = new URL(page.url()).host;
@@ -70,7 +73,6 @@ export async function probeAdminContract(
   const categoryListing: ProbeCheckStatus = passFail(categoryFilterCount > 0);
   if (categoryListing === "FAIL") mismatches.push("category_filter_missing");
 
-  // Product listing structure: table headers present even if 0 rows
   const headers = await page.locator("table thead th").allTextContents();
   const normalizedHeaders = headers.map((h) => h.trim()).filter(Boolean);
   const productListing: ProbeCheckStatus = passFail(
@@ -81,12 +83,13 @@ export async function probeAdminContract(
   if (productListing === "FAIL") mismatches.push("product_table_headers_missing");
   else details.push(`product_table_headers:${normalizedHeaders.join("|")}`);
 
-  // Version marker
+  const editLinkCount = await page.locator(V1_SELECTORS.productEditLink).count();
+  details.push(`product_edit_links:${editLinkCount}`);
+
   const bodyVersion = await page
     .locator("body")
     .getAttribute("data-admin-contract-version");
-  const adminVersion =
-    bodyVersion ?? ADMIN_CONTRACT_V1.adminVersionMarker;
+  const adminVersion = bodyVersion ?? ADMIN_CONTRACT_V1.adminVersionMarker;
   if (!bodyVersion) {
     details.push("ADMIN_VERSION_MARKER_NOT_FOUND");
   }
@@ -103,14 +106,11 @@ export async function probeAdminContract(
   let saveControlDetected: ProbeCheckStatus = "UNKNOWN";
   let productEditRoute: ProbeCheckStatus = "UNKNOWN";
 
+  // --- CREATE CONTRACT ---
   if (options.inspectCreateForm !== false) {
-    const createUrl = new URL(
-      ADMIN_CONTRACT_V1.routes.menuCreate,
-      baseUrl,
-    ).toString();
+    const createUrl = new URL(V1_ROUTES.menuCreate, baseUrl).toString();
     await page.goto(createUrl, { waitUntil: "domcontentloaded" });
 
-    // Ensure we did not land on login
     if (/\/login/i.test(page.url())) {
       mismatches.push("lost_auth_on_create_navigation");
     }
@@ -147,14 +147,7 @@ export async function probeAdminContract(
     saveControlDetected = passFail(
       (await page.getByRole("button", { name: /^Skab$/i }).count()) > 0,
     );
-
-    // Product edit route: pattern documented; live product may be absent
-    productEditRoute = passFail(
-      Boolean(ADMIN_CONTRACT_V1.routes.menuEditPattern.includes("{databaseId}")),
-    );
-    details.push(
-      "product_edit_route_pattern:/admin/menu/{databaseId}/edit (empty menus yield 404 for missing ids)",
-    );
+    details.push("create_contract_inspected");
 
     for (const [name, status] of Object.entries({
       menuNumberField,
@@ -168,18 +161,86 @@ export async function probeAdminContract(
       activeField,
       saveControlDetected,
     })) {
-      if (status === "FAIL") mismatches.push(`missing_${name}`);
+      if (status === "FAIL") mismatches.push(`missing_create_${name}`);
     }
 
-    // Leave create page without submitting — navigate away
     await page.goto(menuUrl, { waitUntil: "domcontentloaded" });
   }
 
-  // Categories page
-  await page.goto(
-    new URL(ADMIN_CONTRACT_V1.routes.categoriesList, baseUrl).toString(),
-    { waitUntil: "domcontentloaded" },
-  );
+  // --- EDIT CONTRACT ---
+  if (options.inspectEditForm !== false) {
+    const firstEdit = page.locator(V1_SELECTORS.productEditLink).first();
+    if ((await firstEdit.count()) > 0) {
+      const href = (await firstEdit.getAttribute("href")) || "";
+      const dbId = parseDatabaseIdFromPath(href, "menu");
+      if (!dbId) {
+        productEditRoute = "FAIL";
+        mismatches.push("edit_link_missing_database_id");
+        details.push("edit_contract:inferred_or_malformed_href");
+      } else {
+        await page.goto(new URL(`/admin/menu/${dbId}/edit`, baseUrl).toString(), {
+          waitUntil: "domcontentloaded",
+        });
+        if (/\/login/i.test(page.url())) {
+          mismatches.push("lost_auth_on_edit_navigation");
+          productEditRoute = "FAIL";
+        } else {
+          const onEdit = /\/admin\/menu\/\d+\/edit/i.test(page.url());
+          productEditRoute = passFail(onEdit);
+          if (!onEdit) mismatches.push("edit_route_not_observed");
+
+          const updateFormOk =
+            (await page.locator(V1_SELECTORS.productUpdateForm).count()) > 0 ||
+            (await page.locator(V1_SELECTORS.menuNumber).count()) > 0;
+          const opdater =
+            (await page.getByRole("button", { name: /^Opdater$/i }).count()) > 0;
+          const variantIds =
+            (await page.locator(V1_SELECTORS.variantIdHidden).count()) > 0;
+
+          if (!updateFormOk) mismatches.push("missing_edit_update_form");
+          if (!opdater) {
+            details.push("edit_save_control:Opdater_not_found");
+          } else {
+            details.push("edit_save_control:Opdater_detected_only");
+          }
+          details.push(
+            variantIds
+              ? "edit_variant_hidden_ids:OBSERVED"
+              : "edit_variant_hidden_ids:UNKNOWN",
+          );
+          details.push(`edit_contract_observed:dbId=${dbId}`);
+
+          if (
+            ADMIN_CONTRACT_V1.semantics.variantPriceSemantics.value === "UNKNOWN"
+          ) {
+            mismatches.push("variant_price_semantics_UNKNOWN");
+            details.push("critical_unknown:variantPriceSemantics");
+          } else {
+            details.push(
+              `variantPriceSemantics:${ADMIN_CONTRACT_V1.semantics.variantPriceSemantics.value}:${ADMIN_CONTRACT_V1.semantics.variantPriceSemantics.evidence}`,
+            );
+          }
+        }
+      }
+      await page.goto(menuUrl, { waitUntil: "domcontentloaded" });
+    } else {
+      // Empty menu: edit route remains pattern-only (INFERRED/UNKNOWN for live confirmation)
+      productEditRoute =
+        V1_ROUTES.menuEditPattern.includes("{databaseId}") ? "UNKNOWN" : "FAIL";
+      details.push(
+        "product_edit_route:no_products_edit_unconfirmed (create-side only)",
+      );
+    }
+  } else if (productEditRoute === "UNKNOWN") {
+    productEditRoute = V1_ROUTES.menuEditPattern.includes("{databaseId}")
+      ? "PASS"
+      : "FAIL";
+    details.push("product_edit_route_pattern_only_skipped_live_edit");
+  }
+
+  await page.goto(new URL(V1_ROUTES.categoriesList, baseUrl).toString(), {
+    waitUntil: "domcontentloaded",
+  });
   const catHeaders = await page.locator("table thead th").allTextContents();
   if (!catHeaders.some((h) => /Navn/i.test(h))) {
     mismatches.push("category_listing_headers_missing");
@@ -201,14 +262,6 @@ export async function probeAdminContract(
     contractStatus = "UNKNOWN";
   } else if (criticalFails > 0 || mismatches.length > 0) {
     contractStatus = "CONTRACT_DRIFT";
-  }
-
-  // Soft: missing version marker alone does not force DRIFT (documented as NOT_FOUND)
-  if (
-    contractStatus === "CONTRACT_DRIFT" &&
-    mismatches.every((m) => m.startsWith("restaurant_host"))
-  ) {
-    // keep DRIFT for wrong restaurant
   }
 
   const result: DetailedProbeResult = {
@@ -326,4 +379,15 @@ export function isMenuNumberSameAsDatabaseId(
   databaseId: string,
 ): boolean {
   return menuNumber.trim() === databaseId.trim();
+}
+
+/** Final variant total from base + admin variant field under SURCHARGE semantics. */
+export function finalVariantPriceOre(
+  basePriceOre: number,
+  adminVariantPriceOre: number,
+  semantics: "SURCHARGE" | "ABSOLUTE_TOTAL" | "UNKNOWN",
+): number | null {
+  if (semantics === "UNKNOWN") return null;
+  if (semantics === "ABSOLUTE_TOTAL") return adminVariantPriceOre;
+  return basePriceOre + adminVariantPriceOre;
 }
