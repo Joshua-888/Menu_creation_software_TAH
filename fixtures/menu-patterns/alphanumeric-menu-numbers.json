@@ -1,0 +1,80 @@
+{
+  "restaurantName": "Fixture Alphanumeric",
+  "categories": [
+    {
+      "sourceId": "cat-pizza",
+      "name": "Pizza",
+      "sourceOrder": 1,
+      "commonIngredients": [
+        { "display": "Tomat", "origin": "SOURCE" },
+        { "display": "Ost", "origin": "SOURCE" }
+      ],
+      "products": [
+        {
+          "sourceId": "p-198",
+          "name": "Margherita",
+          "sourceOrder": 1,
+          "sourceMenuNumber": "198",
+          "ingredients": [],
+          "variants": [
+            { "sourceId": "v1", "name": "Alm.", "sourceTotalPrice": 9000 }
+          ],
+          "addOns": [],
+          "productChoices": [],
+          "isCombo": false
+        },
+        {
+          "sourceId": "p-199",
+          "name": "Hawaii",
+          "sourceOrder": 2,
+          "sourceMenuNumber": "199",
+          "ingredients": [{ "display": "Skinke", "origin": "SOURCE" }],
+          "variants": [
+            { "sourceId": "v2", "name": "Alm.", "sourceTotalPrice": 9500 }
+          ],
+          "addOns": [],
+          "productChoices": [],
+          "isCombo": false
+        },
+        {
+          "sourceId": "p-220a",
+          "name": "Special",
+          "sourceOrder": 3,
+          "sourceMenuNumber": "220A",
+          "ingredients": [{ "display": "Bacon", "origin": "SOURCE" }],
+          "variants": [
+            { "sourceId": "v3", "name": "Alm.", "sourceTotalPrice": 11000 }
+          ],
+          "addOns": [],
+          "productChoices": [],
+          "isCombo": false
+        },
+        {
+          "sourceId": "p-205",
+          "name": "Pepperoni",
+          "sourceOrder": 4,
+          "sourceMenuNumber": "205",
+          "ingredients": [{ "display": "Pepperoni", "origin": "SOURCE" }],
+          "variants": [
+            { "sourceId": "v4", "name": "Alm.", "sourceTotalPrice": 10000 }
+          ],
+          "addOns": [],
+          "productChoices": [],
+          "isCombo": false
+        },
+        {
+          "sourceId": "p-missing",
+          "name": "Extra",
+          "sourceOrder": 5,
+          "ingredients": [{ "display": "Chili", "origin": "SOURCE" }],
+          "variants": [
+            { "sourceId": "v5", "name": "Alm.", "sourceTotalPrice": 10500 }
+          ],
+          "addOns": [],
+          "productChoices": [],
+          "isCombo": false
+        }
+      ]
+    }
+  ]
+}

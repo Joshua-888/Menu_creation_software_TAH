@@ -1,0 +1,13 @@
+---
+description: Layered architecture and module boundaries for menu migration
+alwaysApply: true
+---
+
+# Architecture
+
+- Keep stages explicit: extract → source model → normalize → canonical → domain rules → validate → review → WritePlan → contract check → execute → read-back → verify.
+- `src/domain` must never import Playwright, AI SDKs, or filesystem I/O for side effects.
+- Extraction must never write to TakeAwayHero.
+- Browser adapters must not make menu-business decisions.
+- Prefer boring, testable pure functions in domain.
+- Stable `sourceId` identity; never use product names as IDs or ProductChoice refs.

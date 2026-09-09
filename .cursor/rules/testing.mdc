@@ -1,0 +1,12 @@
+---
+description: Testing expectations for this repo
+alwaysApply: true
+---
+
+# Testing
+
+- Domain bugs get fixtures under `fixtures/menu-patterns/` plus tests.
+- Use Vitest for unit/domain; fast-check for numbering/pricing/purity/determinism invariants.
+- Keep tests deterministic and reproducible.
+- `npm run check` is the normal non-production quality gate.
+- Do not run Playwright/integration suites for trivial domain edits.

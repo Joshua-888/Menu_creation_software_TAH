@@ -1,0 +1,13 @@
+---
+description: Reliability — verified writes, no silent errors, fail-safe
+alwaysApply: true
+---
+
+# Reliability
+
+- A click/save/redirect is not success. Only VERIFIED after read-back compare.
+- Prefer MANUAL_REVIEW_REQUIRED over guessing.
+- On ADMIN_CONTRACT_DRIFT: block production writes.
+- Never mark WRITTEN as complete.
+- Retry only when error taxonomy says retry is safe; never retry drift/auth by guessing.
+- Preserve audit artifacts for every run.

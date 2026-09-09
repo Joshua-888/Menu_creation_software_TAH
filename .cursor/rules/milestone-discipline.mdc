@@ -1,0 +1,12 @@
+---
+description: Milestone discipline — stop after M1 until approved
+alwaysApply: true
+---
+
+# Milestone discipline
+
+- Milestone 1 (deterministic domain engine) is frozen once committed.
+- M2 = Playwright **read-only** discovery of an **explicitly supplied** restaurant admin URL only. No host guessing.
+- M2 must not submit forms, click save/update, or mutate menu data.
+- M3 = WRITE + READ-BACK against canary only, after M2 approval.
+- Do not start the next milestone without explicit human approval.

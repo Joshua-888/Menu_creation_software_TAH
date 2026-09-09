@@ -1,0 +1,12 @@
+---
+description: Secrets and auth hygiene
+alwaysApply: true
+---
+
+# Security
+
+- Never commit passwords, API keys, cookies, or Playwright storage state.
+- Keep auth under `playwright/.auth/` (gitignored).
+- Never log secrets.
+- Use env vars / local protected storage for credentials.
+- Prefer DRY_RUN and canary before any production mutation (M3+).

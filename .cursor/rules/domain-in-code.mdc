@@ -1,0 +1,12 @@
+---
+description: Domain rules live in code and tests — not prompts
+alwaysApply: true
+---
+
+# Domain in code
+
+- Menu numbers, surcharges, base-variant selection, ingredient merge, and validation live in `src/domain` with tests.
+- Do not encode production pricing/numbering rules only in Cursor rules or LLM prompts.
+- ValueOrigin must distinguish SOURCE / DERIVED / SYSTEM_DEFAULT / HUMAN_CORRECTION.
+- Status aggregation: BLOCKED > MANUAL_REVIEW_REQUIRED > WARNING > READY — one function only.
+- DUPLICATE_SOURCE_MENU_NUMBER → MANUAL_REVIEW; DUPLICATE_ASSIGNED_MENU_NUMBER → BLOCKED.
