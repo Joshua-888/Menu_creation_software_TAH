@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Admin System — certified fixture</title>
+  </head>
+  <body>
+    <h1>Admin Portal</h1>
+    <h4>Menu</h4>
+    <select id="category" name="category">
+      <option value="">Alle kategorier</option>
+      <option value="1">Pizza</option>
+    </select>
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th></th>
+          <th>Navn</th>
+          <th>Kategorier</th>
+          <th>Pris</th>
+          <th>Status</th>
+          <th>Handlinger</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+    <a href="/admin/menu/create">Tilføj</a>
+    <a href="/admin/categories">Categories</a>
+
+    <!-- Create-form structural twin (sanitized) -->
+    <form id="product-form" action="/admin/menu" method="POST">
+      <label>Menunummer:<input id="menu_number" name="menu_number" /></label>
+      <label>Navn:<input id="name" name="name" /></label>
+      <label>Beskrivelse:<textarea id="description" name="description"></textarea></label>
+      <h3>Varianter:</h3>
+      <button type="button" id="add-variant">+</button>
+      <table><tbody id="variant-list">
+        <tr class="variant-form" id="variant-0">
+          <td><input class="variant-name" name="variants[0][name]" /></td>
+          <td><input class="variant-price" name="variants[0][price]" type="number" /></td>
+        </tr>
+      </tbody></table>
+      <h3>Ingredienser:</h3>
+      <button type="button" id="add-ingredient">+</button>
+      <table><tbody id="ingredient-list"></tbody></table>
+      <label>Pris:<input id="price" name="price" type="number" /></label>
+      <h3>Tilbehør:</h3>
+      <button type="button" id="add-addition">+</button>
+      <table><tbody id="addition-list"></tbody></table>
+      <input type="checkbox" name="categories[]" id="category-1" value="1" />
+      <label for="category-1">Pizza</label>
+      <label>Billede:<input id="image" name="image" type="file" /></label>
+      <label>Aktiv?<input id="active" name="active" type="checkbox" value="1" checked /></label>
+      <button type="submit">Skab</button>
+    </form>
+  </body>
+</html>

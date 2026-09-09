@@ -1,0 +1,56 @@
+{
+  "version": "1",
+  "platform": "TakeAwayHero",
+  "adminVersionMarker": "ADMIN_VERSION_MARKER_NOT_FOUND",
+  "discoveredFrom": "https://veronipizza.dk/admin/menu (read-only discovery; no menu content copied)",
+  "routes": {
+    "login": "/login",
+    "menuList": "/admin/menu",
+    "menuCreate": "/admin/menu/create",
+    "menuEditPattern": "/admin/menu/{databaseId}/edit",
+    "categoriesList": "/admin/categories",
+    "categoryEditPattern": "/admin/categories/{databaseId}/edit"
+  },
+  "idStrategy": {
+    "menuNumberField": "menu_number",
+    "productDatabaseId": "URL path /admin/menu/{id}/edit",
+    "categoryDatabaseId": "URL path /admin/categories/{id}/edit and categories[] checkbox ids category-{id}",
+    "warning": "visible menu number MUST NOT be assumed equal to database id"
+  },
+  "fields": {
+    "menu_number": { "label": "Menunummer:", "id": "menu_number", "required": true },
+    "name": { "label": "Navn:", "id": "name", "required": true },
+    "description": { "label": "Beskrivelse:", "id": "description" },
+    "price": { "label": "Pris:", "id": "price", "required": true },
+    "variants": {
+      "listId": "variant-list",
+      "addButtonId": "add-variant",
+      "namePattern": "variants[$i][name]",
+      "pricePattern": "variants[$i][price]"
+    },
+    "ingredients": {
+      "listId": "ingredient-list",
+      "addButtonId": "add-ingredient",
+      "namePattern": "ingredients[$i][name]"
+    },
+    "additions": {
+      "label": "Tilbehør",
+      "listId": "addition-list",
+      "addButtonId": "add-addition",
+      "namePattern": "additions[$i][name]",
+      "pricePattern": "additions[$i][price]"
+    },
+    "categories": { "name": "categories[]", "idPattern": "category-{id}" },
+    "image": { "id": "image", "type": "file" },
+    "active": { "label": "Aktiv?", "id": "active", "type": "checkbox" }
+  },
+  "saveControls": {
+    "create": { "role": "button", "name": "Skab", "detectOnlyInM2": true },
+    "update": { "role": "button", "name": "Opdater", "detectOnlyInM2": true }
+  },
+  "dataTestIdsPresent": false,
+  "notes": [
+    "Sanitized contract fixture — no Veroni product names/prices stored.",
+    "Veroni recorded as future source-menu regression candidate (PDF), not global domain rules."
+  ]
+}

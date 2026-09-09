@@ -57,7 +57,7 @@ Extraction never writes to TakeAwayHero. Browser automation never makes menu-bus
 | **M7** | Admin drift / repair / adapter certification | Canary until certified |
 | **M8** | Production hardening | After certification |
 
-**Current stop:** Milestone 1 complete and frozen. Milestone 2 starts only with an **explicitly supplied** restaurant admin URL (no host guessing). M2 is strictly read-only.
+**Current stop:** Milestone 2 complete (read-only AdminContract v1). Do **not** start Milestone 3 without explicit approval.
 
 ## Architecture locks (pre-M1)
 
