@@ -116,17 +116,22 @@ export const ADMIN_CONTRACT_V1 = {
     variantPriceSemantics: ev(
       "SURCHARGE" as VariantPriceSemantics,
       "TESTED",
-      "NEW WAY: base+Alm(0)=public list price; Alm absolute 0 impossible. Products 1,2,12,4,18.",
+      "M2C: non-default publics observed. Hvidløgsbrød base99 Deep+20→Tilføj 119; Fam+110→Tilføj 209. Vesuvio same 119/209. Cart never mutated.",
     ),
     basePriceSemantics: ev(
       "DEFAULT_BASE_PRODUCT_PRICE" as BasePriceSemantics,
       "TESTED",
-      "Product #price is default/base; public list matches base + Alm surcharge 0.",
+      "Product #price is default/base; public Alm total equals base; Deep/Fam finals = base + admin variant.",
     ),
     additionPriceSemantics: ev(
       "ABSOLUTE_ADDON_PRICE" as const,
       "OBSERVED",
-      "additions[i][price] are topping/extra amounts (e.g. 17/29).",
+      "Admin additions[i][price] equals public '+N kr' extra; customer pays that additional amount when selecting the add-on (not a product-variant surcharge).",
+    ),
+    activeReadSemantics: ev(
+      "CHECKED_MEANS_AVAILABLE" as const,
+      "TESTED",
+      "M2C live: #active checked matches admin list Status Tilgængelig on sampled products; not toggled.",
     ),
   },
   idStrategy: {

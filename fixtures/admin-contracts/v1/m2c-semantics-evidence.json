@@ -1,0 +1,73 @@
+{
+  "milestone": "2C",
+  "restaurant": "NEW WAY",
+  "adminBase": "https://newwaypizzaringsted.dk",
+  "adminLogin": "https://newwaypizzaringsted.dk/login",
+  "readOnly": true,
+  "sanitized": true,
+  "m2bCommit": "11c83cf",
+  "nonDefaultVariantProofs": [
+    {
+      "product": "Hvidløgsbrød",
+      "databaseId": "1",
+      "menuNumber": "0",
+      "adminBaseKr": 99,
+      "cases": [
+        {
+          "variant": "Deep pan",
+          "adminVariantKr": 20,
+          "publicFinalButton": "Tilføj 119 kr.",
+          "publicFinalKr": 119,
+          "equation": "99 + 20 = 119"
+        },
+        {
+          "variant": "Familie",
+          "adminVariantKr": 110,
+          "publicFinalButton": "Tilføj 209 kr.",
+          "publicFinalKr": 209,
+          "equation": "99 + 110 = 209"
+        }
+      ],
+      "cartMutated": false
+    },
+    {
+      "product": "Vesuvio",
+      "databaseId": "2",
+      "menuNumber": "2",
+      "adminBaseKr": 99,
+      "cases": [
+        {
+          "variant": "Deep",
+          "adminVariantKr": 20,
+          "publicFinalButton": "Tilføj 119 kr.",
+          "publicFinalKr": 119,
+          "equation": "99 + 20 = 119"
+        },
+        {
+          "variant": "Fam",
+          "adminVariantKr": 110,
+          "publicFinalButton": "Tilføj 209 kr.",
+          "publicFinalKr": 209,
+          "equation": "99 + 110 = 209"
+        }
+      ],
+      "cartMutated": false
+    }
+  ],
+  "variantPriceSemantics": "SURCHARGE",
+  "additionPriceSemantics": {
+    "value": "ABSOLUTE_ADDON_PRICE",
+    "meaning": "customer pays this additional amount when selecting the add-on",
+    "evidence": "OBSERVED",
+    "publicDisplay": "+N kr matches admin additions[i][price]"
+  },
+  "liveReadProduct": {
+    "products": [
+      { "databaseId": "1", "menuNumber": "0", "name": "Hvidløgsbrød", "pass": true },
+      { "databaseId": "2", "menuNumber": "2", "name": "Vesuvio", "pass": true },
+      { "databaseId": "12", "menuNumber": "20", "name": "O sole mio", "pass": true },
+      { "databaseId": "4", "menuNumber": "45A", "name": "New Way Spec - Halv indbagt", "pass": true },
+      { "databaseId": "18", "menuNumber": "15", "name": "Hawal", "pass": true }
+    ]
+  }
+}

@@ -2,12 +2,13 @@
 
 ## Status
 
-**AdminContract v1** — create-side discovered on Veroni (M2); populated **READ certification** on NEW WAY (M2B).
+**AdminContract v1** — create-side discovered on Veroni (M2); populated **READ certification** on NEW WAY (M2B/M2C).
 
 | Milestone | Host | Focus |
 |-----------|------|--------|
 | M2 | `https://veronipizza.dk` | Create-form contract (empty menu) |
 | M2B | `https://newwaypizzaringsted.dk` | Populated list/edit read certification |
+| M2C | `https://newwaypizzaringsted.dk` | Non-default public variant finals + live `readProduct` |
 
 **Admin login (NEW WAY):** [https://newwaypizzaringsted.dk/login](https://newwaypizzaringsted.dk/login)
 
@@ -19,10 +20,12 @@ Sanitized fixtures: [`fixtures/admin-contracts/v1/`](../fixtures/admin-contracts
 
 Critical elements carry `OBSERVED` | `TESTED` | `INFERRED` | `UNKNOWN`.
 
-- `variantPriceSemantics`: **SURCHARGE** (`TESTED`) — admin variant price is surcharge over `#price`
+- `variantPriceSemantics`: **SURCHARGE** (`TESTED`) — M2C proved non-default Deep/Fam public finals (`99+20=119`, `99+110=209`)
 - `basePriceSemantics`: **DEFAULT_BASE_PRODUCT_PRICE** (`TESTED`)
+- `additionPriceSemantics`: **ABSOLUTE_ADDON_PRICE** (`OBSERVED`) — customer pays that additional amount for the add-on
+- `activeReadSemantics`: **CHECKED_MEANS_AVAILABLE** (`TESTED`) on sampled products
 - `menuEditPattern`: **OBSERVED** on populated products
-- WRITE capabilities: all **UNCERTIFIED** (M2B is read-only)
+- WRITE capabilities: all **UNCERTIFIED** (M2B/M2C are read-only)
 
 ## Version marker
 

@@ -16,6 +16,11 @@ import {
   parseDatabaseIdFromPath,
   probeAdminContract,
 } from "../../probe/contractProbe.js";
+import {
+  extractCategoryRows,
+  extractProductEdit,
+  extractProductListRows,
+} from "./pageScripts.mjs";
 import { menuEditPath, V1_ROUTES, V1_SELECTORS } from "./selectors.js";
 
 export type DestinationCategory = {
@@ -154,29 +159,7 @@ export class TahAdminAdapterV1 implements TahAdminAdapter {
     await page.goto(new URL(V1_ROUTES.categoriesList, baseUrl).toString(), {
       waitUntil: "domcontentloaded",
     });
-
-    return page.evaluate(() => {
-      const rows = [...document.querySelectorAll("table tbody tr")];
-      return rows.map((tr) => {
-        const cells = [...tr.querySelectorAll("td")].map((td) =>
-          (td.textContent || "").replace(/\s+/g, " ").trim(),
-        );
-        const edit =
-          tr
-            .querySelector("a[href*='/admin/categories/'][href$='/edit']")
-            ?.getAttribute("href") || "";
-        const path = edit.replace(/^https?:\/\/[^/]+/i, "");
-        const idMatch = /\/admin\/categories\/(\d+)/i.exec(path);
-        return {
-          databaseId: idMatch?.[1] || "",
-          name: cells[0] || "",
-          order: cells[1] && !Number.isNaN(Number(cells[1])) ? Number(cells[1]) : null,
-          itemCount:
-            cells[2] && !Number.isNaN(Number(cells[2])) ? Number(cells[2]) : null,
-          editPath: path,
-        };
-      });
-    });
+    return page.evaluate(extractCategoryRows);
   }
 
   async listProducts(): Promise<DestinationProductListItem[]> {
@@ -184,41 +167,7 @@ export class TahAdminAdapterV1 implements TahAdminAdapter {
     await page.goto(new URL(V1_ROUTES.menuList, baseUrl).toString(), {
       waitUntil: "domcontentloaded",
     });
-
-    return page.evaluate(() => {
-      const rows = [...document.querySelectorAll("table tbody tr")];
-      return rows.map((tr) => {
-        const cells = [...tr.querySelectorAll("td")];
-        const cellText = (td: Element | undefined) =>
-          (td?.textContent || "").replace(/\s+/g, " ").trim();
-        const nameSpan = cells[2]?.querySelector("span");
-        const name =
-          (nameSpan?.textContent || "").replace(/\s+/g, " ").trim() ||
-          cellText(cells[2]);
-        const editHref =
-          tr
-            .querySelector("a[href*='/admin/menu/'][href$='/edit']")
-            ?.getAttribute("href") || "";
-        const showHref =
-          [...tr.querySelectorAll("a[href]")].find((a) => {
-            const h = a.getAttribute("href") || "";
-            return /\/admin\/menu\/\d+\/?$/i.test(h) && !/\/edit/i.test(h);
-          })?.getAttribute("href") || "";
-        const editPath = editHref.replace(/^https?:\/\/[^/]+/i, "");
-        const showPath = showHref.replace(/^https?:\/\/[^/]+/i, "") || null;
-        const idMatch = /\/admin\/menu\/(\d+)/i.exec(editPath || showPath || "");
-        return {
-          databaseId: idMatch?.[1] ?? null,
-          menuNumber: cellText(cells[0]) || null,
-          name,
-          categoryText: cellText(cells[3]) || null,
-          priceText: cellText(cells[4]) || null,
-          statusText: cellText(cells[5]) || null,
-          editPath: editPath || null,
-          showPath,
-        };
-      });
-    });
+    return page.evaluate(extractProductListRows);
   }
 
   async findProduct(query: {
@@ -255,104 +204,15 @@ export class TahAdminAdapterV1 implements TahAdminAdapter {
       throw new Error(`Product databaseId ${destinationId} not found (404)`);
     }
 
-    const data = await page.evaluate((selectors) => {
-      const form =
-        (document.querySelector(selectors.productUpdateForm) as HTMLFormElement | null) ||
-        (document.querySelector("#menu_number")?.closest("form") as HTMLFormElement | null);
-      const root: ParentNode = form || document;
-
-      const val = (sel: string) => {
-        const el = root.querySelector(sel) as HTMLInputElement | null;
-        return el ? el.value : null;
-      };
-      const checked = (sel: string) => {
-        const el = root.querySelector(sel) as HTMLInputElement | null;
-        return el ? el.checked : null;
-      };
-      const categoryIds = [
-        ...root.querySelectorAll(selectors.categoryCheckboxes),
-      ]
-        .filter((el) => (el as HTMLInputElement).checked)
-        .map((el) => {
-          const id = el.id || "";
-          const m = /category-(\d+)/i.exec(id);
-          return m?.[1] || (el as HTMLInputElement).value;
-        });
-
-      const variants = [...root.querySelectorAll("tr.variant-form")].map(
-        (tr, index) => ({
-          databaseId:
-            (
-              tr.querySelector('input[name*="[id]"]') as HTMLInputElement | null
-            )?.value || null,
-          name:
-            (tr.querySelector("input.variant-name") as HTMLInputElement | null)
-              ?.value || "",
-          priceRaw:
-            (tr.querySelector("input.variant-price") as HTMLInputElement | null)
-              ?.value || "",
-          index,
-        }),
-      );
-      const ingredients = [
-        ...root.querySelectorAll("tr.ingredient-form"),
-      ].map((tr, index) => ({
-        databaseId:
-          (
-            tr.querySelector('input[name*="[id]"]') as HTMLInputElement | null
-          )?.value || null,
-        name:
-          (
-            tr.querySelector("input.ingredient-name") as HTMLInputElement | null
-          )?.value || "",
-        index,
-      }));
-      const additions = [...root.querySelectorAll("tr.addition-form")].map(
-        (tr, index) => ({
-          databaseId:
-            (
-              tr.querySelector('input[name*="[id]"]') as HTMLInputElement | null
-            )?.value || null,
-          name:
-            (
-              tr.querySelector("input.addition-name") as HTMLInputElement | null
-            )?.value || "",
-          priceRaw:
-            (
-              tr.querySelector("input.addition-price") as HTMLInputElement | null
-            )?.value || "",
-          index,
-        }),
-      );
-
-      const methodOverride =
-        (
-          form?.querySelector(
-            'input[name="_method"]',
-          ) as HTMLInputElement | null
-        )?.value || null;
-      const existingImg = document.querySelector(
-        "img[src*='menu'], img[src*='storage'], .existing-image, img.product-image",
-      );
-
-      return {
-        menuNumber: val(selectors.menuNumber),
-        name: val(selectors.productName),
-        description: val(selectors.description),
-        basePriceRaw: val(selectors.basePrice),
-        active: checked(selectors.active),
-        categoryIds,
-        variants,
-        ingredients,
-        additions,
-        formAction: form
-          ? (form.getAttribute("action") || "").replace(/^https?:\/\/[^/]+/i, "")
-          : null,
-        formMethod: form?.getAttribute("method") || null,
-        formMethodOverride: methodOverride,
-        hasExistingImageHint: Boolean(existingImg),
-      };
-    }, V1_SELECTORS);
+    const data = await page.evaluate(extractProductEdit, {
+      productUpdateForm: V1_SELECTORS.productUpdateForm,
+      menuNumber: V1_SELECTORS.menuNumber,
+      productName: V1_SELECTORS.productName,
+      description: V1_SELECTORS.description,
+      basePrice: V1_SELECTORS.basePrice,
+      active: V1_SELECTORS.active,
+      categoryCheckboxes: V1_SELECTORS.categoryCheckboxes,
+    });
 
     return {
       databaseId: destinationId,
