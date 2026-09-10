@@ -1,0 +1,111 @@
+{
+  "host": "veronipizza.dk",
+  "databaseId": "18",
+  "readOnly": true,
+  "opdaterClicked": false,
+  "mutationRequestsObserved": [],
+  "writePlanNote": "CANARY_18_WRITE_PLAN is product-specific for canary 18 only — not a global row-count/name default; variant names remain open-ended.",
+  "writePlan": {
+    "variants": [
+      {
+        "name": "Alm.",
+        "price": "0"
+      }
+    ],
+    "ingredients": [
+      {
+        "name": "Test ingredient A"
+      },
+      {
+        "name": "Test ingredient B"
+      }
+    ],
+    "additions": []
+  },
+  "scalars": {
+    "menuNumberPopulated": true,
+    "namePopulated": true,
+    "descriptionPopulated": true,
+    "basePricePopulated": true,
+    "categorySelected": true,
+    "menuNumber": "99001",
+    "name": "__TAH_CANARY_PRODUCT_M3__",
+    "description": "Automated TakeAwayHero inactive canary test",
+    "basePrice": "99",
+    "categoryIds": [
+      "1"
+    ]
+  },
+  "variants": {
+    "instantiatedCount": 1,
+    "blueprintsIgnored": 0,
+    "rows": [
+      {
+        "index": 0,
+        "name": "Alm.",
+        "price": "0",
+        "complete": true
+      }
+    ]
+  },
+  "ingredients": {
+    "instantiatedCount": 2,
+    "blueprintsIgnored": 0,
+    "rows": [
+      {
+        "index": 0,
+        "name": "Test ingredient A",
+        "complete": true
+      },
+      {
+        "index": 1,
+        "name": "Test ingredient B",
+        "complete": true
+      }
+    ]
+  },
+  "additions": {
+    "instantiatedCount": 0,
+    "blueprintsIgnored": 0,
+    "rows": []
+  },
+  "unexpectedBlankDynamicRows": [],
+  "nativeCheckValidity": true,
+  "completenessOnly": {
+    "status": "VALID",
+    "submitReady": true,
+    "issues": [],
+    "instantiated": {
+      "variants": 1,
+      "ingredients": 2,
+      "additions": 0
+    },
+    "blueprintsIgnored": {
+      "variants": 0,
+      "ingredients": 0,
+      "additions": 0
+    },
+    "writePlanCounts": null
+  },
+  "againstProductWritePlan": {
+    "status": "VALID",
+    "submitReady": true,
+    "issues": [],
+    "instantiated": {
+      "variants": 1,
+      "ingredients": 2,
+      "additions": 0
+    },
+    "blueprintsIgnored": {
+      "variants": 0,
+      "ingredients": 0,
+      "additions": 0
+    },
+    "writePlanCounts": {
+      "variants": 1,
+      "ingredients": 2,
+      "additions": 0
+    }
+  },
+  "overall": "SUBMIT_READY"
+}

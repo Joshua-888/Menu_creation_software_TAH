@@ -14,17 +14,26 @@ Implemented in `src/domain` with tests. Not only in prompts.
 
 ## Variants
 
-- Every normal product needs ≥1 variant.  
+- Variant names are **open-ended source data** — any restaurant-specific name is allowed (e.g. Alm., Lille, Deep Pan, 30 cm, XL, Børne, or unknown names).
+- **Do not** implement a whitelist of allowed variant names.
+- Preserve names from the approved source / CanonicalMenu; do not rename or reject unfamiliar names.
+- Every normal product needs ≥1 variant.
 - If none: inject `Alm.` / surcharge 0 / `SYSTEM_DEFAULT`.
+- Instantiated admin rows: non-empty name + valid price/surcharge; blank rows must be removed before Skab/Opdater.
+- Row count is product-specific (WritePlan / CanonicalMenu), not a fixed default.
 
 ## Base variant
 
-Deterministic alias normalize (trim, lower, strip harmless punctuation):
+Base-variant determination uses **deterministic patterns for choosing a base price only**. It is **not** a list of allowed variant names.
+
+Normalize (trim, lower, strip harmless punctuation) aliases used only when selecting base:
 
 `Alm.` | `Alm` | `Almindelig` | `Standard` | `Normal` | `Regular`
 
 Else size hierarchy `Lille < Mellem < Stor` or numeric `cm` (smallest = base).  
-Else `AMBIGUOUS_BASE_VARIANT` → review.
+Else `AMBIGUOUS_BASE_VARIANT` → `MANUAL_REVIEW_REQUIRED`.
+
+If source contains unfamiliar names and no deterministic base can be identified: **MANUAL_REVIEW_REQUIRED**. Do not rename or reject the variants.
 
 ## Surcharges
 

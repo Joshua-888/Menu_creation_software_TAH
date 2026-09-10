@@ -42,19 +42,31 @@ describe("HUMAN_CONFIRMED edit/persist contract", () => {
     expect(formModifiedCountsAsWritten()).toBe(false);
     expect(canTransition("FORM_MODIFIED", "WRITTEN")).toBe(false);
     expect(canTransition("FORM_MODIFIED", "UPDATE_SUBMITTED")).toBe(true);
-    expect(canTransition("UPDATE_SUBMITTED", "WRITTEN")).toBe(true);
+    expect(canTransition("UPDATE_SUBMITTED", "SUBMIT_EVENT_CONFIRMED")).toBe(
+      true,
+    );
+    expect(canTransition("SUBMIT_EVENT_CONFIRMED", "SUBMIT_REQUEST_OBSERVED")).toBe(
+      true,
+    );
+    expect(canTransition("SUBMIT_REQUEST_OBSERVED", "SERVER_RESPONSE_RECEIVED")).toBe(
+      true,
+    );
+    expect(canTransition("SERVER_RESPONSE_RECEIVED", "WRITTEN")).toBe(true);
     expect(() =>
       assertEditPathRequiresOpdater([
         "PRE_UPDATE",
         "FORM_MODIFIED",
         "WRITTEN",
       ]),
-    ).toThrow(/Opdater|UPDATE_SUBMITTED/);
+    ).toThrow(/SUBMIT_REQUEST_OBSERVED/);
     expect(() =>
       assertEditPathRequiresOpdater([
         "PRE_UPDATE",
         "FORM_MODIFIED",
         "UPDATE_SUBMITTED",
+        "SUBMIT_EVENT_CONFIRMED",
+        "SUBMIT_REQUEST_OBSERVED",
+        "SERVER_RESPONSE_RECEIVED",
         "WRITTEN",
         "READ_BACK",
         "VERIFIED",
@@ -64,7 +76,7 @@ describe("HUMAN_CONFIRMED edit/persist contract", () => {
 
   it("keeps updateProduct separately uncertified from createProduct", () => {
     expect(ADMIN_CONTRACT_V1.capabilities.write.createProduct).toBe(
-      "UNCERTIFIED",
+      "CERTIFIED",
     );
     expect(ADMIN_CONTRACT_V1.capabilities.write.updateProduct).toBe(
       "UNCERTIFIED",

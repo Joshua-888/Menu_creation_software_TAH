@@ -1,0 +1,14 @@
+{
+  "milestone": "M3G",
+  "result": "FORM_SUBMIT_EVENT_CONFIRMED",
+  "zeroServerMutations": true,
+  "findings": {
+    "nativeButtonClickProducesSubmitEvent": true,
+    "requestSubmitProducesSubmitEvent": true,
+    "submitterIsOpdater": true,
+    "formEnctype": "multipart/form-data",
+    "productUnchanged": true,
+    "m3fLikelyFalseNegativeObserver": true
+  },
+  "nextStep": "READY_FOR_ONE_REAL_CANARY_UPDATE"
+}

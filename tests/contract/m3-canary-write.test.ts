@@ -227,6 +227,10 @@ describe("M3 state machine + ambiguous policy", () => {
   it("forbids FORM_MODIFIED jumping to WRITTEN without Opdater", () => {
     expect(canTransition("FORM_MODIFIED", "WRITTEN")).toBe(false);
     expect(canTransition("FORM_MODIFIED", "UPDATE_SUBMITTED")).toBe(true);
+    expect(canTransition("UPDATE_SUBMITTED", "WRITTEN")).toBe(false);
+    expect(canTransition("UPDATE_SUBMITTED", "SUBMIT_EVENT_CONFIRMED")).toBe(
+      true,
+    );
   });
 
   it("documents no blind retry", () => {

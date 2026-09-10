@@ -11,6 +11,8 @@ export type FillInactiveProductInput = {
   categoryDatabaseId: string;
   variants: Array<{ name: string; priceKr: string }>;
   ingredients: string[];
+  /** Absolute addon price in kroner string, e.g. "17" for 1700 øre */
+  additions?: Array<{ name: string; priceKr: string }>;
 };
 
 export async function assertPageIsVeroniAdmin(page: Page): Promise<void> {
@@ -41,23 +43,33 @@ export async function fillInactiveProductCreateForm(
   await page.locator("#description").fill(input.description);
   await page.locator("#price").fill(input.basePriceKr);
 
-  // Variants: first row exists; add more if needed
+  // Variants: prefer list rows (ignore #blueprint-*)
   for (let i = 0; i < input.variants.length; i++) {
     if (i > 0) {
       await page.locator("#add-variant").click();
       await page.waitForTimeout(200);
     }
-    const row = page.locator("tr.variant-form").nth(i);
+    const row = page.locator("#variant-list tr.variant-form").nth(i);
     await row.locator("input.variant-name").fill(input.variants[i]!.name);
     await row.locator("input.variant-price").fill(input.variants[i]!.priceKr);
   }
 
-  // Ingredients start empty — add rows
+  // Ingredients start empty — add rows inside list
   for (let i = 0; i < input.ingredients.length; i++) {
     await page.locator("#add-ingredient").click();
     await page.waitForTimeout(200);
-    const row = page.locator("tr.ingredient-form").nth(i);
+    const row = page.locator("#ingredient-list tr.ingredient-form").nth(i);
     await row.locator("input.ingredient-name").fill(input.ingredients[i]!);
+  }
+
+  // Additions / TILBEHØR — optional; green + adds instantiated rows
+  const additions = input.additions ?? [];
+  for (let i = 0; i < additions.length; i++) {
+    await page.locator("#add-addition").click();
+    await page.waitForTimeout(200);
+    const row = page.locator("#addition-list tr.addition-form").nth(i);
+    await row.locator("input.addition-name").fill(additions[i]!.name);
+    await row.locator("input.addition-price").fill(additions[i]!.priceKr);
   }
 
   // Categories: check only the selected id

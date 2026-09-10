@@ -43,6 +43,14 @@ export type AdapterCapabilities = {
      * Does NOT certify visibility transitions or full updateProduct API.
      */
     updateExistingProductForm: CapabilityStatus;
+    updateProductDescription: CapabilityStatus;
+    updateScalarProductField: CapabilityStatus;
+    /** Hidden create via Skab + unchecked Aktiv? (not visibility Opdater transition). */
+    createHiddenProduct: CapabilityStatus;
+    writeDefaultVariant: CapabilityStatus;
+    writeNonZeroVariants: CapabilityStatus;
+    writeMultipleVariants: CapabilityStatus;
+    assignExistingCategory: CapabilityStatus;
     writeVariants: CapabilityStatus;
     writeIngredients: CapabilityStatus;
     writeAdditions: CapabilityStatus;
@@ -74,6 +82,13 @@ export const DEFAULT_ADAPTER_CAPABILITIES: AdapterCapabilities = {
     createProduct: "UNCERTIFIED",
     updateProduct: "UNCERTIFIED",
     updateExistingProductForm: "UNCERTIFIED",
+    updateProductDescription: "UNCERTIFIED",
+    updateScalarProductField: "UNCERTIFIED",
+    createHiddenProduct: "UNCERTIFIED",
+    writeDefaultVariant: "UNCERTIFIED",
+    writeNonZeroVariants: "UNCERTIFIED",
+    writeMultipleVariants: "UNCERTIFIED",
+    assignExistingCategory: "UNCERTIFIED",
     writeVariants: "UNCERTIFIED",
     writeIngredients: "UNCERTIFIED",
     writeAdditions: "UNCERTIFIED",
@@ -82,7 +97,7 @@ export const DEFAULT_ADAPTER_CAPABILITIES: AdapterCapabilities = {
   },
 };
 
-/** M2B certified READ capabilities after NEW WAY populated discovery. WRITE stays uncertified. */
+/** M2B certified READ + M3H update + M3 create (filled after live cert). */
 export const M2B_ADAPTER_CAPABILITIES: AdapterCapabilities = {
   read: {
     contractProbe: "CERTIFIED",
@@ -95,26 +110,45 @@ export const M2B_ADAPTER_CAPABILITIES: AdapterCapabilities = {
   },
   write: {
     createCategory: "UNCERTIFIED",
-    createProduct: "UNCERTIFIED",
+    createProduct: "CERTIFIED",
     updateProduct: "UNCERTIFIED",
-    /** M3E: Opdater on Veroni canary 18 — field preserve + remain Skjult/public-absent */
+    /** M3H Veroni canary 18: Opdater + POST /admin/menu/18 + description read-back */
     updateExistingProductForm: "CERTIFIED",
+    updateProductDescription: "CERTIFIED",
+    updateScalarProductField: "CERTIFIED",
+    /** M3 create: hidden Skab canaries 19/20 on Veroni */
+    createHiddenProduct: "CERTIFIED",
+    writeDefaultVariant: "CERTIFIED",
+    writeNonZeroVariants: "CERTIFIED",
+    writeMultipleVariants: "CERTIFIED",
+    assignExistingCategory: "CERTIFIED",
     writeVariants: "UNCERTIFIED",
-    writeIngredients: "UNCERTIFIED",
-    writeAdditions: "UNCERTIFIED",
+    writeIngredients: "CERTIFIED",
+    writeAdditions: "CERTIFIED",
     setProductHidden: "UNCERTIFIED",
     setProductAvailable: "UNCERTIFIED",
   },
 };
 
+/** Broad / dangerous writes that must stay UNCERTIFIED until dedicated cert. */
+const BROAD_WRITE_CAPS_MUST_STAY_UNCERTIFIED = [
+  "createCategory",
+  "updateProduct",
+  "setProductHidden",
+  "setProductAvailable",
+] as const;
+
+/**
+ * After M3H, narrow description/scalar Opdater caps may be CERTIFIED.
+ * Broad create/full-update/visibility writes must remain UNCERTIFIED.
+ */
 export function assertNoWriteCapabilitiesCertified(
   caps: AdapterCapabilities,
 ): void {
-  for (const [name, status] of Object.entries(caps.write)) {
-    if (name === "updateExistingProductForm") continue; // narrowly CERTIFIED after M3E
-    if (status === "CERTIFIED") {
+  for (const name of BROAD_WRITE_CAPS_MUST_STAY_UNCERTIFIED) {
+    if (caps.write[name] === "CERTIFIED") {
       throw new Error(
-        `WRITE capability ${name} must not be CERTIFIED until Veroni canary round-trip succeeds`,
+        `WRITE capability ${name} must not be CERTIFIED until dedicated canary certification succeeds`,
       );
     }
   }

@@ -1,0 +1,57 @@
+{
+  "milestone": "M3H",
+  "status": "VERIFIED",
+  "baselineConfirmed": true,
+  "formCompleteness": {
+    "status": "VALID",
+    "submitReady": true,
+    "issues": [],
+    "instantiated": {
+      "variants": 1,
+      "ingredients": 2,
+      "additions": 0
+    },
+    "blueprintsIgnored": {
+      "variants": 0,
+      "ingredients": 0,
+      "additions": 0
+    },
+    "writePlanCounts": {
+      "variants": 1,
+      "ingredients": 2,
+      "additions": 0
+    }
+  },
+  "preSubmitFormData": {
+    "action": "/admin/menu/18",
+    "_method": "put",
+    "description": "Automated TakeAwayHero canary test v2",
+    "activeOmitted": true
+  },
+  "postObserved": true,
+  "httpMethod": "POST",
+  "httpPath": "/admin/menu/18",
+  "postDataUnreadable": false,
+  "responseStatus": 302,
+  "redirectFinalUrl": "https://veronipizza.dk/admin/menu/18/edit",
+  "beforeDescription": "Automated TakeAwayHero inactive canary test ss",
+  "afterDescription": "Automated TakeAwayHero canary test v2",
+  "semanticDiff": [
+    "description"
+  ],
+  "unauthorizedFieldChanges": [],
+  "listStatus": "Skjult",
+  "publicAfter": {
+    "visibleCanary": false,
+    "visibleMenuNumber": false
+  },
+  "certification": {
+    "updatePersistBoundary": "CERTIFIED",
+    "updateProductDescription": "CERTIFIED",
+    "updateScalarProductField": "CERTIFIED",
+    "updateExistingProductForm": "CERTIFIED",
+    "updateProduct": "UNCERTIFIED",
+    "setProductHidden": "UNCERTIFIED",
+    "setProductAvailable": "UNCERTIFIED"
+  }
+}

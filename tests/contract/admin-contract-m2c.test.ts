@@ -85,7 +85,7 @@ describe("M2C non-default variant surcharge proof", () => {
       }),
     ).toBe(true);
     expect(ADMIN_CONTRACT_V1.capabilities.write.createProduct).toBe(
-      "UNCERTIFIED",
+      "CERTIFIED",
     );
   });
 

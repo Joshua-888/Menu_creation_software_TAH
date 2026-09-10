@@ -217,3 +217,255 @@ export function serializeSuccessfulControlsInPage(formSelector) {
     asObject,
   };
 }
+
+/**
+ * Read-only snapshot of product form fields + dynamic rows.
+ * Instantiated rows = list containers only; #blueprint-* / template ignored.
+ */
+export function extractAdminFormCompletenessSnapshot() {
+  const form =
+    document.querySelector("form:has(#menu_number)") ||
+    document.querySelector("#menu_number")?.closest("form");
+  const root = form || document;
+
+  const isBlueprintNode = (el) => {
+    if (!el) return true;
+    if (el.closest("template")) return true;
+    if (el.closest("[id^='blueprint-']")) return true;
+    if (el.id && /^blueprint-/i.test(el.id)) return true;
+    return false;
+  };
+
+  const mapRows = (listSel, rowSel, nameSel, priceSel) => {
+    const list = root.querySelector(listSel);
+    const scope = list || root;
+    const all = [...scope.querySelectorAll(rowSel)];
+    const out = [];
+    for (const tr of all) {
+      const blueprint = isBlueprintNode(tr);
+      const inList = Boolean(list && list.contains(tr));
+      out.push({
+        name: tr.querySelector(nameSel)?.value || "",
+        price: priceSel ? tr.querySelector(priceSel)?.value || "" : undefined,
+        databaseId: tr.querySelector('input[name*="[id]"]')?.value || null,
+        isBlueprint: blueprint,
+        isInstantiated: inList && !blueprint,
+      });
+    }
+    // Also record blueprints outside the list so callers can prove ignore
+    for (const bp of document.querySelectorAll(
+      "[id^='blueprint-'] tr, tr[id^='blueprint-'], [id^='blueprint-'].variant-form, [id^='blueprint-'].ingredient-form, [id^='blueprint-'].addition-form",
+    )) {
+      if (all.includes(bp)) continue;
+      if (
+        rowSel.includes("variant") &&
+        !/variant/i.test(bp.className + bp.id)
+      )
+        continue;
+      if (
+        rowSel.includes("ingredient") &&
+        !/ingredient/i.test(bp.className + bp.id)
+      )
+        continue;
+      if (
+        rowSel.includes("addition") &&
+        !/addition/i.test(bp.className + bp.id)
+      )
+        continue;
+      out.push({
+        name: bp.querySelector?.(nameSel)?.value || "",
+        price: priceSel ? bp.querySelector?.(priceSel)?.value || "" : undefined,
+        databaseId: null,
+        isBlueprint: true,
+        isInstantiated: false,
+      });
+    }
+    return out;
+  };
+
+  const categoryIds = [
+    ...root.querySelectorAll("input[name='categories[]']:checked"),
+  ].map((el) => {
+    const m = /category-(\d+)/i.exec(el.id || "");
+    return m?.[1] || el.value;
+  });
+
+  return {
+    menuNumber: root.querySelector("#menu_number")?.value || "",
+    name: root.querySelector("#name")?.value || "",
+    description: root.querySelector("#description")?.value || "",
+    basePrice: root.querySelector("#price")?.value || "",
+    categoryIds,
+    variants: mapRows(
+      "#variant-list",
+      "tr.variant-form",
+      "input.variant-name",
+      "input.variant-price",
+    ),
+    ingredients: mapRows(
+      "#ingredient-list",
+      "tr.ingredient-form",
+      "input.ingredient-name",
+      null,
+    ),
+    additions: mapRows(
+      "#addition-list",
+      "tr.addition-form",
+      "input.addition-name",
+      "input.addition-price",
+    ),
+    nativeCheckValidity: form ? form.checkValidity() : null,
+    formAction: form
+      ? (form.getAttribute("action") || "").replace(/^https?:\/\/[^/]+/i, "")
+      : null,
+  };
+}
+
+/** M3G: inspect update form + Opdater (no mutation). */
+export function inspectUpdateFormAndOpdater() {
+  const form = document.querySelector("form:has(#menu_number)");
+  const btn = [...(form?.querySelectorAll("button, input[type=submit]") || [])].find(
+    (b) => /opdater/i.test((b.textContent || b.value || "").trim()),
+  );
+  const box = btn?.getBoundingClientRect();
+  const cx = box ? box.left + box.width / 2 : null;
+  const cy = box ? box.top + box.height / 2 : null;
+  const top = cx != null && cy != null ? document.elementFromPoint(cx, cy) : null;
+  const method = form?.querySelector('input[name="_method"]');
+  const csrf = form?.querySelector('input[name="_token"]');
+  return {
+    form: form
+      ? {
+          action: form.getAttribute("action"),
+          method: form.getAttribute("method"),
+          enctype: form.getAttribute("enctype"),
+          _method: method?.value || null,
+          hasCsrf: Boolean(csrf),
+          checkValidity: form.checkValidity(),
+        }
+      : null,
+    button: btn
+      ? {
+          tag: btn.tagName,
+          type: btn.getAttribute("type") || btn.type,
+          text: (btn.textContent || "").trim(),
+          disabled: btn.disabled,
+          buttonFormIsUpdateForm: btn.form === form,
+          visible: !!(box && box.width > 0 && box.height > 0),
+          boundingBox: box
+            ? { x: box.x, y: box.y, w: box.width, h: box.height }
+            : null,
+          elementFromPointTag: top?.tagName || null,
+          elementFromPointIsButtonOrChild: Boolean(
+            top && (top === btn || btn.contains(top)),
+          ),
+          inViewport:
+            !!box &&
+            box.top < window.innerHeight &&
+            box.bottom > 0 &&
+            box.left < window.innerWidth &&
+            box.right > 0,
+        }
+      : null,
+  };
+}
+
+/** M3G: capture-phase submit preventDefault guard (zero network). */
+export function installM3gSubmitGuard() {
+  window.__m3gCleanup?.();
+  const log = {
+    submitEventObserved: false,
+    submitterTag: null,
+    submitterText: null,
+    submitterIsOpdater: false,
+    formActionObserved: null,
+    formMethodObserved: null,
+    preventDefaultCalls: [],
+    clickObserved: false,
+    clickDefaultPrevented: null,
+    formValid: null,
+  };
+  const form = document.querySelector("form:has(#menu_number)");
+  const btn = [...(form?.querySelectorAll("button, input[type=submit]") || [])].find(
+    (b) => /opdater/i.test((b.textContent || b.value || "").trim()),
+  );
+  if (!form || !btn) throw new Error("missing_form_or_button");
+
+  const origPD = Event.prototype.preventDefault;
+  Event.prototype.preventDefault = function (...args) {
+    try {
+      log.preventDefaultCalls.push({
+        type: this.type,
+        targetTag: this.target?.tagName || null,
+        currentTag: this.currentTarget?.tagName || null,
+      });
+    } catch {
+      /* ignore */
+    }
+    return origPD.apply(this, args);
+  };
+
+  const submitGuard = (ev) => {
+    log.submitEventObserved = true;
+    const sub = ev.submitter;
+    log.submitterTag = sub?.tagName || null;
+    log.submitterText = (sub?.textContent || sub?.value || "").trim().slice(0, 40);
+    log.submitterIsOpdater = /opdater/i.test(log.submitterText || "");
+    log.formActionObserved = form.getAttribute("action");
+    log.formMethodObserved = form.getAttribute("method");
+    log.formValid = form.checkValidity();
+    ev.preventDefault();
+    ev.stopImmediatePropagation();
+  };
+  const clickSpy = (ev) => {
+    log.clickObserved = true;
+    queueMicrotask(() => {
+      log.clickDefaultPrevented = ev.defaultPrevented;
+    });
+  };
+  form.addEventListener("submit", submitGuard, true);
+  btn.addEventListener("click", clickSpy, true);
+  window.__m3gGuardLog = log;
+  window.__m3gCleanup = () => {
+    form.removeEventListener("submit", submitGuard, true);
+    btn.removeEventListener("click", clickSpy, true);
+    Event.prototype.preventDefault = origPD;
+  };
+  return { ok: true };
+}
+
+export function readM3gSubmitGuard() {
+  return (
+    window.__m3gGuardLog || {
+      submitEventObserved: false,
+      submitterTag: null,
+      submitterText: null,
+      submitterIsOpdater: false,
+      formActionObserved: null,
+      formMethodObserved: null,
+      preventDefaultCalls: [],
+      clickObserved: false,
+      clickDefaultPrevented: null,
+      formValid: null,
+    }
+  );
+}
+
+export function cleanupM3gSubmitGuard() {
+  window.__m3gCleanup?.();
+}
+
+export function runM3gRequestSubmit() {
+  const form = document.querySelector("form:has(#menu_number)");
+  const btn = [...(form?.querySelectorAll("button, input[type=submit]") || [])].find(
+    (b) => /opdater/i.test((b.textContent || b.value || "").trim()),
+  );
+  if (!form || !btn) return { error: "missing_form_or_button" };
+  form.requestSubmit(btn);
+  return {
+    error: null,
+    formValid: form.checkValidity(),
+    action: form.getAttribute("action"),
+    method: form.getAttribute("method"),
+  };
+}

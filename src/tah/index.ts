@@ -109,6 +109,10 @@ export {
   assertVerificationPath,
   assertEditPathRequiresOpdater,
   persistBoundaryForAction,
+  buttonClickAloneMeansWritten,
+  isFormSubmitBypassProhibited,
+  classifyOpdaterEventPath,
+  clickWithoutSubmitAdvancesToWritten,
 } from "./write/stateMachine.js";
 export {
   parseFormBody,
@@ -123,10 +127,38 @@ export {
   type InspectedFormField,
 } from "./write/formInspect.js";
 export {
+  validateAdminFormBeforeSubmit,
+  validateInstantiatedRowsComplete,
+  validateDynamicSection,
+  validateDynamicSectionAgainstWritePlan,
+  validateDynamicRowsComplete,
+  unintendedBlankRows,
+  missingFieldsForRow,
+  instantiatedRows,
+  countsFromWritePlan,
+  type AdminFormCompletenessSnapshot,
+  type AdminFormRowSnapshot,
+  type WritePlanDynamicCollections,
+  type DynamicRowCounts,
+  type FormCompletenessResult,
+  type FormCompletenessIssue,
+} from "./write/formCompleteness.js";
+export {
   fillInactiveProductCreateForm,
   assertActiveUnchecked,
   assertPageIsVeroniAdmin,
 } from "./write/formFill.js";
+export {
+  dismissKnownCookieBanner,
+  assertSubmitControlInteractable,
+  type SubmitInteractabilityResult,
+} from "./write/submitInteractability.js";
+export {
+  isProductCreateRequest,
+  clickSkabAndObserveCreate,
+  type SanitizedCreateRequestTrace,
+  type SanitizedCreateResponseTrace,
+} from "./write/createRequestObserve.js";
 export {
   buildAdminContractFingerprint,
   normalizeFingerprintParts,
@@ -144,9 +176,28 @@ export {
   ACTIVE_CHECKBOX_PERSIST_REQUIRES_OPDATER,
   ACTIVE_INTENDED_MAPPING,
   EDIT_PERSIST_REQUIRES_OPDATER,
+  DYNAMIC_ROW_COMPLETENESS_REQUIRED,
   VISIBILITY_WRITE_CERTIFICATION_CHECKLIST,
   isVisibilityWriteRoundTripComplete,
   type ActiveReadSemantics,
   type ActiveObservationLayer,
   type ScopedSemanticEvidence,
 } from "./contracts/activeSemantics.js";
+export {
+  createDescriptionUpdatePlan,
+  assertPlanAllowsOnly,
+  semanticDiff,
+  assertExactlyAllowedSemanticDiff,
+  mayRetryOpdaterAfterAmbiguousResult,
+  type ScalarProductUpdatePlan,
+  type SemanticProductSnapshot,
+  type AllowedProductChangeField,
+} from "./write/updatePlan.js";
+export {
+  isProductUpdateRequest,
+  sanitizeUpdateRequest,
+  clickOpdaterAndObserveUpdate,
+  classifyUpdateOutcome,
+  type SanitizedUpdateRequestTrace,
+  type SanitizedUpdateResponseTrace,
+} from "./write/updateRequestObserve.js";

@@ -2,23 +2,18 @@
   "milestone": "M3E",
   "host": "veronipizza.dk",
   "canaryDatabaseId": "18",
-  "opdaterSubmitted": true,
-  "result": "VERIFIED",
+  "opdaterSubmitted": "attempted_without_proven_request_trace",
+  "result": "SUPERSEDED_BY_M3F",
   "certified": {
-    "updateExistingProductForm": "CERTIFIED",
-    "updatePersistBoundary": "CERTIFIED"
+    "updateExistingProductForm": "UNCERTIFIED",
+    "updatePersistBoundary": "UNCERTIFIED"
   },
   "stillUncertified": [
     "updateProduct",
+    "updateProductDescription",
     "setProductHidden",
     "setProductAvailable",
     "createProduct"
   ],
-  "evidence": {
-    "businessFieldDiffs": [],
-    "listStatusAfter": "Skjult",
-    "publicVisibleAfter": false,
-    "editActiveAfterStillChecked": true,
-    "note": "Hidden→hidden update; edit #active render remains inconsistent with list/storefront"
-  }
+  "note": "M3F downgraded prior CERTIFIED claims; no observed mutation request + persisted semantic diff yet"
 }

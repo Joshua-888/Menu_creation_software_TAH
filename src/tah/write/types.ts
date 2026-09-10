@@ -11,6 +11,9 @@ export type WriteOpState =
   | "PRE_UPDATE"
   | "FORM_MODIFIED"
   | "UPDATE_SUBMITTED"
+  | "SUBMIT_EVENT_CONFIRMED"
+  | "SUBMIT_REQUEST_OBSERVED"
+  | "SERVER_RESPONSE_RECEIVED"
   | "PENDING_WRITE"
   | "WRITTEN"
   | "READ_BACK"
@@ -81,11 +84,20 @@ export const CANARY_NAMES = {
   product: "__TAH_CANARY_PRODUCT_M3__",
   productNonZero: "__TAH_CANARY_VARIANT_M3__",
   productMulti: "__TAH_CANARY_MULTIVARIANT_M3__",
+  /** M3 create certification (hidden) */
+  productCreate: "__TAH_CANARY_CREATE_M3__",
+  productCreateMulti: "__TAH_CANARY_CREATE_MULTI_M3__",
   description: "Automated TakeAwayHero inactive canary test",
+  descriptionCreate: "Automated hidden create certification",
   ingredientA: "Test ingredient A",
   ingredientB: "Test ingredient B",
   ingredient: "Test ingredient",
   reservedMenuNumber: "99001",
   reservedMenuNumberNonZero: "99002",
   reservedMenuNumberMulti: "99003",
+  reservedMenuNumberCreate: "99011",
+  reservedMenuNumberCreateMulti: "99012",
+  productAdditions: "__TAH_CANARY_ADDITIONS_M3__",
+  descriptionAdditions: "Automated hidden additions certification",
+  reservedMenuNumberAdditions: "99013",
 } as const;

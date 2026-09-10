@@ -12,7 +12,7 @@
     "test:domain": "vitest run tests/domain",
     "test:contract": "vitest run tests/contract",
     "test:watch": "vitest",
-    "check": "npm run typecheck && npm run test:domain && npm run test:contract",
+    "check": "npm run typecheck && npm run test:domain && npm run test:contract && npm run test:unit",
     "discover:admin": "tsx scripts/discover-admin-readonly.ts"
   },
   "engines": {

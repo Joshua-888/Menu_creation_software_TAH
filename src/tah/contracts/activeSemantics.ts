@@ -68,6 +68,29 @@ export const EDIT_PERSIST_REQUIRES_OPDATER = {
 };
 
 /**
+ * HUMAN_CONFIRMED: every instantiated dynamic admin row must be complete
+ * before Skab or Opdater. Empty section ≠ blank row. Never invent data.
+ */
+export const DYNAMIC_ROW_COMPLETENESS_REQUIRED = {
+  evidence: "HUMAN_CONFIRMED" as const,
+  value: "DYNAMIC_ROW_COMPLETENESS_REQUIRED" as const,
+  applyBefore: ["Skab", "Opdater"] as const,
+  sections: ["variants", "ingredients", "additions"] as const,
+  notes: [
+    "Green + adds a real editable row; red X removes it",
+    "Empty section (header only) is allowed; blank instantiated rows block submit",
+    "Ignore hidden #blueprint-* template markup",
+    "No fixed/default row limit — a product may have any number of complete variants/ingredients/additions",
+    "MULTIPLE COMPLETE ROWS = VALID; ANY INCOMPLETE INSTANTIATED ROW = INVALID",
+    "Variant names are open-ended source data — no whitelist; adapter executes WritePlan only",
+    "Expected collections come only from the approved product-specific WritePlan (not a hardcoded count of 1)",
+    "Actual intended rows must equal WritePlan rows; do not remove valid populated rows merely because there are multiple",
+    "form.checkValidity() true ≠ TAH dynamic-row submit-ready",
+    "Never invent ingredients/variants/additions to pass validation",
+  ],
+};
+
+/**
  * HUMAN_CONFIRMED visibility mutation via Aktiv? + Opdater.
  */
 export const ACTIVE_CHECKBOX_PERSIST_REQUIRES_OPDATER = {

@@ -148,6 +148,11 @@ export const ADMIN_CONTRACT_V1 = {
       "HUMAN_CONFIRMED",
       "All existing-product field edits (menu_number, name, description, price, variants, ingredients, additions, categories, image, active) persist only via Opdater. Create uses Skab. Lifecycle: PRE_UPDATE → FORM_MODIFIED → UPDATE_SUBMITTED → WRITTEN → READ_BACK → VERIFIED.",
     ),
+    dynamicRowCompletenessRequired: ev(
+      "DYNAMIC_ROW_COMPLETENESS_REQUIRED" as const,
+      "HUMAN_CONFIRMED",
+      "Before Skab/Opdater every instantiated variant/ingredient/addition row must be fully filled or removed via red X. No fixed row limit — any number of complete rows is valid. Variant names are open-ended (no whitelist); adapter executes WritePlan only. Expected collections = product WritePlan. Empty section ≠ blank row. Ignore #blueprint-*. Never invent data. form.checkValidity() alone is insufficient.",
+    ),
   },
   idStrategy: {
     productDatabaseId: ev(
@@ -184,8 +189,8 @@ export const ADMIN_CONTRACT_V1 = {
     ),
     editSubmit: ev(
       "Opdater on POST /admin/menu/{id} _method=PUT",
-      "TESTED",
-      "M3E Veroni canary 18: ONE Opdater with #active omitted; business fields preserved; list Skjult; public absent. updateExistingProductForm CERTIFIED; setProductHidden still UNCERTIFIED (no AVAILABLE→HIDDEN transition).",
+      "OBSERVED",
+      "HUMAN_CONFIRMED: Opdater is edit persist boundary. M3H CERTIFIED on Veroni canary 18 for description-only updateExistingProductForm (multipart POST /admin/menu/{id} + read-back). Full updateProduct remains UNCERTIFIED.",
     ),
     editHasPersistentRowIds: ev(
       true,
@@ -414,7 +419,9 @@ export const ADMIN_CONTRACT_V1 = {
     "M2B certified READ against NEW WAY; WRITE remains UNCERTIFIED.",
     "variantPriceSemantics=SURCHARGE (TESTED).",
     "M3 Veroni canary BLOCKED: create #active defaults checked (CANARY_PUBLIC_VISIBILITY_RISK).",
-    "HUMAN_CONFIRMED: intended Aktiv? mapping checked=AVAILABLE / unchecked=HIDDEN; all edit fields require Opdater; Skab≠Opdater; updateExistingProductForm CERTIFIED (M3E canary 18 Opdater+read-back, hidden→hidden); updateProduct / setProductHidden / setProductAvailable remain UNCERTIFIED.",
+    "HUMAN_CONFIRMED: intended Aktiv? mapping checked=AVAILABLE / unchecked=HIDDEN; all edit fields require Opdater; Skab≠Opdater; M3H update caps CERTIFIED; M3 CREATE + writeAdditions CERTIFIED (hidden canaries); createCategory/image/setProductHidden/setProductAvailable/updateProduct remain UNCERTIFIED.",
+    "HUMAN_CONFIRMED: DYNAMIC_ROW_COMPLETENESS_REQUIRED — every instantiated row complete or removed; multiple complete rows valid; variant names open-ended (no whitelist); expected collections from WritePlan only; never invent row data.",
+    "HUMAN_CONFIRMED (M3H): cookie/consent overlays may block Skab/Opdater — dismiss safely and verify interactability; never force-click through overlays.",
   ],
 } as const;
 

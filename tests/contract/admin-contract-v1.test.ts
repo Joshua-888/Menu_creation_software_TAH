@@ -99,7 +99,9 @@ describe("probe flag evaluation", () => {
 });
 
 describe("fixture DOM structure", () => {
-  it("recognizes certified structure selectors", async () => {
+  it(
+    "recognizes certified structure selectors",
+    async () => {
     const browser = await chromium.launch({ headless: true });
     const page = await browser.newPage();
     await page.setContent(readFileSync(certified, "utf8"));
@@ -115,9 +117,13 @@ describe("fixture DOM structure", () => {
     expect(await page.getByRole("button", { name: /^Skab$/i }).count()).toBe(1);
 
     await browser.close();
-  });
+  },
+  30_000,
+);
 
-  it("fails required selectors on drifted structure", async () => {
+  it(
+    "fails required selectors on drifted structure",
+    async () => {
     const browser = await chromium.launch({ headless: true });
     const page = await browser.newPage();
     await page.setContent(readFileSync(drifted, "utf8"));
@@ -138,7 +144,9 @@ describe("fixture DOM structure", () => {
     });
     expect(result.contractStatus).toBe("CONTRACT_DRIFT");
     await browser.close();
-  });
+  },
+  30_000,
+);
 });
 
 describe("adapter registry read-only guarantees", () => {

@@ -51,7 +51,11 @@ export type BaseVariantSelection =
     };
 
 /**
- * Select base variant deterministically.
+ * Select base variant deterministically for pricing only.
+ * BASE_ALIASES / SIZE_RANK / cm patterns are NOT an allowlist of variant names.
+ * Variant names are open-ended source data; unfamiliar sets → MANUAL_REVIEW_REQUIRED
+ * without renaming or rejecting rows.
+ *
  * 1) Explicit aliases (Alm., Standard, …)
  * 2) Size hierarchy Lille < Mellem < Stor
  * 3) Numeric cm (smallest)

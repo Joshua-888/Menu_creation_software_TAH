@@ -1,0 +1,174 @@
+{
+  "milestone": "M3_CREATE",
+  "status": "VERIFIED",
+  "cookieOverlayHandling": "dismissKnownCookieBanner + assertSubmitControlInteractable before Skab (no force-click)",
+  "firstCanary": {
+    "databaseId": "19",
+    "postObserved": true,
+    "responseStatus": 302,
+    "finalUrl": "https://veronipizza.dk/admin/menu",
+    "cookieHandling": {
+      "cookieBannerDismissed": false
+    },
+    "formCompleteness": {
+      "status": "VALID",
+      "submitReady": true,
+      "issues": [],
+      "instantiated": {
+        "variants": 2,
+        "ingredients": 2,
+        "additions": 0
+      },
+      "blueprintsIgnored": {
+        "variants": 0,
+        "ingredients": 0,
+        "additions": 0
+      },
+      "writePlanCounts": {
+        "variants": 2,
+        "ingredients": 2,
+        "additions": 0
+      }
+    },
+    "preSubmit": {
+      "action": "/admin/menu",
+      "menu_number": "99011",
+      "name": "__TAH_CANARY_CREATE_M3__",
+      "description": "Automated hidden create certification",
+      "price": "100",
+      "activeOmitted": true,
+      "categoryOk": true
+    },
+    "diffs": [],
+    "listStatus": "Skjult",
+    "publicAfter": {
+      "visibleName": false,
+      "visibleMenuNumber": false
+    },
+    "read": {
+      "menuNumber": "99011",
+      "name": "__TAH_CANARY_CREATE_M3__",
+      "description": "Automated hidden create certification",
+      "basePriceOre": 10000,
+      "categoryIds": [
+        "1"
+      ],
+      "variants": [
+        {
+          "name": "Alm.",
+          "priceOre": 0
+        },
+        {
+          "name": "Familie",
+          "priceOre": 8000
+        }
+      ],
+      "ingredients": [
+        "Test ingredient A",
+        "Test ingredient B"
+      ]
+    },
+    "name": "__TAH_CANARY_CREATE_M3__",
+    "menuNumber": "99011"
+  },
+  "multiCanary": {
+    "databaseId": "20",
+    "postObserved": true,
+    "responseStatus": 302,
+    "finalUrl": "https://veronipizza.dk/admin/menu",
+    "cookieHandling": {
+      "cookieBannerDismissed": false
+    },
+    "formCompleteness": {
+      "status": "VALID",
+      "submitReady": true,
+      "issues": [],
+      "instantiated": {
+        "variants": 5,
+        "ingredients": 2,
+        "additions": 0
+      },
+      "blueprintsIgnored": {
+        "variants": 0,
+        "ingredients": 0,
+        "additions": 0
+      },
+      "writePlanCounts": {
+        "variants": 5,
+        "ingredients": 2,
+        "additions": 0
+      }
+    },
+    "preSubmit": {
+      "action": "/admin/menu",
+      "menu_number": "99012",
+      "name": "__TAH_CANARY_CREATE_MULTI_M3__",
+      "description": "Automated hidden create certification",
+      "price": "100",
+      "activeOmitted": true,
+      "categoryOk": true
+    },
+    "diffs": [],
+    "listStatus": "Skjult",
+    "publicAfter": {
+      "visibleName": false,
+      "visibleMenuNumber": false
+    },
+    "read": {
+      "menuNumber": "99012",
+      "name": "__TAH_CANARY_CREATE_MULTI_M3__",
+      "description": "Automated hidden create certification",
+      "basePriceOre": 10000,
+      "categoryIds": [
+        "1"
+      ],
+      "variants": [
+        {
+          "name": "Alm.",
+          "priceOre": 0
+        },
+        {
+          "name": "Deep Pan",
+          "priceOre": 2000
+        },
+        {
+          "name": "Glutenfri",
+          "priceOre": 2500
+        },
+        {
+          "name": "Fuldkorn",
+          "priceOre": 1000
+        },
+        {
+          "name": "Familie",
+          "priceOre": 8000
+        }
+      ],
+      "ingredients": [
+        "Test ingredient A",
+        "Test ingredient B"
+      ]
+    },
+    "name": "__TAH_CANARY_CREATE_MULTI_M3__",
+    "menuNumber": "99012"
+  },
+  "certification": {
+    "createProduct": "CERTIFIED",
+    "createHiddenProduct": "CERTIFIED",
+    "writeDefaultVariant": "CERTIFIED",
+    "writeNonZeroVariants": "CERTIFIED",
+    "writeIngredients": "CERTIFIED",
+    "assignExistingCategory": "CERTIFIED",
+    "writeMultipleVariants": "CERTIFIED",
+    "createCategory": "UNCERTIFIED",
+    "writeAdditions": "UNCERTIFIED",
+    "imageUpload": "UNCERTIFIED",
+    "createAvailableProduct": "UNCERTIFIED",
+    "deleteProduct": "UNCERTIFIED",
+    "updateProduct": "UNCERTIFIED",
+    "setProductHidden": "UNCERTIFIED",
+    "setProductAvailable": "UNCERTIFIED"
+  },
+  "READY_FOR_REAL_MENU_DRY_RUN": false,
+  "note": "Synthetic create certified only. Do not import Veroni PDF automatically."
+}

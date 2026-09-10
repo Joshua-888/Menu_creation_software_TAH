@@ -1,2 +1,25 @@
-/** Planner / executor — implemented in Milestone 4. */
-export {};
+export {
+  freezeWritePlan,
+  assertWritePlanImmutable,
+  createMigrationWritePlan,
+  planCreateProduct,
+  planSkipProduct,
+  planBlockProduct,
+  planReviewProduct,
+  type WritePlanAction,
+  type WritePlanEntityType,
+  type ProductIdentityKey,
+  type PlannedProductPayload,
+  type WritePlanOperation,
+  type MigrationWritePlan,
+} from "./writePlan.js";
+export {
+  canTransitionOp,
+  compareProductExact,
+  resolveCreateResume,
+  executeMigrationPlan,
+  type DestinationPort,
+  type DestinationProduct,
+  type ExecutorGate,
+  type ExecuteResult,
+} from "./executor.js";

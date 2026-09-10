@@ -1,0 +1,21 @@
+{
+  "milestone": "M3F",
+  "result": "VERIFY_FAILED",
+  "errorClassification": "UPDATE_REQUEST_NOT_SENT",
+  "host": "veronipizza.dk",
+  "databaseId": "18",
+  "notes": [
+    "Update form correctly identified: form:has(#menu_number), action /admin/menu/18, _method=put, Opdater submit inside form",
+    "Zero-network FormData had description v2 and active omitted",
+    "Clicking Opdater once produced no matching POST /admin/menu/18 + _method=put",
+    "Button enabled, form.checkValidity true, no visible validation errors",
+    "No second click attempted",
+    "updateExistingProductForm and updatePersistBoundary remain UNCERTIFIED"
+  ],
+  "certification": {
+    "updatePersistBoundary": "UNCERTIFIED",
+    "updateProductDescription": "UNCERTIFIED",
+    "updateExistingProductForm": "UNCERTIFIED",
+    "updateProduct": "UNCERTIFIED"
+  }
+}

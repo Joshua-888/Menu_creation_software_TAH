@@ -62,12 +62,16 @@ describe("M2B AdminContract evidence levels", () => {
     expect(ADMIN_CONTRACT_V1.routes.menuEditPattern.evidence).toBe("OBSERVED");
   });
 
-  it("separates READ CERTIFIED from WRITE UNCERTIFIED", () => {
+  it("separates READ CERTIFIED from broad WRITE UNCERTIFIED (M3H/M3 create narrow caps CERTIFIED)", () => {
     const caps = ADMIN_CONTRACT_V1.capabilities;
     expect(caps.read.readProduct).toBe("CERTIFIED");
     expect(caps.read.listProducts).toBe("CERTIFIED");
-    expect(caps.write.createProduct).toBe("UNCERTIFIED");
+    expect(caps.write.createProduct).toBe("CERTIFIED");
+    expect(caps.write.createHiddenProduct).toBe("CERTIFIED");
+    expect(caps.write.writeAdditions).toBe("CERTIFIED");
     expect(caps.write.updateProduct).toBe("UNCERTIFIED");
+    expect(caps.write.updateExistingProductForm).toBe("CERTIFIED");
+    expect(caps.write.createCategory).toBe("UNCERTIFIED");
     expect(caps.write.setProductHidden).toBe("UNCERTIFIED");
     expect(caps.write.setProductAvailable).toBe("UNCERTIFIED");
     expect(() => assertNoWriteCapabilitiesCertified(caps)).not.toThrow();
@@ -123,7 +127,9 @@ describe("M2B variant surcharge equations", () => {
 });
 
 describe("M2B product list parsing", () => {
-  it("parses list rows and never treats menu number as database id", async () => {
+  it(
+    "parses list rows and never treats menu number as database id",
+    async () => {
     const browser = await chromium.launch({ headless: true });
     const page = await browser.newPage();
     await page.setContent(readFileSync(listFixture, "utf8"));
@@ -160,11 +166,15 @@ describe("M2B product list parsing", () => {
     });
     expect(products[0]!.menuNumber).not.toBe(products[0]!.databaseId);
     await browser.close();
-  });
+  },
+  30_000,
+);
 });
 
 describe("M2B readProduct edit-form isolation", () => {
-  it("reads update form fields and ignores delete form", async () => {
+  it(
+    "reads update form fields and ignores delete form",
+    async () => {
     const browser = await chromium.launch({ headless: true });
     const page = await browser.newPage();
     await page.route("**/admin/menu", async (route) => {
@@ -227,7 +237,9 @@ describe("M2B readProduct edit-form isolation", () => {
     expect(await page.getByRole("button", { name: /^Slet$/i }).count()).toBe(1);
 
     await browser.close();
-  });
+  },
+  30_000,
+);
 });
 
 describe("M2B create vs edit contract notes", () => {

@@ -1,0 +1,43 @@
+{
+  "milestone": "M3_ADDITIONS",
+  "status": "VERIFIED",
+  "databaseId": "21",
+  "menuNumber": "99013",
+  "postObserved": true,
+  "responseStatus": 302,
+  "completeness": {
+    "status": "VALID",
+    "submitReady": true,
+    "issues": [],
+    "instantiated": {
+      "variants": 1,
+      "ingredients": 1,
+      "additions": 2
+    },
+    "blueprintsIgnored": {
+      "variants": 0,
+      "ingredients": 0,
+      "additions": 0
+    },
+    "writePlanCounts": {
+      "variants": 1,
+      "ingredients": 1,
+      "additions": 2
+    }
+  },
+  "listStatus": "Skjult",
+  "publicAbsent": true,
+  "additions": [
+    {
+      "name": "Extra test A",
+      "priceOre": 1700
+    },
+    {
+      "name": "Extra test B",
+      "priceOre": 2900
+    }
+  ],
+  "certification": {
+    "writeAdditions": "CERTIFIED"
+  }
+}

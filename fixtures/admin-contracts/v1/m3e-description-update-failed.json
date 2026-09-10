@@ -1,0 +1,22 @@
+{
+  "milestone": "M3E_DESCRIPTION",
+  "result": "VERIFY_FAILED",
+  "host": "veronipizza.dk",
+  "databaseId": "18",
+  "authorizedChange": "description",
+  "expectedAfter": "Automated TakeAwayHero canary test v2",
+  "actualAfter": "Automated TakeAwayHero inactive canary test",
+  "semanticDiff": [],
+  "opdaterClickedOnce": true,
+  "blindRetry": false,
+  "certification": {
+    "updateProductDescription": "UNCERTIFIED",
+    "updateScalarProductField": "UNCERTIFIED",
+    "updateExistingProductForm": "CERTIFIED_PRIOR_BUT_QUESTIONED",
+    "note": "FormData preflight showed new description and active omitted; read-back description unchanged. No second Opdater without re-approval."
+  },
+  "visibility": {
+    "list": "Skjult",
+    "public": "absent"
+  }
+}

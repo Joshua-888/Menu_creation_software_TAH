@@ -1,0 +1,112 @@
+{
+  "milestone": "M3G",
+  "mutationRule": "ZERO_SERVER_MUTATIONS",
+  "formInspect": {
+    "form": {
+      "action": "https://veronipizza.dk/admin/menu/18",
+      "method": "POST",
+      "enctype": "multipart/form-data",
+      "_method": "put",
+      "hasCsrf": true,
+      "checkValidity": true
+    },
+    "button": {
+      "tag": "BUTTON",
+      "type": "submit",
+      "text": "Opdater",
+      "disabled": false,
+      "buttonFormIsUpdateForm": true,
+      "visible": true,
+      "boundingBox": {
+        "x": 528,
+        "y": 1243,
+        "w": 132.359375,
+        "h": 36
+      },
+      "elementFromPointTag": null,
+      "elementFromPointIsButtonOrChild": false,
+      "inViewport": false
+    }
+  },
+  "beforeClickBox": {
+    "x": 528,
+    "y": 664,
+    "width": 132.359375,
+    "height": 36
+  },
+  "playwrightClickError": null,
+  "matrix": {
+    "normalPlaywrightClick": {
+      "clickEvent": true,
+      "submitEvent": true,
+      "submitter": "Opdater",
+      "clickDefaultPrevented": false,
+      "preventDefaultCalls": [
+        {
+          "type": "submit",
+          "targetTag": "FORM",
+          "currentTag": "FORM"
+        }
+      ],
+      "classification": "C_CLICK_AND_SUBMIT_CONFIRMED",
+      "mutations": []
+    },
+    "requestSubmit": {
+      "submitEvent": true,
+      "submitter": "Opdater",
+      "submitterIsOpdater": true,
+      "formValid": true,
+      "action": "https://veronipizza.dk/admin/menu/18",
+      "method": "POST",
+      "mutations": []
+    }
+  },
+  "interpretation": "CLICK and requestSubmit both work → M3F request observer was probably wrong (FALSE_NEGATIVE_REQUEST_OBSERVER / multipart postData)",
+  "consoleErrors": [],
+  "pageErrors": [],
+  "unexpectedMutationRequests": [],
+  "m3fObserverAudit": {
+    "waitForRequestAttachedBeforeClick": true,
+    "usesForceClick": true,
+    "predicateRequires": [
+      "POST",
+      "pathname === /admin/menu/{id} (trailing slash stripped)",
+      "_method=put visible in request.postData()"
+    ],
+    "multipartRisk": "HIGH: Playwright request.postData() is often null/empty for multipart; isProductUpdateRequest then returns false → UPDATE_REQUEST_NOT_SENT false negative",
+    "pageOnceUnrelatedConsumer": false,
+    "notes": [
+      "Listener ordering in clickOpdaterAndObserveUpdate is correct (waitForRequest before click).",
+      "URL matcher strips trailing slash — unlikely false negative for /admin/menu/18.",
+      "Critical: multipart FormData bodies frequently yield empty postData(); matcher requires _method=put IN BODY → false negative if request fired.",
+      "M3F used force:true; this diagnostic also tests normal Playwright click with scrollIntoViewIfNeeded.",
+      "If submit event fires under local preventDefault, HTTP would fire without guard — UPDATE_REQUEST_NOT_SENT then implicates observer, not missing submit."
+    ]
+  },
+  "rootCause": "FORM_SUBMIT_EVENT_CONFIRMED_BOTH_PATHS",
+  "recommendedSubmissionMechanism": "A_PLAYWRIGHT_CLICK",
+  "productUnchanged": {
+    "exists": true,
+    "description": "Automated TakeAwayHero inactive canary test ss",
+    "descriptionMatchesExpectedBaseline": false,
+    "descriptionUnchangedDuringDiag": true,
+    "descriptionDriftBeforeDiag": {
+      "expected": "Automated TakeAwayHero inactive canary test",
+      "actual": "Automated TakeAwayHero inactive canary test ss",
+      "code": "BASELINE_DESCRIPTION_DRIFT"
+    },
+    "listStatus": "Tilgængelig",
+    "listSkjult": false,
+    "publicAbsent": false
+  },
+  "flakyTestNote": {
+    "code": "FLAKY_TEST_DETECTED",
+    "tests": [
+      "tests/contract/admin-contract-m2b.test.ts > parses list rows...",
+      "tests/contract/admin-contract-v1.test.ts > recognizes certified structure selectors"
+    ],
+    "observation": "Intermittent 5000ms Playwright launch/timeout failures under load; later full run passed (~2s).",
+    "recommendedFollowUp": "Replace arbitrary waits with deterministic readiness; raise testTimeout only if justified for chromium.launch + fixture setContent."
+  },
+  "READY_FOR_ONE_REAL_UPDATE": false
+}
