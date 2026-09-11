@@ -1,8 +1,13 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { getPortalStore, readJobArtifact } from "@engine/portal/index.js";
+import {
+  getPortalStore,
+  readJobArtifact,
+  reconcileJobStatusFromArtifacts,
+} from "@engine/portal/index.js";
 import { getCurrentEmployee } from "../../../lib/session";
 import { AppShell } from "../../../components/AppShell";
+import { JobStatusPoller } from "../../../components/JobStatusPoller";
 
 export default async function JobDetailPage({
   params,
@@ -14,6 +19,7 @@ export default async function JobDetailPage({
 
   const { id } = await params;
   const store = getPortalStore();
+  reconcileJobStatusFromArtifacts(id, store);
   const job = store.getJob(id);
   if (!job) notFound();
 
@@ -30,6 +36,7 @@ export default async function JobDetailPage({
 
   return (
     <AppShell employeeName={emp.name}>
+      <JobStatusPoller status={job.status} />
       <h1 className="page-title">{job.merchantName}</h1>
       <p className="page-sub">
         {job.destinationHost} · <span className="status-pill">{job.status}</span>

@@ -11,7 +11,7 @@ export {
 } from "./auth.js";
 export { PortalStore, getPortalStore, resetPortalStoreForTests } from "./store.js";
 export { submitReviewAnswer } from "./review.js";
-export { readJobArtifact } from "./artifacts.js";
+export { readJobArtifact, reconcileJobStatusFromArtifacts } from "./artifacts.js";
 export {
   portalDataDir,
   portalDbPath,
