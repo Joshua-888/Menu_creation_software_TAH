@@ -31,11 +31,13 @@
     "portal:dev": "next dev apps/portal -p 3000",
     "portal:build": "next build apps/portal",
     "portal:start": "node scripts/portal-start.mjs",
+    "build": "npm run portal:build",
+    "start": "npm run portal:start",
     "portal:seed": "tsx scripts/portal-seed-employee.ts",
     "test:portal": "vitest run tests/unit/portal"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

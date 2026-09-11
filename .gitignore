@@ -17,3 +17,7 @@ Thumbs.db
 .vscode/
 !.vscode/extensions.json
 *.tsbuildinfo
+
+.railway-bootstrap-local.txt
+railway-login-result.txt
+
