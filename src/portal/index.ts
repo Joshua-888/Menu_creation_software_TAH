@@ -13,6 +13,12 @@ export { PortalStore, getPortalStore, resetPortalStoreForTests } from "./store.j
 export { submitReviewAnswer } from "./review.js";
 export { readJobArtifact, reconcileJobStatusFromArtifacts } from "./artifacts.js";
 export {
+  evaluatePortalLiveWriteGate,
+  isPortalLiveWritesEnabled,
+  isDestinationHostAllowlistedForLiveWrites,
+  PORTAL_LIVE_WRITE_HOST_ALLOWLIST,
+} from "./liveWrites.js";
+export {
   portalDataDir,
   portalDbPath,
   uploadsDir,

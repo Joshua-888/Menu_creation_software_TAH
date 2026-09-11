@@ -71,7 +71,7 @@ describe("M2B AdminContract evidence levels", () => {
     expect(caps.write.writeAdditions).toBe("CERTIFIED");
     expect(caps.write.updateProduct).toBe("UNCERTIFIED");
     expect(caps.write.updateExistingProductForm).toBe("CERTIFIED");
-    expect(caps.write.createCategory).toBe("UNCERTIFIED");
+    expect(caps.write.createCategory).toBe("CERTIFIED");
     expect(caps.write.setProductHidden).toBe("UNCERTIFIED");
     expect(caps.write.setProductAvailable).toBe("UNCERTIFIED");
     expect(() => assertNoWriteCapabilitiesCertified(caps)).not.toThrow();
@@ -82,6 +82,18 @@ describe("M2B AdminContract evidence levels", () => {
         capabilities: caps,
       }),
     ).toBe(true);
+  });
+
+  it("M6.7 createCategory evidence is VERIFIED before CERTIFIED capability", () => {
+    const m67 = JSON.parse(
+      readFileSync(
+        join(root, "fixtures/admin-contracts/v1/m67-create-category-evidence.json"),
+        "utf8",
+      ),
+    ) as { status: string; createCategory: string; targetHost: string };
+    expect(m67.status).toBe("VERIFIED");
+    expect(m67.targetHost).toBe("veronipizza.dk");
+    expect(m67.createCategory).toMatch(/CERTIFIED/);
   });
 });
 

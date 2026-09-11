@@ -3,6 +3,7 @@ import type { AdapterCapabilities } from "../tah/contracts/evidence.js";
 import {
   createMigrationWritePlan,
   planBlockProduct,
+  planCreateCategory,
   planCreateProduct,
   planReviewProduct,
   planSkipProduct,
@@ -137,6 +138,13 @@ export function buildDryRunWritePlan(input: {
 
   const operations: WritePlanOperation[] = [];
   let opSeq = 0;
+  const pendingCategoryCreates = new Set<string>();
+  const createCategoryCertified =
+    input.capabilities.write.createCategory === "CERTIFIED";
+
+  function pendingCategoryToken(categoryName: string): string {
+    return `__resolve__:${categoryName.trim()}`;
+  }
 
   for (const category of input.canonical.categories) {
     const mapping = catBySource.get(category.sourceId);
@@ -198,6 +206,17 @@ export function buildDryRunWritePlan(input: {
             }),
           );
           continue;
+        } else if (
+          createCategoryCertified &&
+          (pm.outcome === "MISSING_DESTINATION_CATEGORY" ||
+            pm.outcome === "SOURCE_STRUCTURE_PLACEHOLDER")
+        ) {
+          effectiveMapping = {
+            sourceCategoryId: category.sourceId,
+            sourceCategoryName: category.name,
+            outcome: "MISSING_DESTINATION_CATEGORY",
+            reason: pm.reason,
+          };
         } else {
           operations.push(
             planBlockProduct({
@@ -211,32 +230,65 @@ export function buildDryRunWritePlan(input: {
         }
       }
 
-      const identity = {
-        ...identityBase,
-        ...(effectiveMapping?.destinationCategoryId
-          ? { categoryHint: effectiveMapping.destinationCategoryId }
-          : {}),
-      };
-
-      // Capability / destination-category blocks take precedence over source REVIEW
-      // so Pasta (etc.) stays visible as createCategory-dependent even when also
-      // temporarily source-review.
       if (
         !effectiveMapping ||
-        effectiveMapping.outcome === "MISSING_DESTINATION_CATEGORY" ||
         effectiveMapping.outcome === "AMBIGUOUS_MATCH" ||
         effectiveMapping.outcome === "SOURCE_STRUCTURE_PLACEHOLDER"
       ) {
         operations.push(
           planBlockProduct({
             operationId,
-            identity,
+            identity: identityBase,
             reason: `category mapping ${effectiveMapping?.outcome ?? "missing"}; createCategory UNCERTIFIED`,
             missingCapabilities: ["createCategory"],
           }),
         );
         continue;
       }
+
+      if (effectiveMapping.outcome === "MISSING_DESTINATION_CATEGORY") {
+        if (!createCategoryCertified) {
+          operations.push(
+            planBlockProduct({
+              operationId,
+              identity: identityBase,
+              reason:
+                "category mapping MISSING_DESTINATION_CATEGORY; createCategory UNCERTIFIED",
+              missingCapabilities: ["createCategory"],
+            }),
+          );
+          continue;
+        }
+        const catName = effectiveMapping.sourceCategoryName || category.name;
+        if (!pendingCategoryCreates.has(category.sourceId)) {
+          pendingCategoryCreates.add(category.sourceId);
+          opSeq += 1;
+          operations.push(
+            planCreateCategory({
+              operationId: `dry-cat-${opSeq}`,
+              sourceId: category.sourceId,
+              name: catName,
+              requiredCapabilities: ["createCategory"],
+              reason:
+                "destination category missing; createCategory CERTIFIED",
+            }),
+          );
+        }
+        effectiveMapping = {
+          ...effectiveMapping,
+          outcome: "SAFE_MAPPED_MATCH",
+          destinationCategoryId: pendingCategoryToken(catName),
+          destinationCategoryName: catName,
+          reason: `${effectiveMapping.reason}; pending createCategory`,
+        };
+      }
+
+      const identity = {
+        ...identityBase,
+        ...(effectiveMapping.destinationCategoryId
+          ? { categoryHint: effectiveMapping.destinationCategoryId }
+          : {}),
+      };
 
       if (
         product.status === "BLOCKED" ||
@@ -258,12 +310,15 @@ export function buildDryRunWritePlan(input: {
 
       const menuForMatch =
         product.assignedMenuNumber ?? product.sourceMenuNumber;
+      const resolvedCatHint =
+        effectiveMapping.destinationCategoryId &&
+        !effectiveMapping.destinationCategoryId.startsWith("__resolve__:")
+          ? effectiveMapping.destinationCategoryId
+          : undefined;
       const match = matchDestinationByEvidence(destCatalog, {
         ...(menuForMatch ? { menuNumber: menuForMatch } : {}),
         name: product.name,
-        ...(effectiveMapping.destinationCategoryId
-          ? { categoryHint: effectiveMapping.destinationCategoryId }
-          : {}),
+        ...(resolvedCatHint ? { categoryHint: resolvedCatHint } : {}),
       });
 
       if (match.outcome === "AMBIGUOUS") {
@@ -396,6 +451,9 @@ export function summarizeSourceDryRun(plan: MigrationWritePlan): {
   let DESTINATION_INTERNAL_TEST_RECORDS = 0;
 
   for (const op of plan.operations) {
+    if (op.entityType === "category") {
+      continue;
+    }
     if (
       op.action === "SKIP" &&
       (op.identity.name?.startsWith("__TAH_CANARY_") ||

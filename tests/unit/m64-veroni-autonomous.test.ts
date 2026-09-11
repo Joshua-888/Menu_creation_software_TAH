@@ -281,7 +281,7 @@ describe("M6.4 Veroni autonomous decision pass", () => {
     expect(det?.status).toBe("AUTO_RESOLVED_DETERMINISTIC");
     expect(det?.explanation).toMatch(/capability-gated|Pasta/i);
     expect(ADMIN_CONTRACT_V1.capabilities.write.createCategory).toBe(
-      "UNCERTIFIED",
+      "CERTIFIED",
     );
   });
 

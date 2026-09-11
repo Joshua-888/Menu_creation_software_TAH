@@ -81,6 +81,8 @@ export const VERONI_CANARY_TARGET = {
 export const CANARY_NAMES = {
   /** Not used in M3 resume — category create out of scope */
   category: "__TAH_CANARY_M3__",
+  /** M6.7 createCategory certification (synthetic only) */
+  categoryCreate: "__TAH_CANARY_CATEGORY_M67__",
   product: "__TAH_CANARY_PRODUCT_M3__",
   productNonZero: "__TAH_CANARY_VARIANT_M3__",
   productMulti: "__TAH_CANARY_MULTIVARIANT_M3__",

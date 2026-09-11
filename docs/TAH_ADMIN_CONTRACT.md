@@ -30,7 +30,7 @@ Critical elements carry `OBSERVED` | `TESTED` | `INFERRED` | `UNKNOWN` | `HUMAN_
 - `activePersistRequiresOpdater` / `editPersistRequiresOpdater`: **HUMAN_CONFIRMED** — see below
 - `dynamicRowCompletenessRequired`: **HUMAN_CONFIRMED** — every instantiated variant/ingredient/addition row must be complete or removed before Skab/Opdater
 - `activeReadSemantics`: NEW WAY **TESTED** checked↔Tilgængelig; Veroni product 18 read remains **EDIT_CHECKBOX_NOT_AUTHORITATIVE** (list/storefront preferred) — likely render inconsistency, **do not invert**
-- WRITE: M3H CERTIFIED narrow Opdater path (`updateExistingProductForm`, `updatePersistBoundary`, `updateProductDescription`, `updateScalarProductField`). M3 CREATE CERTIFIED (`createProduct`, `createHiddenProduct`, `writeDefaultVariant`, `writeNonZeroVariants`, `writeMultipleVariants`, `writeIngredients`, `assignExistingCategory`, `writeAdditions`). Still **UNCERTIFIED**: `createCategory`, full `updateProduct`, image, `setProductHidden`, `setProductAvailable`.
+- WRITE: M3H CERTIFIED narrow Opdater path (`updateExistingProductForm`, `updatePersistBoundary`, `updateProductDescription`, `updateScalarProductField`). M3 CREATE CERTIFIED (`createProduct`, `createHiddenProduct`, `writeDefaultVariant`, `writeNonZeroVariants`, `writeMultipleVariants`, `writeIngredients`, `assignExistingCategory`, `writeAdditions`). M6.7 CERTIFIED: `createCategory` (Veroni synthetic canary). Still **UNCERTIFIED**: full `updateProduct`, image, `setProductHidden`, `setProductAvailable`.
 
 ## Aktiv? intended mapping (`HUMAN_CONFIRMED`)
 

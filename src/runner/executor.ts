@@ -49,6 +49,18 @@ export type DestinationPort = {
     databaseId?: string;
     error?: string;
   }>;
+  /** Optional: create a destination category (M6.7+). */
+  createCategory?(input: {
+    name: string;
+    sourceId?: string;
+    allowCustomerCategory?: boolean;
+  }): Promise<{
+    outcome: "CREATED" | "EXISTS" | "FAILED";
+    databaseId?: string;
+    error?: string;
+  }>;
+  /** Optional: list categories for `__resolve__:Name` tokens after create. */
+  listCategories?(): Promise<Array<{ databaseId: string; name: string }>>;
 };
 
 export type ExecutorGate = {
@@ -392,6 +404,25 @@ export async function executeMigrationPlan(input: {
       continue;
     }
 
+    if (op.entityType === "category" && op.action === "CREATE") {
+      await processCategoryCreateOp({
+        plan,
+        op,
+        store,
+        destination,
+        onVerified: () => {
+          verified += 1;
+        },
+        onFailed: () => {
+          failed += 1;
+        },
+        onBlocked: () => {
+          blocked += 1;
+        },
+      });
+      continue;
+    }
+
     if (op.action !== "CREATE" || !op.expectedPayload) {
       blocked += 1;
       continue;
@@ -435,6 +466,118 @@ export async function executeMigrationPlan(input: {
   };
 }
 
+async function processCategoryCreateOp(input: {
+  plan: MigrationWritePlan;
+  op: WritePlanOperation;
+  store: RunStore;
+  destination: DestinationPort;
+  onVerified: () => void;
+  onFailed: () => void;
+  onBlocked: () => void;
+}): Promise<void> {
+  const { plan, op, store, destination } = input;
+  const rec = store.getOperation(plan.runId, op.operationId)!;
+  if (rec.state === "VERIFIED") {
+    input.onVerified();
+    return;
+  }
+  const name = op.identity.name?.trim();
+  if (!name) {
+    store.upsertOperation({
+      ...rec,
+      state: "BLOCKED",
+      lastErrorMessage: "category CREATE missing name",
+      updatedAt: now(),
+    });
+    input.onBlocked();
+    return;
+  }
+  if (!destination.createCategory) {
+    store.upsertOperation({
+      ...rec,
+      state: "BLOCKED",
+      lastErrorMessage: "destination port does not support createCategory",
+      updatedAt: now(),
+    });
+    input.onBlocked();
+    return;
+  }
+
+  if (destination.listCategories) {
+    const existing = await destination.listCategories();
+    const hit = existing.find(
+      (c) => c.name.trim().toLowerCase() === name.toLowerCase(),
+    );
+    if (hit) {
+      store.upsertOperation({
+        ...rec,
+        destinationId: hit.databaseId,
+        state: "VERIFIED",
+        updatedAt: now(),
+      });
+      input.onVerified();
+      return;
+    }
+  }
+
+  const allowCustomer = !/^__TAH_CANARY_/i.test(name);
+  const result = await destination.createCategory({
+    name,
+    sourceId: op.identity.sourceId,
+    allowCustomerCategory: allowCustomer,
+  });
+  if (result.outcome === "FAILED" || !result.databaseId) {
+    store.upsertOperation({
+      ...rec,
+      state: "WRITE_FAILED",
+      lastErrorCategory: "ADMIN_WRITE_ERROR",
+      lastErrorMessage: result.error ?? "createCategory failed",
+      updatedAt: now(),
+    });
+    input.onFailed();
+    return;
+  }
+  store.upsertOperation({
+    ...rec,
+    destinationId: result.databaseId,
+    state: "VERIFIED",
+    updatedAt: now(),
+  });
+  input.onVerified();
+}
+
+async function resolveCategoryIds(
+  destination: DestinationPort,
+  categoryIds: string[],
+): Promise<{ ok: true; ids: string[] } | { ok: false; error: string }> {
+  const out: string[] = [];
+  for (const id of categoryIds) {
+    if (!id.startsWith("__resolve__:")) {
+      out.push(id);
+      continue;
+    }
+    const name = id.slice("__resolve__:".length).trim();
+    if (!destination.listCategories) {
+      return {
+        ok: false,
+        error: `cannot resolve pending category "${name}" — listCategories missing`,
+      };
+    }
+    const cats = await destination.listCategories();
+    const hit = cats.find(
+      (c) => c.name.trim().toLowerCase() === name.toLowerCase(),
+    );
+    if (!hit) {
+      return {
+        ok: false,
+        error: `pending category "${name}" not found after createCategory`,
+      };
+    }
+    out.push(hit.databaseId);
+  }
+  return { ok: true, ids: out };
+}
+
 async function processCreateOp(input: {
   plan: MigrationWritePlan;
   op: WritePlanOperation;
@@ -448,12 +591,31 @@ async function processCreateOp(input: {
 }): Promise<void> {
   const { plan, op, store, destination, maxAttempts } = input;
   let rec = store.getOperation(plan.runId, op.operationId)!;
-  const expected = op.expectedPayload!;
+  const rawExpected = op.expectedPayload!;
 
   if (rec.state === "VERIFIED") {
     input.onVerified();
     return;
   }
+
+  const resolved = await resolveCategoryIds(
+    destination,
+    rawExpected.categoryIds,
+  );
+  if (!resolved.ok) {
+    store.upsertOperation({
+      ...rec,
+      state: "BLOCKED",
+      lastErrorMessage: resolved.error,
+      updatedAt: now(),
+    });
+    input.onBlocked();
+    return;
+  }
+  const expected: PlannedProductPayload = {
+    ...rawExpected,
+    categoryIds: resolved.ids,
+  };
 
   const identity: ProductIdentityKey = {
     ...op.identity,

@@ -30,6 +30,9 @@ export type JobStatus =
   | "ARTIFACTS"
   | "AWAITING_REVIEW"
   | "READY_DRY_RUN"
+  | "WRITING"
+  | "COMPLETED"
+  | "COMPLETED_WITH_ERRORS"
   | "SOURCE_URL_PENDING"
   | "FAILED"
   | "CANCELLED";

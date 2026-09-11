@@ -72,7 +72,12 @@ export interface TahAdminAdapter {
     menuNumber?: string;
     name?: string;
   }): Promise<unknown | null>;
-  createCategory(input: { name: string }): Promise<{ destinationId: string }>;
+  createCategory(input: {
+    name: string;
+    order?: number;
+    /** Required for non-canary (customer) category names such as Pasta. */
+    allowCustomerCategory?: boolean;
+  }): Promise<{ destinationId: string }>;
   createProduct(input: CanonicalProduct): Promise<{ destinationId: string }>;
   updateProduct(
     destinationId: string,

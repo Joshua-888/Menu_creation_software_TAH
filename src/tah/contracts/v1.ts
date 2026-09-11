@@ -419,7 +419,7 @@ export const ADMIN_CONTRACT_V1 = {
     "M2B certified READ against NEW WAY; WRITE remains UNCERTIFIED.",
     "variantPriceSemantics=SURCHARGE (TESTED).",
     "M3 Veroni canary BLOCKED: create #active defaults checked (CANARY_PUBLIC_VISIBILITY_RISK).",
-    "HUMAN_CONFIRMED: intended Aktiv? mapping checked=AVAILABLE / unchecked=HIDDEN; all edit fields require Opdater; Skab≠Opdater; M3H update caps CERTIFIED; M3 CREATE + writeAdditions CERTIFIED (hidden canaries); createCategory/image/setProductHidden/setProductAvailable/updateProduct remain UNCERTIFIED.",
+    "HUMAN_CONFIRMED: intended Aktiv? mapping checked=AVAILABLE / unchecked=HIDDEN; all edit fields require Opdater; Skab≠Opdater; M3H update caps CERTIFIED; M3 CREATE + writeAdditions CERTIFIED (hidden canaries); M6.7 createCategory CERTIFIED (synthetic canary); image/setProductHidden/setProductAvailable/updateProduct remain UNCERTIFIED.",
     "HUMAN_CONFIRMED: DYNAMIC_ROW_COMPLETENESS_REQUIRED — every instantiated row complete or removed; multiple complete rows valid; variant names open-ended (no whitelist); expected collections from WritePlan only; never invent row data.",
     "HUMAN_CONFIRMED (M3H): cookie/consent overlays may block Skab/Opdater — dismiss safely and verify interactability; never force-click through overlays.",
   ],

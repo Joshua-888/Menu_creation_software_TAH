@@ -30,7 +30,12 @@ export async function dismissKnownCookieBanner(page: Page): Promise<boolean> {
   if ((await btn.count()) === 0) return false;
   try {
     await btn.first().click({ timeout: 3_000 });
-    await page.waitForTimeout(200);
+    await page
+      .locator(".js-cookie-consent, .cookie-consent, [class*='cookie-consent']")
+      .first()
+      .waitFor({ state: "hidden", timeout: 5_000 })
+      .catch(() => undefined);
+    await page.waitForTimeout(300);
     return true;
   } catch {
     return false;

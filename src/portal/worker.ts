@@ -1,6 +1,6 @@
 /**
  * Migration worker — extract → domain → decisions/questions → dry-run artifacts.
- * Hard rule: no live TakeAwayHero admin writes.
+ * Live admin writes only when PORTAL_LIVE_WRITES=1 + allowlisted host.
  */
 
 import { mkdirSync, writeFileSync } from "node:fs";
@@ -18,15 +18,20 @@ import {
   summarizeDryRun,
   summarizeSourceDryRun,
 } from "../planning/index.js";
-import { DEFAULT_ADAPTER_CAPABILITIES } from "../tah/contracts/evidence.js";
+import { M2B_ADAPTER_CAPABILITIES } from "../tah/contracts/evidence.js";
 import {
   buildAdminContractFingerprint,
   TAH_V1_STRUCTURE_FINGERPRINT_INPUT,
 } from "../tah/contracts/fingerprint.js";
 import { ADMIN_CONTRACT_VERSION } from "../tah/contracts/v1.js";
-import { jobRunDir } from "./paths.js";
+import {
+  executePortalLiveWrites,
+  portalLiveRunsDbPath,
+} from "./liveExecute.js";
+import { evaluatePortalLiveWriteGate } from "./liveWrites.js";
+import { jobRunDir, portalDataDir } from "./paths.js";
 import { getPortalStore, type PortalStore } from "./store.js";
-import type { JobMetrics, MigrationJob } from "./types.js";
+import type { JobMetrics, JobStatus, MigrationJob } from "./types.js";
 
 export { readJobArtifact } from "./artifacts.js";
 
@@ -251,19 +256,19 @@ export async function runMigrationJob(
       canonical: domain.menu,
       categoryMappings,
       destination: emptyDest,
-      capabilities: DEFAULT_ADAPTER_CAPABILITIES,
+      capabilities: M2B_ADAPTER_CAPABILITIES,
     });
 
     writeJson(outDir, "dry-run-writeplan.json", plan);
+    const liveGate = evaluatePortalLiveWriteGate({
+      destinationHost: job.destinationHost,
+    });
     writeJson(outDir, "dry-run-summary.json", {
       ...summarizeDryRun(plan),
       source: summarizeSourceDryRun(plan),
-      liveWriteBlocked: true,
-      liveWriteBlockers: [
-        "createCategory not certified",
-        "executor not bound to portal",
-        "MVP dry-run only",
-      ],
+      liveWriteBlocked: !liveGate.canLiveExecute,
+      liveWriteBlockers: liveGate.blockers,
+      liveWritesFlag: liveGate.enabled,
       adminContractVersion: ADMIN_CONTRACT_VERSION,
     });
     const dryCounts = summarizeDryRun(plan);
@@ -280,8 +285,48 @@ export async function runMigrationJob(
       finishedAt: new Date().toISOString(),
     });
 
-    const finalStatus =
+    let finalStatus: JobStatus =
       created.length > 0 ? "AWAITING_REVIEW" : "READY_DRY_RUN";
+
+    if (liveGate.canLiveExecute && created.length === 0) {
+      try {
+        store.updateJobStatus(jobId, "WRITING");
+        const live = await executePortalLiveWrites({
+          runId: `live-${runStub.id}`,
+          restaurant: job.restaurantKey,
+          destinationHost: job.destinationHost,
+          source: pdf.originalName,
+          schemaVersion: CANONICAL_MENU_SCHEMA_VERSION,
+          domainRuleVersion: DOMAIN_RULE_ENGINE_VERSION,
+          adapterVersion: adapter.extractorVersion,
+          contractFingerprint: fingerprint.fingerprint,
+          canonical: domain.menu,
+          runsDbPath: portalLiveRunsDbPath(portalDataDir()),
+        });
+        writeJson(outDir, "live-writeplan.json", live.livePlan);
+        writeJson(outDir, "live-destination-snapshot.json", live.destination);
+        writeJson(outDir, "live-execute-result.json", live.result);
+        finalStatus =
+          live.result.failed + live.result.blocked > 0
+            ? "COMPLETED_WITH_ERRORS"
+            : "COMPLETED";
+      } catch (liveErr) {
+        const message =
+          liveErr instanceof Error ? liveErr.message : String(liveErr);
+        writeJson(outDir, "live-execute-error.json", {
+          message,
+          at: new Date().toISOString(),
+        });
+        finalStatus = "READY_DRY_RUN";
+        store.updateJobStatus(jobId, finalStatus, {
+          remainingQuestions: 0,
+          errorMessage: `Live write failed (dry-run kept): ${message}`,
+        });
+        store.finishJobRun(runStub.id, finalStatus, metrics, message);
+        return;
+      }
+    }
+
     store.updateJobStatus(jobId, finalStatus, {
       remainingQuestions: created.length,
       errorMessage: null,

@@ -28,6 +28,7 @@
     "m64:veroni": "tsx scripts/m64-veroni-autonomous.ts",
     "m65:veroni": "tsx scripts/m65-veroni-decision-lock.ts",
     "m66:veroni": "tsx scripts/m66-veroni-validation-cleanup.ts",
+    "m67:category": "tsx scripts/m67-veroni-create-category-cert.ts",
     "portal:dev": "next dev apps/portal -p 3000",
     "portal:build": "next build apps/portal",
     "portal:start": "node scripts/portal-start.mjs",

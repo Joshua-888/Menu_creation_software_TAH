@@ -1,20 +1,4 @@
 export {
-  freezeWritePlan,
-  assertWritePlanImmutable,
-  createMigrationWritePlan,
-  planCreateProduct,
-  planSkipProduct,
-  planBlockProduct,
-  planReviewProduct,
-  planUpdateProduct,
-  type WritePlanAction,
-  type WritePlanEntityType,
-  type ProductIdentityKey,
-  type PlannedProductPayload,
-  type WritePlanOperation,
-  type MigrationWritePlan,
-} from "./writePlan.js";
-export {
   canTransitionOp,
   compareProductExact,
   resolveCreateResume,
@@ -27,3 +11,24 @@ export {
   type ExecutorGate,
   type ExecuteResult,
 } from "./executor.js";
+export {
+  createTahPlaywrightDestinationPort,
+  type TahDestinationPortOptions,
+} from "./tahDestinationPort.js";
+export {
+  freezeWritePlan,
+  assertWritePlanImmutable,
+  createMigrationWritePlan,
+  planCreateProduct,
+  planCreateCategory,
+  planSkipProduct,
+  planBlockProduct,
+  planReviewProduct,
+  planUpdateProduct,
+  type WritePlanAction,
+  type WritePlanEntityType,
+  type ProductIdentityKey,
+  type PlannedProductPayload,
+  type WritePlanOperation,
+  type MigrationWritePlan,
+} from "./writePlan.js";

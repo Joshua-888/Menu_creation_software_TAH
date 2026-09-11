@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import {
+  evaluatePortalLiveWriteGate,
   getPortalStore,
   readJobArtifact,
   reconcileJobStatusFromArtifacts,
@@ -32,7 +33,14 @@ export default async function JobDetailPage({
     string,
     unknown
   > | null;
+  const liveResult = readJobArtifact(id, "live-execute-result.json") as Record<
+    string,
+    unknown
+  > | null;
   const remaining = store.listOpenQuestions(id);
+  const liveGate = evaluatePortalLiveWriteGate({
+    destinationHost: job.destinationHost,
+  });
 
   return (
     <AppShell employeeName={emp.name}>
@@ -42,13 +50,35 @@ export default async function JobDetailPage({
         {job.destinationHost} · <span className="status-pill">{job.status}</span>
       </p>
 
-      <div className="blocker">
-        <strong>Live admin write controls are disabled.</strong>
-        <div className="muted">
-          Blockers: createCategory not certified · executor not bound · portal
-          MVP is dry-run only.
+      {liveGate.canLiveExecute ? (
+        <div className="panel">
+          <h2>Live writes enabled</h2>
+          <p className="muted">
+            PORTAL_LIVE_WRITES=1 and host allowlisted. After review clears, the
+            worker loads a real destination snapshot and runs the executor.
+          </p>
+          {liveResult ? (
+            <pre
+              style={{
+                whiteSpace: "pre-wrap",
+                fontSize: "0.85rem",
+                margin: 0,
+              }}
+            >
+              {JSON.stringify(liveResult, null, 2)}
+            </pre>
+          ) : (
+            <p className="muted">No live execute result yet for this job.</p>
+          )}
         </div>
-      </div>
+      ) : (
+        <div className="blocker">
+          <strong>Live admin write controls are disabled.</strong>
+          <div className="muted">
+            Blockers: {liveGate.blockers.join(" · ") || "dry-run default"}
+          </div>
+        </div>
+      )}
 
       {job.errorMessage ? (
         <div className="panel">
@@ -61,6 +91,7 @@ export default async function JobDetailPage({
         <h2>Progress</h2>
         <p className="muted">
           extract → domain → decisions → dry-run artifacts
+          {liveGate.canLiveExecute ? " → gated live execute" : ""}
         </p>
         <div className="metrics">
           <div className="metric">

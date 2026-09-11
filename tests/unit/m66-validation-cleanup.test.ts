@@ -250,7 +250,7 @@ describe("M6.6 source validation cleanup", () => {
     expect(maps[0]!.outcome).toBe("MISSING_DESTINATION_CATEGORY");
   });
 
-  it("source-ready vs capability-block: Pasta READY products still BLOCK on createCategory", () => {
+  it("source-ready vs capability-block: Pasta READY products CREATE when createCategory CERTIFIED", () => {
     const canon: CanonicalMenu = {
       restaurantName: "Veroni",
       categories: [
@@ -321,9 +321,14 @@ describe("M6.6 source validation cleanup", () => {
       ["33", "34", "35"].includes(o.identity.menuNumber ?? ""),
     );
     expect(pastaOps).toHaveLength(3);
-    expect(pastaOps.every((o) => o.action === "BLOCK")).toBe(true);
+    expect(pastaOps.every((o) => o.action === "CREATE")).toBe(true);
     expect(
-      pastaOps.every((o) => o.missingCapabilities?.includes("createCategory")),
+      plan.operations.some(
+        (o) =>
+          o.entityType === "category" &&
+          o.action === "CREATE" &&
+          o.identity.name === "Pasta",
+      ),
     ).toBe(true);
     expect(categoryExpectsListedIngredients("Pasta")).toBe(false);
   });

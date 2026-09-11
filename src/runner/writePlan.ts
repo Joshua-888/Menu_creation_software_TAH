@@ -154,6 +154,33 @@ export function planCreateProduct(input: {
   };
 }
 
+export function planCreateCategory(input: {
+  operationId: string;
+  sourceId: string;
+  name: string;
+  requiredCapabilities?: string[];
+  missingCapabilities?: string[];
+  reason?: string;
+}): WritePlanOperation {
+  return {
+    operationId: input.operationId,
+    entityType: "category",
+    action: "CREATE",
+    identity: {
+      sourceId: input.sourceId,
+      name: input.name,
+    },
+    expectedPayload: null,
+    ...(input.reason ? { reason: input.reason } : {}),
+    ...(input.requiredCapabilities
+      ? { requiredCapabilities: input.requiredCapabilities }
+      : {}),
+    ...(input.missingCapabilities
+      ? { missingCapabilities: input.missingCapabilities }
+      : {}),
+  };
+}
+
 export function planSkipProduct(input: {
   operationId: string;
   identity: ProductIdentityKey;

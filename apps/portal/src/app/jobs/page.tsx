@@ -19,8 +19,8 @@ export default async function JobsPage() {
         </h1>
         <p className="page-sub" style={{ marginBottom: 0 }}>
           Menu migrations for merchants moving onto TakeAwayHero ordering.
-          Dry-run only — live admin writes stay blocked until createCategory /
-          executor certification.
+          Dry-run by default — set PORTAL_LIVE_WRITES=1 on an allowlisted host
+          (veronipizza.dk) to enable gated live admin writes.
         </p>
       </section>
 

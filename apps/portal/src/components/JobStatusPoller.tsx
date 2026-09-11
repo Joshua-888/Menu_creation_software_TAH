@@ -9,6 +9,7 @@ const IN_FLIGHT = new Set([
   "DOMAIN",
   "DECISIONS",
   "ARTIFACTS",
+  "WRITING",
 ]);
 
 /** Poll job detail while the worker is still running. */

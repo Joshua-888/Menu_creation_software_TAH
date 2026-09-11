@@ -109,7 +109,8 @@ export const M2B_ADAPTER_CAPABILITIES: AdapterCapabilities = {
     readAdditions: "CERTIFIED",
   },
   write: {
-    createCategory: "UNCERTIFIED",
+    /** M6.7 Veroni canary __TAH_CANARY_CATEGORY_M67__ — POST /admin/categories + list read-back */
+    createCategory: "CERTIFIED",
     createProduct: "CERTIFIED",
     updateProduct: "UNCERTIFIED",
     /** M3H Veroni canary 18: Opdater + POST /admin/menu/18 + description read-back */
@@ -132,15 +133,14 @@ export const M2B_ADAPTER_CAPABILITIES: AdapterCapabilities = {
 
 /** Broad / dangerous writes that must stay UNCERTIFIED until dedicated cert. */
 const BROAD_WRITE_CAPS_MUST_STAY_UNCERTIFIED = [
-  "createCategory",
   "updateProduct",
   "setProductHidden",
   "setProductAvailable",
 ] as const;
 
 /**
- * After M3H, narrow description/scalar Opdater caps may be CERTIFIED.
- * Broad create/full-update/visibility writes must remain UNCERTIFIED.
+ * After M3H/M6.7, narrow createCategory + create/update Opdater caps may be CERTIFIED.
+ * Broad full-update/visibility writes must remain UNCERTIFIED.
  */
 export function assertNoWriteCapabilitiesCertified(
   caps: AdapterCapabilities,

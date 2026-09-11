@@ -16,7 +16,7 @@ See [PLAN.md](PLAN.md) and [AGENTS.md](AGENTS.md).
 
 ## Operator Portal — deploy & invite employees
 
-Internal TakeAwayHero employee web app for merchant menu migrations (PDF upload + optional source URL). **Dry-run only** — no live admin writes until createCategory / executor certification.
+Internal TakeAwayHero employee web app for merchant menu migrations (PDF upload + optional source URL). **Dry-run is the default.** Live admin writes require an explicit env flag (see below).
 
 ### Local
 
@@ -34,6 +34,17 @@ Pre-push ship gate (no Playwright browsers / no heavy PDF OCR suite):
 ```bash
 npm run check:ship
 ```
+
+### Live writes (gated)
+
+Dry-run remains the default. To unlock live executor writes against an allowlisted host:
+
+1. Certify createCategory canary on Veroni: `npm run m67:category` (needs `TAH_ADMIN_*` in `.env`)
+2. Set `PORTAL_LIVE_WRITES=1`
+3. Destination host must be allowlisted (`veronipizza.dk` for this milestone)
+4. Provide `TAH_ADMIN_EMAIL` / `TAH_ADMIN_PASSWORD` for Playwright admin session
+
+Without the flag, the portal only writes dry-run artifacts. Customer Pasta create uses `allowCustomerCategory: true` at the executor call site after the canary gate.
 
 Heavy Veroni PDF extraction tests (optional, slow):
 
@@ -55,6 +66,7 @@ npm run portal:seed -- --email colleague@takeawayhero.example --password '…' -
    - `PORTAL_DATA_DIR=/data/portal`
    - `PORTAL_SESSION_SECRET` (long random, min 16 chars) — **required** or the app will not boot pages in production
    - `ADMIN_BOOTSTRAP_EMAIL` / `ADMIN_BOOTSTRAP_PASSWORD`
+   - Leave `PORTAL_LIVE_WRITES` unset unless intentionally enabling gated live writes
 4. Prefer a **single running instance** while the portal uses local SQLite on the volume.
 5. Open `https://<railway-url>/login` with personal credentials.
 
@@ -67,6 +79,7 @@ Portal code: `apps/portal/` (Next.js) + `src/portal/` (auth, jobs, worker). Engi
 | `npm run portal:dev` | Next.js portal on :3000 |
 | `npm run portal:build` / `portal:start` | Production portal |
 | `npm run portal:seed` | Bootstrap / add employees |
+| `npm run m67:category` | Veroni createCategory canary certification |
 | `npm run test:portal` | Portal unit/API smoke tests |
 
 ## Setup

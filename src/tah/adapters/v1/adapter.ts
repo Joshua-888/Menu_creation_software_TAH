@@ -18,6 +18,13 @@ import {
   probeAdminContract,
 } from "../../probe/contractProbe.js";
 import {
+  clickSkabAndObserveCategoryCreate,
+  isTahCanaryCategoryName,
+} from "../../write/categoryCreateObserve.js";
+import {
+  assertPageIsVeroniAdmin,
+} from "../../write/formFill.js";
+import {
   extractCategoryRows,
   extractProductEdit,
   extractProductListRows,
@@ -282,8 +289,67 @@ export class TahAdminAdapterV1 implements TahAdminAdapter {
     };
   }
 
-  async createCategory(_input: { name: string }): Promise<{ destinationId: string }> {
-    throw mutationBlocked("createCategory");
+  async createCategory(input: {
+    name: string;
+    order?: number;
+    allowCustomerCategory?: boolean;
+  }): Promise<{ destinationId: string }> {
+    if (this.capabilities.write.createCategory !== "CERTIFIED") {
+      throw mutationBlocked("createCategory");
+    }
+    const name = input.name.trim();
+    if (!name) {
+      throw new Error("ADMIN_WRITE_BLOCKED: createCategory requires a non-empty name");
+    }
+    if (!isTahCanaryCategoryName(name) && !input.allowCustomerCategory) {
+      throw new Error(
+        "ADMIN_WRITE_BLOCKED: createCategory refuses non-canary names unless allowCustomerCategory: true",
+      );
+    }
+
+    const { page, baseUrl } = this.options;
+
+    const before = await this.listCategories();
+    const preexisting = before.find(
+      (c) => c.name.trim().toLowerCase() === name.toLowerCase(),
+    );
+    if (preexisting?.databaseId) {
+      return { destinationId: preexisting.databaseId };
+    }
+
+    await page.goto(new URL("/admin/categories/create", baseUrl).toString(), {
+      waitUntil: "domcontentloaded",
+    });
+    await assertPageIsVeroniAdmin(page);
+
+    const observed = await clickSkabAndObserveCategoryCreate({
+      page,
+      name,
+      order: input.order ?? 10,
+    });
+    if (!observed.ok) {
+      throw new Error(
+        `ADMIN_WRITE_BLOCKED: createCategory failed (${observed.code}${
+          observed.detail ? `: ${observed.detail}` : ""
+        })`,
+      );
+    }
+    if (observed.response.status >= 400) {
+      throw new Error(
+        `ADMIN_WRITE_BLOCKED: createCategory HTTP ${observed.response.status}`,
+      );
+    }
+
+    const after = await this.listCategories();
+    const found = after.find(
+      (c) => c.name.trim().toLowerCase() === name.toLowerCase(),
+    );
+    if (!found?.databaseId) {
+      throw new Error(
+        "ADMIN_WRITE_BLOCKED: createCategory read-back missing destination id",
+      );
+    }
+    return { destinationId: found.databaseId };
   }
   async createProduct(
     _input: CanonicalProduct,

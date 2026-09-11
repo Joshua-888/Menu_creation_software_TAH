@@ -1,0 +1,14 @@
+{
+  "milestone": "M67_CREATE_CATEGORY",
+  "status": "VERIFIED",
+  "capability": "createCategory",
+  "canaryName": "__TAH_CANARY_CATEGORY_M67__",
+  "targetHost": "veronipizza.dk",
+  "reason": "canary_already_present_from_prior_run",
+  "destinationId": "11",
+  "categoriesBefore": 11,
+  "requestObserved": false,
+  "readBack": true,
+  "evidenceLevel": "TESTED",
+  "createCategory": "CERTIFIED_CANDIDATE"
+}
