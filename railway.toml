@@ -1,0 +1,17 @@
+# Railway / Nixpacks — TakeAwayHero Menu Operator Portal
+[build]
+builder = "NIXPACKS"
+buildCommand = "npm ci && npm run portal:build"
+
+[deploy]
+startCommand = "npm run portal:start"
+healthcheckPath = "/login"
+healthcheckTimeout = 60
+restartPolicyType = "ON_FAILURE"
+
+# Required env (set in Railway dashboard):
+#   PORTAL_SESSION_SECRET
+#   ADMIN_BOOTSTRAP_EMAIL
+#   ADMIN_BOOTSTRAP_PASSWORD
+#   PORTAL_DATA_DIR=/data/portal
+# Attach a persistent volume mounted at /data for uploads + sqlite + runs.

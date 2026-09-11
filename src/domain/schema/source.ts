@@ -44,6 +44,9 @@ export const SourceProductChoiceSchema = z.object({
   sourceId: SourceIdSchema,
   prompt: z.string().min(1),
   options: z.array(SourceProductChoiceOptionSchema).min(1),
+  required: z.boolean().optional(),
+  minSelections: z.number().int().positive().optional(),
+  maxSelections: z.number().int().positive().optional(),
   evidence: SourceEvidenceSchema.optional(),
 });
 
@@ -57,6 +60,18 @@ export const SourceProductSchema = z.object({
   sourceOrder: z.number().int(),
   ingredients: z.array(SourceIngredientSchema).default([]),
   variants: z.array(SourceVariantSchema).default([]),
+  /**
+   * Raw source price columns/options before deciding variant vs choice semantics.
+   * Example: BASE 75 + Menu 125.
+   */
+  sourcePriceOptions: z
+    .array(
+      z.object({
+        label: z.string().min(1),
+        sourceTotalPrice: MoneyMinorSchema.optional(),
+      }),
+    )
+    .optional(),
   addOns: z.array(SourceAddOnSchema).default([]),
   productChoices: z.array(SourceProductChoiceSchema).default([]),
   isCombo: z.boolean().default(false),

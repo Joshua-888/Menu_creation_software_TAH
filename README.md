@@ -14,6 +14,61 @@ This is **not** a monolithic AI browser agent.
 
 See [PLAN.md](PLAN.md) and [AGENTS.md](AGENTS.md).
 
+## Operator Portal — deploy & invite employees
+
+Internal TakeAwayHero employee web app for merchant menu migrations (PDF upload + optional source URL). **Dry-run only** — no live admin writes until createCategory / executor certification.
+
+### Local
+
+```bash
+cp .env.example .env
+# set PORTAL_SESSION_SECRET, ADMIN_BOOTSTRAP_EMAIL, ADMIN_BOOTSTRAP_PASSWORD
+npm install
+npm run portal:seed
+npm run portal:dev
+# open http://localhost:3000/login
+```
+
+Pre-push ship gate (no Playwright browsers / no heavy PDF OCR suite):
+
+```bash
+npm run check:ship
+```
+
+Heavy Veroni PDF extraction tests (optional, slow):
+
+```bash
+npm run test:extraction
+```
+
+Add more employees:
+
+```bash
+npm run portal:seed -- --email colleague@takeawayhero.example --password '…' --name "Colleague"
+```
+
+### Railway (recommended)
+
+1. Push this repo to GitHub (`Joshua-888/Menu_creation_software_TAH`).
+2. New Railway project → deploy from that repo (uses `railway.toml` / Nixpacks, or `Dockerfile.portal`).
+3. Attach a **persistent volume** at `/data` and set:
+   - `PORTAL_DATA_DIR=/data/portal`
+   - `PORTAL_SESSION_SECRET` (long random, min 16 chars) — **required** or the app will not boot pages in production
+   - `ADMIN_BOOTSTRAP_EMAIL` / `ADMIN_BOOTSTRAP_PASSWORD`
+4. Prefer a **single running instance** while the portal uses local SQLite on the volume.
+5. Open `https://<railway-url>/login` with personal credentials.
+
+Do **not** commit `*.traineddata`, `.env`, or `data/` — they are gitignored (Tesseract downloads language data at runtime).
+
+Portal code: `apps/portal/` (Next.js) + `src/portal/` (auth, jobs, worker). Engine reuse: `src/domain`, `src/extraction`, `src/decisions`, `src/planning`.
+
+| Command | Purpose |
+|---------|---------|
+| `npm run portal:dev` | Next.js portal on :3000 |
+| `npm run portal:build` / `portal:start` | Production portal |
+| `npm run portal:seed` | Bootstrap / add employees |
+| `npm run test:portal` | Portal unit/API smoke tests |
+
 ## Setup
 
 ```bash
@@ -28,17 +83,20 @@ npm run check
 | `npm run typecheck` | TypeScript strict |
 | `npm run test:domain` | Domain + property tests |
 | `npm run lint` | ESLint |
-| `npm run check` | typecheck + domain tests (quality gate) |
+| `npm run check` | typecheck + domain + contract + unit tests |
+| `npm run portal:dev` | Operator portal (local) |
 
 ## Layout
 
 ```text
-src/domain/     Canonical schema + rule engine (Milestone 1)
-src/extraction/ Extractor interfaces (stubs)
-src/tah/        Admin adapter / contract / WritePlan types (stubs)
-src/runs/       Run state / error taxonomy types (stubs)
-src/review/     CorrectionEvent types (stubs)
-tests/domain/   Domain + fast-check tests
+apps/portal/    Next.js Operator Portal (employee UI + API)
+src/portal/     Portal auth, jobs, worker adapters
+src/domain/     Canonical schema + rule engine
+src/extraction/ PDF / source extractors
+src/decisions/  Decision learning + human review
+src/planning/   Dry-run WritePlan
+src/tah/        Admin adapter / contract / WritePlan types
+tests/          Domain, contract, unit, portal tests
 fixtures/       Menu-pattern fixtures
 docs/           Architecture and domain docs
 ```

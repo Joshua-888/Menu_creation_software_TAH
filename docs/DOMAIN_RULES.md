@@ -47,7 +47,8 @@ If source contains unfamiliar names and no deterministic base can be identified:
 - Never invent.  
 - Merge category + product: preserve order; dedupe case/whitespace-insensitive; keep first display form.  
 - Product choices never enter ingredient lists.  
-- Missing → `MISSING_SOURCE_SUPPORTED_INGREDIENTS` → review.
+- Pizza-like categories (pizza / salatpizza / vegetarpizza / indbagt / calzone / ufo): empty ingredients → `MISSING_SOURCE_SUPPORTED_INGREDIENTS` → `MANUAL_REVIEW_REQUIRED` (source almost always lists toppings).  
+- Other categories (drinks, grill named plates, pasta descriptions already extracted, etc.): empty ingredients are a **valid source absence** → product stays `READY` (optional field). Do not invent fillers.
 
 ## Status aggregation
 

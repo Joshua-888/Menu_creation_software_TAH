@@ -1,6 +1,9 @@
 /**
  * M4 migration executor — idempotency, resume, exact verification.
  * Browser adapter is injected; this layer makes no menu-business inventions.
+ *
+ * Identity: prefer destinationDatabaseId when known; otherwise sourceId mapping;
+ * evidence (menuNumber/name/category) is secondary and must not guess on ambiguity.
  */
 
 import type { MigrationEntityState } from "../domain/states.js";
@@ -24,10 +27,22 @@ export type DestinationProduct = {
   ingredients: Array<{ name: string }>;
   additions: Array<{ name: string; priceOre: number }>;
   listStatus: string;
+  /** Optional link back to source when known. */
+  sourceId?: string;
 };
 
+export type DestinationMatchResult =
+  | { outcome: "FOUND"; product: DestinationProduct }
+  | { outcome: "NONE" }
+  | { outcome: "AMBIGUOUS"; candidates: DestinationProduct[] };
+
 export type DestinationPort = {
-  findByIdentity(identity: ProductIdentityKey): Promise<DestinationProduct | null>;
+  /**
+   * Resolve destination for an operation identity.
+   * Prefer destinationDatabaseId → sourceId mapping → evidence match.
+   * Ambiguous evidence must return AMBIGUOUS (never guess).
+   */
+  findByIdentity(identity: ProductIdentityKey): Promise<DestinationMatchResult>;
   readProduct(databaseId: string): Promise<DestinationProduct>;
   createHiddenProduct(payload: PlannedProductPayload): Promise<{
     outcome: "CREATED" | "AMBIGUOUS" | "FAILED";
@@ -132,8 +147,82 @@ export function compareProductExact(
   return diffs;
 }
 
+/**
+ * Evidence-only destination matching (no sourceId / destinationId yet).
+ * Ambiguous matches must not be resolved by guessing.
+ */
+export function matchDestinationByEvidence(
+  catalog: readonly DestinationProduct[],
+  evidence: {
+    menuNumber?: string;
+    name?: string;
+    categoryHint?: string;
+  },
+): DestinationMatchResult {
+  const menu = evidence.menuNumber?.trim();
+  const name = evidence.name?.trim().toLowerCase();
+  if (!menu && !name) return { outcome: "NONE" };
+
+  const candidates = catalog.filter((p) => {
+    const menuOk = menu ? p.menuNumber.trim() === menu : true;
+    const nameOk = name ? p.name.trim().toLowerCase() === name : true;
+    const catOk = evidence.categoryHint
+      ? p.categoryIds.some((c) => c === evidence.categoryHint)
+      : true;
+    return menuOk && nameOk && catOk;
+  });
+
+  if (candidates.length === 0) return { outcome: "NONE" };
+  if (candidates.length === 1) {
+    return { outcome: "FOUND", product: candidates[0]! };
+  }
+  return { outcome: "AMBIGUOUS", candidates };
+}
+
+/**
+ * Prefer destinationDatabaseId, then sourceId on catalog, then evidence.
+ */
+export function resolveDestinationIdentity(
+  identity: ProductIdentityKey,
+  catalog: readonly DestinationProduct[],
+  sourceIdMap?: ReadonlyMap<string, string>,
+): DestinationMatchResult {
+  if (identity.destinationDatabaseId) {
+    const byId = catalog.find(
+      (p) => p.databaseId === identity.destinationDatabaseId,
+    );
+    if (byId) return { outcome: "FOUND", product: byId };
+  }
+
+  const mappedId = sourceIdMap?.get(identity.sourceId);
+  if (mappedId) {
+    const byMap = catalog.find((p) => p.databaseId === mappedId);
+    if (byMap) return { outcome: "FOUND", product: byMap };
+  }
+
+  const bySource = catalog.filter((p) => p.sourceId === identity.sourceId);
+  if (bySource.length === 1) {
+    return { outcome: "FOUND", product: bySource[0]! };
+  }
+  if (bySource.length > 1) {
+    return { outcome: "AMBIGUOUS", candidates: bySource };
+  }
+
+  return matchDestinationByEvidence(catalog, {
+    ...(identity.menuNumber ? { menuNumber: identity.menuNumber } : {}),
+    ...(identity.name ? { name: identity.name } : {}),
+    ...(identity.categoryHint ? { categoryHint: identity.categoryHint } : {}),
+  });
+}
+
 function now(): string {
   return new Date().toISOString();
+}
+
+function foundOrNull(
+  match: DestinationMatchResult,
+): DestinationProduct | null {
+  return match.outcome === "FOUND" ? match.product : null;
 }
 
 /**
@@ -144,6 +233,7 @@ export function resolveCreateResume(input: {
   persistedState: MigrationEntityState | null;
   destination: DestinationProduct | null;
   createOutcome?: "CREATED" | "AMBIGUOUS" | "FAILED" | null;
+  matchAmbiguous?: boolean;
 }): {
   next:
     | "EXECUTE_CREATE"
@@ -154,6 +244,12 @@ export function resolveCreateResume(input: {
     | "FAIL";
   reason: string;
 } {
+  if (input.matchAmbiguous) {
+    return {
+      next: "REVIEW_AMBIGUOUS",
+      reason: "MANUAL_REVIEW_REQUIRED: ambiguous destination match",
+    };
+  }
   if (input.persistedState === "VERIFIED") {
     return { next: "SKIP_VERIFIED", reason: "already VERIFIED" };
   }
@@ -202,6 +298,10 @@ export async function executeMigrationPlan(input: {
   const { plan, store, destination, gate } = input;
   const maxAttempts = input.maxCreateAttempts ?? 2;
 
+  if (plan.dryRun) {
+    throw new Error("DRY_RUN WritePlan cannot be executed");
+  }
+
   if (!gate.hostOk) {
     throw new Error(
       `WRONG_HOST: expected ${gate.expectedHost} got ${gate.host}`,
@@ -234,12 +334,13 @@ export async function executeMigrationPlan(input: {
         operationId: op.operationId,
         entityType: op.entityType,
         action: op.action,
-        identityMenuNumber: op.identity.menuNumber,
-        identityName: op.identity.name,
+        identitySourceId: op.identity.sourceId,
+        identityMenuNumber: op.identity.menuNumber ?? "",
+        identityName: op.identity.name ?? "",
         expectedPayloadJson: op.expectedPayload
           ? JSON.stringify(op.expectedPayload)
           : null,
-        destinationId: null,
+        destinationId: op.identity.destinationDatabaseId ?? null,
         state:
           op.action === "SKIP"
             ? "VERIFIED"
@@ -354,7 +455,27 @@ async function processCreateOp(input: {
     return;
   }
 
-  const found = await destination.findByIdentity(op.identity);
+  const identity: ProductIdentityKey = {
+    ...op.identity,
+    ...(rec.destinationId
+      ? { destinationDatabaseId: rec.destinationId }
+      : {}),
+  };
+
+  const match = await destination.findByIdentity(identity);
+  if (match.outcome === "AMBIGUOUS") {
+    store.upsertOperation({
+      ...rec,
+      state: "BLOCKED",
+      lastErrorCategory: "UNKNOWN_ERROR",
+      lastErrorMessage: "MANUAL_REVIEW_REQUIRED: ambiguous destination match",
+      updatedAt: now(),
+    });
+    input.onBlocked();
+    return;
+  }
+
+  const found = foundOrNull(match);
   const decision = resolveCreateResume({
     persistedState: rec.state,
     destination: found,
@@ -382,9 +503,20 @@ async function processCreateOp(input: {
     }
 
     // Pre-create identity check (idempotency)
-    const again = await destination.findByIdentity(op.identity);
-    if (again) {
-      databaseId = again.databaseId;
+    const again = await destination.findByIdentity(identity);
+    if (again.outcome === "AMBIGUOUS") {
+      store.upsertOperation({
+        ...rec,
+        state: "BLOCKED",
+        lastErrorCategory: "UNKNOWN_ERROR",
+        lastErrorMessage: "MANUAL_REVIEW_REQUIRED: ambiguous destination match",
+        updatedAt: now(),
+      });
+      input.onBlocked();
+      return;
+    }
+    if (again.outcome === "FOUND") {
+      databaseId = again.product.databaseId;
     } else {
       const createResult = await destination.createHiddenProduct(expected);
       rec = {
@@ -393,9 +525,20 @@ async function processCreateOp(input: {
         updatedAt: now(),
       };
       if (createResult.outcome === "FAILED") {
-        const afterFail = await destination.findByIdentity(op.identity);
-        if (afterFail) {
-          databaseId = afterFail.databaseId;
+        const afterFail = await destination.findByIdentity(identity);
+        if (afterFail.outcome === "FOUND") {
+          databaseId = afterFail.product.databaseId;
+        } else if (afterFail.outcome === "AMBIGUOUS") {
+          store.upsertOperation({
+            ...rec,
+            state: "BLOCKED",
+            lastErrorCategory: "UNKNOWN_ERROR",
+            lastErrorMessage:
+              "MANUAL_REVIEW_REQUIRED: ambiguous destination match after failed create",
+            updatedAt: now(),
+          });
+          input.onBlocked();
+          return;
         } else if (rec.attemptCount >= maxAttempts) {
           store.upsertOperation({
             ...rec,
@@ -413,13 +556,12 @@ async function processCreateOp(input: {
             lastErrorMessage: createResult.error ?? "create failed",
             updatedAt: now(),
           });
-          // bounded: one more loop not automatic here — mark pending
           input.onFailed();
           return;
         }
       } else if (createResult.outcome === "AMBIGUOUS") {
-        const afterAmb = await destination.findByIdentity(op.identity);
-        if (!afterAmb) {
+        const afterAmb = await destination.findByIdentity(identity);
+        if (afterAmb.outcome !== "FOUND") {
           store.upsertOperation({
             ...rec,
             state: "BLOCKED",
@@ -430,12 +572,13 @@ async function processCreateOp(input: {
           input.onBlocked();
           return;
         }
-        databaseId = afterAmb.databaseId;
+        databaseId = afterAmb.product.databaseId;
       } else {
         databaseId = createResult.databaseId ?? null;
         if (!databaseId) {
-          const lookup = await destination.findByIdentity(op.identity);
-          databaseId = lookup?.databaseId ?? null;
+          const lookup = await destination.findByIdentity(identity);
+          databaseId =
+            lookup.outcome === "FOUND" ? lookup.product.databaseId : null;
         }
       }
 
@@ -449,18 +592,29 @@ async function processCreateOp(input: {
         input.onFailed();
         return;
       }
+      if (databaseId) {
+        store.setSourceDestinationMapping(
+          plan.runId,
+          op.identity.sourceId,
+          databaseId,
+        );
+      }
     }
   }
 
   if (decision.next === "READ_BACK_EXISTING" && found) {
     databaseId = found.databaseId;
-    // If we already had a destinationId and create would have run — duplicate risk counter stays 0 because we skipped create
     store.upsertOperation({
       ...rec,
       destinationId: databaseId,
       state: "WRITTEN",
       updatedAt: now(),
     });
+    store.setSourceDestinationMapping(
+      plan.runId,
+      op.identity.sourceId,
+      databaseId,
+    );
   }
 
   if (decision.next === "REVIEW_AMBIGUOUS") {

@@ -13,9 +13,12 @@ import {
 import {
   compareProductExact,
   executeMigrationPlan,
+  matchDestinationByEvidence,
   resolveCreateResume,
+  resolveDestinationIdentity,
   type DestinationPort,
   type DestinationProduct,
+  type DestinationMatchResult,
 } from "../../src/runner/executor.js";
 import type { PlannedProductPayload } from "../../src/runner/writePlan.js";
 
@@ -24,6 +27,7 @@ function payload(
   overrides: Partial<PlannedProductPayload> = {},
 ): PlannedProductPayload {
   return {
+    sourceId: `src-mig-${i}`,
     menuNumber: `99${String(100 + i).slice(1)}`,
     name: `__TAH_MIG_${i}__`,
     description: `desc ${i}`,
@@ -58,6 +62,32 @@ function toDest(p: PlannedProductPayload, databaseId: string): DestinationProduc
       priceOre: a.priceOre,
     })),
     listStatus: "Skjult",
+    sourceId: p.sourceId,
+  };
+}
+
+function portFromMap(
+  created: Map<string, DestinationProduct>,
+  opts?: {
+    createHiddenProduct?: DestinationPort["createHiddenProduct"];
+  },
+): DestinationPort {
+  return {
+    async findByIdentity(identity): Promise<DestinationMatchResult> {
+      return resolveDestinationIdentity(identity, [...created.values()]);
+    },
+    async readProduct(databaseId) {
+      const p = created.get(databaseId);
+      if (!p) throw new Error("missing");
+      return p;
+    },
+    async createHiddenProduct(pl) {
+      if (opts?.createHiddenProduct) return opts.createHiddenProduct(pl);
+      const id = `db-${created.size + 1}`;
+      const dest = toDest(pl, id);
+      created.set(id, dest);
+      return { outcome: "CREATED", databaseId: id };
+    },
   };
 }
 
@@ -76,13 +106,14 @@ describe("M4 WritePlan", () => {
         planCreateProduct({ operationId: "op-1", payload: payload(1) }),
         planSkipProduct({
           operationId: "op-2",
-          identity: { menuNumber: "x", name: "y" },
+          identity: { sourceId: "skip-1", menuNumber: "x", name: "y" },
           reason: "already verified",
         }),
       ],
     });
     assertWritePlanImmutable(plan);
     expect(plan.operations[0]!.action).toBe("CREATE");
+    expect(plan.operations[0]!.identity.sourceId).toBe("src-mig-1");
     expect(plan.operations[1]!.action).toBe("SKIP");
     expect(() => {
       // @ts-expect-error immutability
@@ -113,6 +144,47 @@ describe("M4 WritePlan", () => {
     const bad = toDest(p, "10");
     bad.additions[0]!.priceOre = 1;
     expect(compareProductExact(p, bad)).toContain("additionPrice0");
+  });
+});
+
+describe("M4 sourceId identity", () => {
+  it("operations reference sourceId, not menuNumber+name as primary key", () => {
+    const op = planCreateProduct({
+      operationId: "op-id",
+      payload: payload(1, { menuNumber: "1", name: "Margarita" }),
+    });
+    expect(op.identity.sourceId).toBe("src-mig-1");
+    expect(op.identity.menuNumber).toBe("1");
+    expect(op.identity.name).toBe("Margarita");
+  });
+
+  it("prefers destinationDatabaseId over evidence", () => {
+    const a = toDest(payload(1), "10");
+    const b = toDest(payload(1, { sourceId: "other", name: a.name }), "11");
+    b.menuNumber = a.menuNumber;
+    const match = resolveDestinationIdentity(
+      {
+        sourceId: "src-mig-1",
+        menuNumber: a.menuNumber,
+        name: a.name,
+        destinationDatabaseId: "11",
+      },
+      [a, b],
+    );
+    expect(match.outcome).toBe("FOUND");
+    if (match.outcome === "FOUND") {
+      expect(match.product.databaseId).toBe("11");
+    }
+  });
+
+  it("returns MANUAL_REVIEW ambiguity when evidence matches multiple", () => {
+    const a = toDest(payload(1), "1");
+    const b = toDest(payload(2, { menuNumber: a.menuNumber, name: a.name }), "2");
+    const match = matchDestinationByEvidence([a, b], {
+      menuNumber: a.menuNumber,
+      name: a.name,
+    });
+    expect(match.outcome).toBe("AMBIGUOUS");
   });
 });
 
@@ -188,32 +260,15 @@ describe("M4 RunStore + executeMigrationPlan", () => {
 
     const created = new Map<string, DestinationProduct>();
     let createCalls = 0;
-    const destination: DestinationPort = {
-      async findByIdentity(identity) {
-        for (const p of created.values()) {
-          if (
-            p.menuNumber === identity.menuNumber &&
-            p.name === identity.name
-          ) {
-            return p;
-          }
-        }
-        return null;
-      },
-      async readProduct(databaseId) {
-        const p = created.get(databaseId);
-        if (!p) throw new Error("missing");
-        return p;
-      },
+    const destination = portFromMap(created, {
       async createHiddenProduct(pl) {
         createCalls += 1;
-        // Simulate crash during product 4 (op-4): fail first time only via attempt tracking outside
         const id = String(createCalls);
         const dest = toDest(pl, id);
         created.set(id, dest);
         return { outcome: "CREATED", databaseId: id };
       },
-    };
+    });
 
     const first = await executeMigrationPlan({
       plan,
@@ -225,7 +280,6 @@ describe("M4 RunStore + executeMigrationPlan", () => {
     expect(first.duplicatesCreated).toBe(0);
     const createsAfterFirst = createCalls;
 
-    // Resume same run — all VERIFIED → no new creates
     const second = await executeMigrationPlan({
       plan,
       store,
@@ -240,6 +294,10 @@ describe("M4 RunStore + executeMigrationPlan", () => {
       const rec = store.getOperation("resume-run", op.operationId)!;
       expect(rec.state).toBe("VERIFIED");
       expect(rec.destinationId).toBeTruthy();
+      expect(rec.identitySourceId).toBe(op.identity.sourceId);
+      expect(
+        store.getDestinationIdForSource("resume-run", op.identity.sourceId),
+      ).toBe(rec.destinationId);
     }
   });
 
@@ -262,21 +320,7 @@ describe("M4 RunStore + executeMigrationPlan", () => {
     const created = new Map<string, DestinationProduct>();
     let createCalls = 0;
     let failOnceForP4 = true;
-    const destination: DestinationPort = {
-      async findByIdentity(identity) {
-        for (const p of created.values()) {
-          if (
-            p.menuNumber === identity.menuNumber &&
-            p.name === identity.name
-          ) {
-            return p;
-          }
-        }
-        return null;
-      },
-      async readProduct(id) {
-        return created.get(id)!;
-      },
+    const destination = portFromMap(created, {
       async createHiddenProduct(pl) {
         createCalls += 1;
         if (pl.name === "__TAH_MIG_4__" && failOnceForP4) {
@@ -288,7 +332,7 @@ describe("M4 RunStore + executeMigrationPlan", () => {
         created.set(id, dest);
         return { outcome: "CREATED", databaseId: id };
       },
-    };
+    });
 
     const partial = await executeMigrationPlan({
       plan,
@@ -304,7 +348,6 @@ describe("M4 RunStore + executeMigrationPlan", () => {
     expect(partial.duplicatesCreated).toBe(0);
     const createsBeforeResume = createCalls;
 
-    // Fix gate: allow retry by resetting failed op to PENDING and raising attempts
     const failed = store.getOperation("mid-run", "p-4")!;
     store.upsertOperation({
       ...failed,
@@ -324,7 +367,6 @@ describe("M4 RunStore + executeMigrationPlan", () => {
     expect(store.getOperation("mid-run", "p-4")!.state).toBe("VERIFIED");
     expect(store.getOperation("mid-run", "p-6")!.state).toBe("VERIFIED");
     expect(createCalls).toBeGreaterThan(createsBeforeResume);
-    // products 1-3 must not have been created again
     expect(resumed.duplicatesCreated).toBe(0);
   });
 
@@ -342,17 +384,7 @@ describe("M4 RunStore + executeMigrationPlan", () => {
         planCreateProduct({ operationId: "op-1", payload: payload(1) }),
       ],
     });
-    const destination: DestinationPort = {
-      async findByIdentity() {
-        return null;
-      },
-      async readProduct() {
-        throw new Error("no");
-      },
-      async createHiddenProduct() {
-        return { outcome: "FAILED" };
-      },
-    };
+    const destination = portFromMap(new Map());
     await expect(
       executeMigrationPlan({
         plan,
@@ -393,7 +425,7 @@ describe("M4 RunStore + executeMigrationPlan", () => {
     });
     const destination: DestinationPort = {
       async findByIdentity() {
-        return null;
+        return { outcome: "NONE" };
       },
       async readProduct() {
         const d = toDest(p, "77");
@@ -429,14 +461,14 @@ describe("M4 RunStore + executeMigrationPlan", () => {
       operations: [
         planBlockProduct({
           operationId: "b1",
-          identity: { menuNumber: "1", name: "x" },
+          identity: { sourceId: "blocked-1", menuNumber: "1", name: "x" },
           reason: "incomplete dynamic row",
         }),
       ],
     });
     const destination: DestinationPort = {
       async findByIdentity() {
-        return null;
+        return { outcome: "NONE" };
       },
       async readProduct() {
         throw new Error("no");
@@ -455,8 +487,32 @@ describe("M4 RunStore + executeMigrationPlan", () => {
     expect(result.duplicatesCreated).toBe(0);
   });
 
+  it("refuses to execute dry-run plans", async () => {
+    const plan = createMigrationWritePlan({
+      runId: "dry",
+      restaurant: "Veroni Pizza",
+      host: "veronipizza.dk",
+      source: "fixture",
+      schemaVersion: "1",
+      domainRuleVersion: "1",
+      adapterVersion: "1",
+      contractFingerprint: "fp",
+      dryRun: true,
+      operations: [
+        planCreateProduct({ operationId: "op-1", payload: payload(1) }),
+      ],
+    });
+    await expect(
+      executeMigrationPlan({
+        plan,
+        store,
+        destination: portFromMap(new Map()),
+        gate: { hostOk: true, contractMatch: true },
+      }),
+    ).rejects.toThrow(/DRY_RUN/);
+  });
+
   it("zero silent success: HTTP-less create without read-back cannot be VERIFIED", () => {
-    // VERIFIED requires compareProductExact empty diffs after READ_BACK path
     const p = payload(8);
     const d = toDest(p, "8");
     expect(compareProductExact(p, d)).toEqual([]);

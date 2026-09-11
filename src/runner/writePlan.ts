@@ -1,5 +1,8 @@
 /**
  * M4 immutable migration WritePlan — browser must not invent menu decisions.
+ *
+ * Primary identity is sourceId. menuNumber + name are matching evidence only.
+ * Once created, destinationDatabaseId is preferred for known destination ops.
  */
 
 export type WritePlanAction =
@@ -11,13 +14,24 @@ export type WritePlanAction =
 
 export type WritePlanEntityType = "category" | "product";
 
-/** Stable identity used for destination lookup / idempotency. */
+/**
+ * Stable product identity for WritePlan operations.
+ * sourceId is the permanent internal key — never menuNumber+name.
+ */
 export type ProductIdentityKey = {
-  menuNumber: string;
-  name: string;
+  sourceId: string;
+  /** Matching evidence only (not an immutable primary key). */
+  menuNumber?: string;
+  /** Matching evidence only. */
+  name?: string;
+  /** Optional category hint for destination matching. */
+  categoryHint?: string;
+  /** Preferred once a destination entity exists. */
+  destinationDatabaseId?: string;
 };
 
 export type PlannedProductPayload = {
+  sourceId: string;
   menuNumber: string;
   name: string;
   description: string;
@@ -37,6 +51,10 @@ export type WritePlanOperation = {
   identity: ProductIdentityKey;
   expectedPayload: PlannedProductPayload | null;
   reason?: string;
+  /** Certified capability names required for live execution of this op. */
+  requiredCapabilities?: string[];
+  /** Capability names that are missing / uncertified. */
+  missingCapabilities?: string[];
 };
 
 export type MigrationWritePlan = {
@@ -50,6 +68,7 @@ export type MigrationWritePlan = {
   adapterVersion: string;
   contractFingerprint: string;
   immutable: true;
+  dryRun: boolean;
   createdAt: string;
   operations: readonly WritePlanOperation[];
 };
@@ -65,6 +84,8 @@ export function freezeWritePlan(plan: MigrationWritePlan): MigrationWritePlan {
       Object.freeze(op.expectedPayload.categoryIds);
     }
     Object.freeze(op.identity);
+    if (op.requiredCapabilities) Object.freeze(op.requiredCapabilities);
+    if (op.missingCapabilities) Object.freeze(op.missingCapabilities);
   }
   Object.freeze(plan.operations);
   return Object.freeze(plan);
@@ -89,6 +110,7 @@ export function createMigrationWritePlan(input: {
   adapterVersion: string;
   contractFingerprint: string;
   operations: WritePlanOperation[];
+  dryRun?: boolean;
 }): MigrationWritePlan {
   return freezeWritePlan({
     planId: `wp-${input.runId}`,
@@ -101,6 +123,7 @@ export function createMigrationWritePlan(input: {
     adapterVersion: input.adapterVersion,
     contractFingerprint: input.contractFingerprint,
     immutable: true,
+    dryRun: input.dryRun ?? false,
     createdAt: new Date().toISOString(),
     operations: input.operations.map((o) => ({ ...o })),
   });
@@ -109,16 +132,25 @@ export function createMigrationWritePlan(input: {
 export function planCreateProduct(input: {
   operationId: string;
   payload: PlannedProductPayload;
+  requiredCapabilities?: string[];
+  missingCapabilities?: string[];
 }): WritePlanOperation {
   return {
     operationId: input.operationId,
     entityType: "product",
     action: "CREATE",
     identity: {
+      sourceId: input.payload.sourceId,
       menuNumber: input.payload.menuNumber,
       name: input.payload.name,
     },
     expectedPayload: input.payload,
+    ...(input.requiredCapabilities
+      ? { requiredCapabilities: input.requiredCapabilities }
+      : {}),
+    ...(input.missingCapabilities
+      ? { missingCapabilities: input.missingCapabilities }
+      : {}),
   };
 }
 
@@ -141,6 +173,7 @@ export function planBlockProduct(input: {
   operationId: string;
   identity: ProductIdentityKey;
   reason: string;
+  missingCapabilities?: string[];
 }): WritePlanOperation {
   return {
     operationId: input.operationId,
@@ -149,6 +182,9 @@ export function planBlockProduct(input: {
     identity: input.identity,
     expectedPayload: null,
     reason: input.reason,
+    ...(input.missingCapabilities
+      ? { missingCapabilities: input.missingCapabilities }
+      : {}),
   };
 }
 
@@ -164,5 +200,29 @@ export function planReviewProduct(input: {
     identity: input.identity,
     expectedPayload: null,
     reason: input.reason,
+  };
+}
+
+export function planUpdateProduct(input: {
+  operationId: string;
+  identity: ProductIdentityKey;
+  payload: PlannedProductPayload;
+  reason?: string;
+  requiredCapabilities?: string[];
+  missingCapabilities?: string[];
+}): WritePlanOperation {
+  return {
+    operationId: input.operationId,
+    entityType: "product",
+    action: "UPDATE",
+    identity: input.identity,
+    expectedPayload: input.payload,
+    ...(input.reason ? { reason: input.reason } : {}),
+    ...(input.requiredCapabilities
+      ? { requiredCapabilities: input.requiredCapabilities }
+      : {}),
+    ...(input.missingCapabilities
+      ? { missingCapabilities: input.missingCapabilities }
+      : {}),
   };
 }

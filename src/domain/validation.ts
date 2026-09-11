@@ -8,6 +8,10 @@ import type {
 import type { SourceMenu } from "./schema/source.js";
 import { aggregateStatus, type ValidationStatus } from "./status.js";
 
+function isSyntheticChoiceOptionId(id: string): boolean {
+  return id.startsWith("choice-opt:");
+}
+
 export function issue(
   code: ValidationCode,
   message: string,
@@ -141,6 +145,20 @@ export function validateProductChoices(
           );
         }
         for (const option of choice.options) {
+          if (isSyntheticChoiceOptionId(option.productSourceId)) {
+            if (!option.label || !option.label.trim()) {
+              issues.push(
+                issue(
+                  "MALFORMED_PRODUCT_CHOICE",
+                  `Synthetic choice option ${option.productSourceId} requires a label`,
+                  product.sourceId,
+                  "MANUAL_REVIEW_REQUIRED",
+                  "productChoices",
+                ),
+              );
+            }
+            continue;
+          }
           if (!knownProductIds.has(option.productSourceId)) {
             issues.push(
               issue(

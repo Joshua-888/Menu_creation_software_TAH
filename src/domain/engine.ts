@@ -1,4 +1,4 @@
-import { composeIngredients } from "./ingredients.js";
+import { composeIngredients, categoryExpectsListedIngredients } from "./ingredients.js";
 import { assignMenuNumbers } from "./numbering.js";
 import { priceVariants } from "./pricing.js";
 import type {
@@ -197,17 +197,23 @@ export function runDomainEngine(input: SourceMenu): DomainEngineResult {
         product.ingredients.some((i) => i.origin === "SOURCE");
 
       if (!hasSourceIngredients || ingredients.length === 0) {
-        // Business preference: ingredients wanted, but never fabricate.
+        // Never fabricate ingredients. Empty lists are valid when the source
+        // category does not list toppings (drinks, grill named plates, etc.).
+        // Pizza-like categories almost always list toppings — empty ⇒ review
+        // (likely extraction gap), not invention.
         if (ingredients.length === 0) {
-          productIssues.push(
-            issue(
-              "MISSING_SOURCE_SUPPORTED_INGREDIENTS",
-              "No source-supported ingredients available",
-              product.sourceId,
-              "MANUAL_REVIEW_REQUIRED",
-              "ingredients",
-            ),
-          );
+          if (categoryExpectsListedIngredients(category.name)) {
+            productIssues.push(
+              issue(
+                "MISSING_SOURCE_SUPPORTED_INGREDIENTS",
+                "No source-supported ingredients available",
+                product.sourceId,
+                "MANUAL_REVIEW_REQUIRED",
+                "ingredients",
+              ),
+            );
+          }
+          // else: source absence is valid → READY (optional field empty)
         }
       }
 
@@ -261,6 +267,13 @@ export function runDomainEngine(input: SourceMenu): DomainEngineResult {
             productSourceId: o.productSourceId,
             ...(o.label !== undefined ? { label: o.label } : {}),
           })),
+          ...(c.required !== undefined ? { required: c.required } : {}),
+          ...(c.minSelections !== undefined
+            ? { minSelections: c.minSelections }
+            : {}),
+          ...(c.maxSelections !== undefined
+            ? { maxSelections: c.maxSelections }
+            : {}),
         })),
         isCombo: product.isCombo,
         issues: productIssues,

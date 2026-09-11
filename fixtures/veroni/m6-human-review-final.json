@@ -1,0 +1,348 @@
+{
+  "generatedAt": "2026-09-10T20:35:17.242Z",
+  "frozenFor": "M6",
+  "note": "FROZEN REVIEW CASES / fixtures only — NOT human resolutions. recommendedOptionId is system recommendation only; humanApproved=false until operator capture.",
+  "decisions": [
+    {
+      "id": "D-MENU-OPTION",
+      "type": "MENU_PRICE_OPTION_SEMANTICS",
+      "title": "How should the source “Menu” price option be represented in TakeAwayHero?",
+      "affectedProducts": [
+        {
+          "menuNumber": "36",
+          "name": "Dürüm rulle"
+        },
+        {
+          "menuNumber": "37",
+          "name": "Hjemmelavet pitabrød"
+        },
+        {
+          "menuNumber": "39",
+          "name": "Hjemmelavet Cafeteriaburger"
+        },
+        {
+          "menuNumber": "40",
+          "name": "Baconburger"
+        },
+        {
+          "menuNumber": "41",
+          "name": "Cheeseburger"
+        },
+        {
+          "menuNumber": "42",
+          "name": "Fiskefilet m. pommes frites"
+        },
+        {
+          "menuNumber": "43",
+          "name": "½ Grillkyling m. pommes frites"
+        }
+      ],
+      "sourceText": "#36 Dürüm rulle: BASE 75 kr / Menu 125 kr\n#37 Hjemmelavet pitabrød: BASE 75 kr / Menu 125 kr\n#39 Hjemmelavet Cafeteriaburger: BASE 75 kr / Menu 130 kr\n#40 Baconburger: BASE 69 kr / Menu 125 kr\n#41 Cheeseburger: BASE 69 kr / Menu 125 kr\n#42 Fiskefilet m. pommes frites: BASE 90 kr / Menu 115 kr\n#43 ½ Grillkyling m. pommes frites: BASE 99 kr / Menu 130 kr",
+      "currentInterpretation": "Each product keeps BASE as basePrice and a provisional variant/option named “Menu” with derived surcharge. Menu contents are NOT inferred.",
+      "whyNecessary": "Source shows a Menu price column but does not document what the Menu includes (drink, fries, etc.). Representation (variant vs combo/ProductChoice) is a product-model decision.",
+      "options": [
+        {
+          "id": "variant",
+          "label": "Keep “Menu” as a priced variant/option per product (current)",
+          "effect": "Imports both prices now; combo contents can be added later. No invented inclusions."
+        },
+        {
+          "id": "combo-later",
+          "label": "Treat as combo/ProductChoice — hold creates until contents confirmed",
+          "effect": "Products stay REVIEW until an operator specifies Menu composition; prices preserved as evidence."
+        },
+        {
+          "id": "base-only",
+          "label": "Import BASE only; ignore Menu column for v1",
+          "effect": "Loses Menu upsell prices until a later enrichment pass."
+        }
+      ],
+      "recommendedOptionId": "variant",
+      "recommendedRationale": "Safest: preserves exact source prices without inventing Menu contents. Semantics can be upgraded once contents are known."
+    },
+    {
+      "id": "D-CHOICE-1",
+      "type": "PRODUCT_CHOICE",
+      "title": "Does “skinke/kebab” represent a customer choice?",
+      "affectedProducts": [
+        {
+          "menuNumber": "24",
+          "name": "Calzone - Karan"
+        }
+      ],
+      "sourceText": "#24 Calzone - Karan\nIngredients: Tomat, ost, salat og\nChoices: PRODUCT_CHOICE: skinke/kebab\nSource: 24. Calzone -Karan champignon Tomat, ost, 95, skinke/kebab, salat og",
+      "currentInterpretation": "Flagged as PRODUCT_CHOICE / unresolved slash-or-eller wording — not silently stored as plain ingredients.",
+      "whyNecessary": "Slash/eller/valgfrit wording may mean the guest picks one option, or may be a fixed recipe list. Wrong choice creates wrong POS modifiers.",
+      "options": [
+        {
+          "id": "product-choice",
+          "label": "Model as ProductChoice (customer selects one)",
+          "effect": "Creates choice options on the product; guest must pick."
+        },
+        {
+          "id": "ingredient",
+          "label": "Treat as fixed ingredients (no choice UI)",
+          "effect": "Imports text as ingredients only; no modifier."
+        },
+        {
+          "id": "variant",
+          "label": "Model as variants (separate sellable sizes/options)",
+          "effect": "Each option becomes a variant with its own price if priced."
+        }
+      ],
+      "recommendedOptionId": "product-choice",
+      "recommendedRationale": "Wording indicates an explicit choose-one structure in Danish takeaway menus."
+    },
+    {
+      "id": "D-CHOICE-2",
+      "type": "PRODUCT_CHOICE",
+      "title": "Does “Vælg mellem” represent a customer choice?",
+      "affectedProducts": [
+        {
+          "menuNumber": "62",
+          "name": "Fried rice med grøntsager og æg"
+        }
+      ],
+      "sourceText": "#62 Fried rice med grøntsager og æg\nIngredients: Fried rice med 130, - Champignon, - Indisk ost\nChoices: PRODUCT_CHOICE: Vælg mellem\nSource: 62. Fried rice med 130, grØntsager ogæg Vælg mellem: - Champignon - Broccoli - Blomkal - Indisk ost",
+      "currentInterpretation": "Flagged as PRODUCT_CHOICE / unresolved slash-or-eller wording — not silently stored as plain ingredients.",
+      "whyNecessary": "Slash/eller/valgfrit wording may mean the guest picks one option, or may be a fixed recipe list. Wrong choice creates wrong POS modifiers.",
+      "options": [
+        {
+          "id": "product-choice",
+          "label": "Model as ProductChoice (customer selects one)",
+          "effect": "Creates choice options on the product; guest must pick."
+        },
+        {
+          "id": "ingredient",
+          "label": "Treat as fixed ingredients (no choice UI)",
+          "effect": "Imports text as ingredients only; no modifier."
+        },
+        {
+          "id": "variant",
+          "label": "Model as variants (separate sellable sizes/options)",
+          "effect": "Each option becomes a variant with its own price if priced."
+        }
+      ],
+      "recommendedOptionId": "product-choice",
+      "recommendedRationale": "Wording indicates an explicit choose-one structure in Danish takeaway menus."
+    },
+    {
+      "id": "D-CHOICE-3",
+      "type": "PRODUCT_CHOICE",
+      "title": "Does “slash protein/option list” represent a customer choice?",
+      "affectedProducts": [
+        {
+          "menuNumber": "57",
+          "name": "Butter chicken"
+        },
+        {
+          "menuNumber": "58",
+          "name": "Chicken Tikka-Masala"
+        }
+      ],
+      "sourceText": "#57 Butter chicken\nIngredients: Ris/naanbrod, stegt kylling i karry, tilbehor\nSource: 57. 120, Butter chicken Ris/naanbrod, stegt kylling i karry og tilbehor\n---\n#58 Chicken Tikka-Masala\nIngredients: Ris/naanbrod, stegt kylling i masala, tilbehør\nSource: 58. Chicken Tikka-Masala Ris/naanbrod, stegt kylling i masala og tilbehør",
+      "currentInterpretation": "Flagged as PRODUCT_CHOICE / unresolved slash-or-eller wording — not silently stored as plain ingredients.",
+      "whyNecessary": "Slash/eller/valgfrit wording may mean the guest picks one option, or may be a fixed recipe list. Wrong choice creates wrong POS modifiers.",
+      "options": [
+        {
+          "id": "product-choice",
+          "label": "Model as ProductChoice (customer selects one)",
+          "effect": "Creates choice options on the product; guest must pick."
+        },
+        {
+          "id": "ingredient",
+          "label": "Treat as fixed ingredients (no choice UI)",
+          "effect": "Imports text as ingredients only; no modifier."
+        },
+        {
+          "id": "variant",
+          "label": "Model as variants (separate sellable sizes/options)",
+          "effect": "Each option becomes a variant with its own price if priced."
+        }
+      ],
+      "recommendedOptionId": "product-choice",
+      "recommendedRationale": "Wording indicates an explicit choose-one structure in Danish takeaway menus."
+    },
+    {
+      "id": "D-CHOICE-4",
+      "type": "PRODUCT_CHOICE",
+      "title": "Does “kylling eller oksekød” represent a customer choice?",
+      "affectedProducts": [
+        {
+          "menuNumber": "59",
+          "name": "Fried rice"
+        },
+        {
+          "menuNumber": "60",
+          "name": "Fried noodles"
+        }
+      ],
+      "sourceText": "#59 Fried rice\nIngredients: Stegt ris\nChoices: PRODUCT_CHOICE: kylling/okse\nSource: 59. Fried rice 130, Stegt ris, kylling eller oksekød med tilbehor\n---\n#60 Fried noodles\nIngredients: Fried noodles 130, Stegte nudler, tilbehor\nChoices: PRODUCT_CHOICE: kylling/okse; PRODUCT_CHOICE: kylling/okse/vegetar\nSource: 60. Fried noodles 130, Stegte nudler, kylling/okse/vegetar og tilbehor",
+      "currentInterpretation": "Flagged as PRODUCT_CHOICE / unresolved slash-or-eller wording — not silently stored as plain ingredients.",
+      "whyNecessary": "Slash/eller/valgfrit wording may mean the guest picks one option, or may be a fixed recipe list. Wrong choice creates wrong POS modifiers.",
+      "options": [
+        {
+          "id": "product-choice",
+          "label": "Model as ProductChoice (customer selects one)",
+          "effect": "Creates choice options on the product; guest must pick."
+        },
+        {
+          "id": "ingredient",
+          "label": "Treat as fixed ingredients (no choice UI)",
+          "effect": "Imports text as ingredients only; no modifier."
+        },
+        {
+          "id": "variant",
+          "label": "Model as variants (separate sellable sizes/options)",
+          "effect": "Each option becomes a variant with its own price if priced."
+        }
+      ],
+      "recommendedOptionId": "product-choice",
+      "recommendedRationale": "Wording indicates an explicit choose-one structure in Danish takeaway menus."
+    },
+    {
+      "id": "D-CHOICE-5",
+      "type": "PRODUCT_CHOICE",
+      "title": "Does “kylling/okse/vegetar” represent a customer choice?",
+      "affectedProducts": [
+        {
+          "menuNumber": "60",
+          "name": "Fried noodles"
+        }
+      ],
+      "sourceText": "#60 Fried noodles\nIngredients: Fried noodles 130, Stegte nudler, tilbehor\nChoices: PRODUCT_CHOICE: kylling/okse; PRODUCT_CHOICE: kylling/okse/vegetar\nSource: 60. Fried noodles 130, Stegte nudler, kylling/okse/vegetar og tilbehor",
+      "currentInterpretation": "Flagged as PRODUCT_CHOICE / unresolved slash-or-eller wording — not silently stored as plain ingredients.",
+      "whyNecessary": "Slash/eller/valgfrit wording may mean the guest picks one option, or may be a fixed recipe list. Wrong choice creates wrong POS modifiers.",
+      "options": [
+        {
+          "id": "product-choice",
+          "label": "Model as ProductChoice (customer selects one)",
+          "effect": "Creates choice options on the product; guest must pick."
+        },
+        {
+          "id": "ingredient",
+          "label": "Treat as fixed ingredients (no choice UI)",
+          "effect": "Imports text as ingredients only; no modifier."
+        },
+        {
+          "id": "variant",
+          "label": "Model as variants (separate sellable sizes/options)",
+          "effect": "Each option becomes a variant with its own price if priced."
+        }
+      ],
+      "recommendedOptionId": "product-choice",
+      "recommendedRationale": "Wording indicates an explicit choose-one structure in Danish takeaway menus."
+    },
+    {
+      "id": "D-CHOICE-6",
+      "type": "PRODUCT_CHOICE",
+      "title": "Does “valgfrit kød” represent a customer choice?",
+      "affectedProducts": [
+        {
+          "menuNumber": "36",
+          "name": "Dürüm rulle"
+        },
+        {
+          "menuNumber": "37",
+          "name": "Hjemmelavet pitabrød"
+        }
+      ],
+      "sourceText": "#36 Dürüm rulle\nIngredients: Valgfrit kød, salat og, dressing\nChoices: PRODUCT_CHOICE: valgfrit kød\nSource: 36. 75, Valgfrit kød, salat og dressing\n---\n#37 Hjemmelavet pitabrød\nIngredients: Valgfrit kod, salat, dressing\nChoices: PRODUCT_CHOICE: valgfrit kød\nSource: 37. Hjemmelavet pitabrød 75, Valgfrit kod, salat og dressing",
+      "currentInterpretation": "Flagged as PRODUCT_CHOICE / unresolved slash-or-eller wording — not silently stored as plain ingredients.",
+      "whyNecessary": "Slash/eller/valgfrit wording may mean the guest picks one option, or may be a fixed recipe list. Wrong choice creates wrong POS modifiers.",
+      "options": [
+        {
+          "id": "product-choice",
+          "label": "Model as ProductChoice (customer selects one)",
+          "effect": "Creates choice options on the product; guest must pick."
+        },
+        {
+          "id": "ingredient",
+          "label": "Treat as fixed ingredients (no choice UI)",
+          "effect": "Imports text as ingredients only; no modifier."
+        },
+        {
+          "id": "variant",
+          "label": "Model as variants (separate sellable sizes/options)",
+          "effect": "Each option becomes a variant with its own price if priced."
+        }
+      ],
+      "recommendedOptionId": "product-choice",
+      "recommendedRationale": "Wording indicates an explicit choose-one structure in Danish takeaway menus."
+    },
+    {
+      "id": "D-CAT-PASTA",
+      "type": "DESTINATION_CATEGORY",
+      "title": "Create or map a destination category for Pasta?",
+      "affectedProducts": [
+        {
+          "menuNumber": "33",
+          "name": "Spaghetti Bolognese"
+        },
+        {
+          "menuNumber": "34",
+          "name": "Pasta Alfredo med Kylling"
+        },
+        {
+          "menuNumber": "35",
+          "name": "Pasta Ai Gamberi"
+        }
+      ],
+      "sourceText": "Source heading: Pasta\nProducts: 33–35",
+      "currentInterpretation": "Source category Pasta exists; no destination category match. createCategory remains UNCERTIFIED — dry-run BLOCKs these creates.",
+      "whyNecessary": "Cannot assign Pasta products to an existing destination category without inventing a mapping or creating a category.",
+      "options": [
+        {
+          "id": "create-pasta",
+          "label": "Create destination category “Pasta” (when createCategory is certified/authorized)",
+          "effect": "Unblocks Pasta product creates under a new category."
+        },
+        {
+          "id": "map-existing",
+          "label": "Map Pasta products into an existing destination category",
+          "effect": "Requires naming which destination category (e.g. Grill / other)."
+        },
+        {
+          "id": "defer",
+          "label": "Defer Pasta migration",
+          "effect": "Leave Pasta products out of the first write batch."
+        }
+      ],
+      "recommendedOptionId": "create-pasta",
+      "recommendedRationale": "Source has an explicit Pasta heading with three products — a matching destination category is the cleanest model."
+    },
+    {
+      "id": "D-CAT-38",
+      "type": "DESTINATION_CATEGORY",
+      "title": "Where should #38 Hjemmelavet hvidløgsbrød be filed?",
+      "affectedProducts": [
+        {
+          "menuNumber": "38",
+          "name": "Hjemmelavet hvidløgsbrød"
+        }
+      ],
+      "sourceText": "38. Hjemmelavet hvidløgsbrød Tomat, ost og hvidløg",
+      "currentInterpretation": "Not auto-mapped to Durum & Pitabrød solely because it shares an unlabelled source block with #36–37.",
+      "whyNecessary": "Garlic bread may belong under Durum & Pitabrød, Grill, sides/tilbehør, or another destination category — source has no heading.",
+      "options": [
+        {
+          "id": "durum",
+          "label": "Assign to Durum & Pitabrød (with #36–37)",
+          "effect": "Groups breads together; may mix garlic bread with wraps."
+        },
+        {
+          "id": "grill",
+          "label": "Assign to Grill",
+          "effect": "Places with other page-5 mains/sides."
+        },
+        {
+          "id": "other",
+          "label": "Assign to another existing category / defer",
+          "effect": "Operator names the category or skips #38 in v1."
+        }
+      ],
+      "recommendedOptionId": null,
+      "recommendedRationale": null
+    }
+  ]
+}

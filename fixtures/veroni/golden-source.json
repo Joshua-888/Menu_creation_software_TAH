@@ -1,0 +1,87 @@
+{
+  "fixtureId": "veroni-scanner-2026-08-11",
+  "sourceFile": "fixtures/veroni/Scanner-2026-08-11-14_33_58.pdf",
+  "uniqueProductCount": 72,
+  "notes": "Veroni regression oracle only — not a global product-count rule.",
+  "menuNumbers": [
+    "1", "2", "3", "4", "5", "6", "7", "8", "9", "10",
+    "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21",
+    "22", "23", "24", "25", "26",
+    "27", "28", "29", "30", "31",
+    "32", "32b", "32C",
+    "33", "34", "35",
+    "36", "37", "38",
+    "39", "40", "41", "42", "43", "44", "45", "46", "47", "48", "49",
+    "50", "51", "52",
+    "53", "54",
+    "55", "56", "57", "58", "59", "60", "61", "62", "63",
+    "64", "65", "66", "67", "68", "69", "70"
+  ],
+  "sections": [
+    { "name": "PIZZA", "menuNumbers": ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21"] },
+    { "name": "Indbagt, ufo og calzone", "menuNumbers": ["22", "23", "24", "25", "26"] },
+    { "name": "Salatpizza", "menuNumbers": ["27", "28", "29", "30", "31"] },
+    { "name": "Vegetarpizza", "menuNumbers": ["32", "32b", "32C"] },
+    { "name": "Pasta", "menuNumbers": ["33", "34", "35"] },
+    { "name": "UNLABELLED_PAGE5_36_38", "menuNumbers": ["36", "37", "38"] },
+    { "name": "GRILL", "menuNumbers": ["39", "40", "41", "42", "43", "44", "45", "46", "47", "48", "49"] },
+    { "name": "Sandwich - hjemmelavet inkl. pommes frites", "menuNumbers": ["50", "51", "52"] },
+    { "name": "Nachos", "menuNumbers": ["53", "54"] },
+    { "name": "INDISK", "menuNumbers": ["55", "56", "57", "58", "59", "60", "61", "62", "63"] },
+    { "name": "DRIKKEVARER", "menuNumbers": ["64", "65", "66", "67", "68", "69", "70"] }
+  ],
+  "rules": {
+    "page4OverlapsPage3": true,
+    "menuIsPriceColumnNotCategory": true,
+    "lilleStorOnlyProduct48": true,
+    "alphanumericPreserved": ["32b", "32C"],
+    "ocrGarbageNotMenuNumbers": ["II5", "I15"]
+  },
+  "expectedNames": {
+    "1": "Margarita",
+    "19": "Noah",
+    "20": "Hotchicken",
+    "21": "Brianboss",
+    "32": "Tino Bambino",
+    "32b": "Damon",
+    "32C": "Stefan",
+    "34": "Pasta Alfredo med Kylling",
+    "36": "Dürüm rulle",
+    "43": "½ Grillkylling m. pommes frites",
+    "48": "Pommes frites",
+    "55": "Samosa",
+    "65": "Øl"
+  },
+  "visionCorrections": [
+    {
+      "menuNumber": "43",
+      "reason": "TEST ORACLE ONLY — right-hand Menu price visible on rendered page; must be recovered by generic spatial/region-OCR, not runtime hardcoding",
+      "basePriceKroner": 99,
+      "menuPriceKroner": 130,
+      "priceMode": "base_menu"
+    },
+    {
+      "menuNumber": "34",
+      "reason": "TEST ORACLE ONLY — Pasta Alfredo name + 130 on rendered page",
+      "name": "Pasta Alfredo med Kylling",
+      "description": "Klassisk ret med Penne, flødesovs, parmesan og kylling",
+      "basePriceKroner": 130,
+      "priceMode": "single"
+    },
+    {
+      "menuNumber": "65",
+      "reason": "TEST ORACLE ONLY — Øl = 25 DKK on rendered page; text-layer/OCR often glues next-row 45 onto #65 — generic column-shift reassignment must recover 25",
+      "name": "Øl",
+      "basePriceKroner": 25,
+      "priceMode": "single"
+    }
+  ],
+  "priceExpectations": {
+    "43": { "baseKroner": 99, "menuKroner": 130 },
+    "34": { "baseKroner": 130 },
+    "65": { "baseKroner": 25 },
+    "66": { "baseKroner": 45 },
+    "48": { "lilleKroner": 40, "storKroner": 65 }
+  },
+  "note": "visionCorrections / priceExpectations are regression oracles for tests/gates only. Production extraction must NOT load or apply these as hard-coded overrides."
+}

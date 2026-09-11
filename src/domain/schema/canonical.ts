@@ -50,6 +50,9 @@ export const CanonicalProductChoiceSchema = z.object({
   sourceId: z.string().min(1),
   prompt: z.string().min(1),
   options: z.array(CanonicalProductChoiceOptionSchema).min(1),
+  required: z.boolean().optional(),
+  minSelections: z.number().int().positive().optional(),
+  maxSelections: z.number().int().positive().optional(),
   evidence: SourceEvidenceSchema.optional(),
 });
 

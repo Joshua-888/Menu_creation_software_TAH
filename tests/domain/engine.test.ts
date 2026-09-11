@@ -222,7 +222,7 @@ describe("runDomainEngine fixtures", () => {
     ).toEqual(["Tomato", "Cheese"]);
   });
 
-  it("requires review when ingredients missing — never invents", () => {
+  it("requires review when pizza ingredients missing — never invents", () => {
     const source = menu({
       restaurantName: "Demo",
       categories: [
@@ -250,6 +250,35 @@ describe("runDomainEngine fixtures", () => {
       p.issues.some((i) => i.code === "MISSING_SOURCE_SUPPORTED_INGREDIENTS"),
     ).toBe(true);
     expect(p.status).toBe("MANUAL_REVIEW_REQUIRED");
+  });
+
+  it("allows empty ingredients for drinks without inventing", () => {
+    const source = menu({
+      restaurantName: "Demo",
+      categories: [
+        category({
+          sourceId: "c1",
+          name: "DRIKKEVARER",
+          sourceOrder: 1,
+          products: [
+            product({
+              sourceId: "p1",
+              name: "Sodavand",
+              sourceOrder: 1,
+              sourceMenuNumber: "64",
+              variants: [variant("alm", "Alm.", { totalKroner: 25 })],
+            }),
+          ],
+        }),
+      ],
+    });
+    const { menu: out } = runDomainEngine(source);
+    const p = out.categories[0]!.products[0]!;
+    expect(p.ingredients).toEqual([]);
+    expect(
+      p.issues.some((i) => i.code === "MISSING_SOURCE_SUPPORTED_INGREDIENTS"),
+    ).toBe(false);
+    expect(p.status).toBe("READY");
   });
 
   it("keeps ProductChoice as structural IDs, not ingredients", () => {

@@ -1,5 +1,6 @@
 /**
  * M4 SQLite run persistence (Node built-in node:sqlite).
+ * Primary operation identity is sourceId; menuNumber+name are evidence only.
  */
 
 import { mkdirSync } from "node:fs";
@@ -27,6 +28,7 @@ export type OperationRecord = {
   operationId: string;
   entityType: string;
   action: string;
+  identitySourceId: string;
   identityMenuNumber: string;
   identityName: string;
   expectedPayloadJson: string | null;
@@ -59,6 +61,7 @@ CREATE TABLE IF NOT EXISTS operations (
   operation_id TEXT NOT NULL,
   entity_type TEXT NOT NULL,
   action TEXT NOT NULL,
+  identity_source_id TEXT NOT NULL DEFAULT '',
   identity_menu_number TEXT NOT NULL,
   identity_name TEXT NOT NULL,
   expected_payload_json TEXT,
@@ -73,7 +76,17 @@ CREATE TABLE IF NOT EXISTS operations (
   FOREIGN KEY (run_id) REFERENCES runs(run_id)
 );
 
+CREATE TABLE IF NOT EXISTS source_destination_map (
+  run_id TEXT NOT NULL,
+  source_id TEXT NOT NULL,
+  destination_database_id TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  PRIMARY KEY (run_id, source_id),
+  FOREIGN KEY (run_id) REFERENCES runs(run_id)
+);
+
 CREATE INDEX IF NOT EXISTS idx_ops_run_state ON operations(run_id, state);
+CREATE INDEX IF NOT EXISTS idx_ops_source ON operations(run_id, identity_source_id);
 CREATE INDEX IF NOT EXISTS idx_ops_identity ON operations(run_id, identity_menu_number, identity_name);
 `;
 
@@ -84,6 +97,18 @@ export class RunStore {
     mkdirSync(dirname(dbPath), { recursive: true });
     this.db = new DatabaseSync(dbPath);
     this.db.exec(SCHEMA);
+    this.migrate();
+  }
+
+  private migrate(): void {
+    const cols = this.db
+      .prepare(`PRAGMA table_info(operations)`)
+      .all() as Array<{ name: string }>;
+    if (!cols.some((c) => c.name === "identity_source_id")) {
+      this.db.exec(
+        `ALTER TABLE operations ADD COLUMN identity_source_id TEXT NOT NULL DEFAULT ''`,
+      );
+    }
   }
 
   close(): void {
@@ -140,11 +165,13 @@ export class RunStore {
     this.db
       .prepare(
         `INSERT INTO operations (
-          run_id, operation_id, entity_type, action, identity_menu_number, identity_name,
+          run_id, operation_id, entity_type, action, identity_source_id,
+          identity_menu_number, identity_name,
           expected_payload_json, destination_id, state, attempt_count,
           last_error_category, last_error_message, verification_diff_json, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(run_id, operation_id) DO UPDATE SET
+          identity_source_id=excluded.identity_source_id,
           destination_id=excluded.destination_id,
           state=excluded.state,
           attempt_count=excluded.attempt_count,
@@ -158,6 +185,7 @@ export class RunStore {
         op.operationId,
         op.entityType,
         op.action,
+        op.identitySourceId,
         op.identityMenuNumber,
         op.identityName,
         op.expectedPayloadJson,
@@ -188,6 +216,17 @@ export class RunStore {
     return rows.map(mapOp);
   }
 
+  findBySourceId(runId: string, sourceId: string): OperationRecord | null {
+    const row = this.db
+      .prepare(
+        `SELECT * FROM operations WHERE run_id = ? AND identity_source_id = ?`,
+      )
+      .get(runId, sourceId) as Record<string, unknown> | undefined;
+    if (!row) return null;
+    return mapOp(row);
+  }
+
+  /** Evidence lookup — not primary identity. */
   findByIdentity(
     runId: string,
     menuNumber: string,
@@ -201,6 +240,56 @@ export class RunStore {
     if (!row) return null;
     return mapOp(row);
   }
+
+  setSourceDestinationMapping(
+    runId: string,
+    sourceId: string,
+    destinationDatabaseId: string,
+  ): void {
+    this.db
+      .prepare(
+        `INSERT INTO source_destination_map (
+          run_id, source_id, destination_database_id, updated_at
+        ) VALUES (?, ?, ?, ?)
+        ON CONFLICT(run_id, source_id) DO UPDATE SET
+          destination_database_id=excluded.destination_database_id,
+          updated_at=excluded.updated_at`,
+      )
+      .run(runId, sourceId, destinationDatabaseId, new Date().toISOString());
+  }
+
+  getDestinationIdForSource(
+    runId: string,
+    sourceId: string,
+  ): string | null {
+    const row = this.db
+      .prepare(
+        `SELECT destination_database_id FROM source_destination_map
+         WHERE run_id = ? AND source_id = ?`,
+      )
+      .get(runId, sourceId) as
+      | { destination_database_id: string }
+      | undefined;
+    return row ? String(row.destination_database_id) : null;
+  }
+
+  getSourceDestinationMap(runId: string): Map<string, string> {
+    const rows = this.db
+      .prepare(
+        `SELECT source_id, destination_database_id FROM source_destination_map
+         WHERE run_id = ?`,
+      )
+      .all(runId) as Array<{
+      source_id: string;
+      destination_database_id: string;
+    }>;
+    return new Map(
+      rows.map((r) => [
+        String(r.source_id),
+        String(r.destination_database_id),
+      ]),
+    );
+  }
 }
 
 function mapOp(row: Record<string, unknown>): OperationRecord {
@@ -209,6 +298,7 @@ function mapOp(row: Record<string, unknown>): OperationRecord {
     operationId: String(row.operation_id),
     entityType: String(row.entity_type),
     action: String(row.action),
+    identitySourceId: String(row.identity_source_id ?? ""),
     identityMenuNumber: String(row.identity_menu_number),
     identityName: String(row.identity_name),
     expectedPayloadJson:

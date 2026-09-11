@@ -6,6 +6,13 @@ function comparisonKey(display: string): string {
   return display.trim().toLowerCase().replace(/\s+/g, " ");
 }
 
+/** Categories whose source menus almost always list toppings/ingredients. */
+export function categoryExpectsListedIngredients(categoryName: string): boolean {
+  return /pizza|salatpizza|vegetarpizza|indbagt|calzone|ufo/i.test(
+    categoryName,
+  );
+}
+
 /**
  * Merge category/common ingredients with product-specific ingredients.
  * Preserves logical/source order. Deduplicates case- and whitespace-insensitively.

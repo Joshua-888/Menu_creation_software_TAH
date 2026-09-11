@@ -13,3 +13,11 @@ contract drift → block writes → capture → repair mode → new adapter vers
 LLM may assist candidate repairs; must never silently continue production imports after drift.
 
 Corrections become permanent knowledge only via fixture + test + implementation + regression.
+
+## Loop C — Decision policy reuse (M6)
+
+See `DECISION_LEARNING.md`.
+
+human review → HumanDecision (immutable) → PolicyCandidate → SHADOW → safe ACTIVE → auto-resolve later
+
+Recommendations ≠ approvals. No inventing Menu contents. No admin writes from learning alone.
