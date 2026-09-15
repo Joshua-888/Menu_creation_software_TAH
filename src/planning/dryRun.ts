@@ -753,6 +753,9 @@ export function buildDryRunWritePlan(input: {
           ...(input.ingredientLikelihood != null
             ? { ingredientLikelihood: input.ingredientLikelihood }
             : {}),
+          ...(input.probabilityPolicy != null
+            ? { probabilityPolicy: input.probabilityPolicy }
+            : {}),
         });
         const liveRecovered = recoverProductLabelsForReconcile({
           name: live.name,

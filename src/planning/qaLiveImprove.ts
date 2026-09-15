@@ -44,6 +44,10 @@ import {
 import { proposePizzaToppingsFromDescription } from "../learning/pizzaToppings.js";
 import type { IngredientLikelihoodPolicy } from "../learning/ingredientLikelihood.js";
 import {
+  filterAdditionsWithTrace,
+  type ProbabilityPolicyMap,
+} from "../learning/categoryLikelihood.js";
+import {
   isForbiddenMenuVariantName,
   stripForbiddenMenuVariants,
 } from "../learning/categorySizeVariantPolicy.js";
@@ -282,6 +286,8 @@ export function buildQaTargetPayload(input: {
   destinationCategories: DestinationCategory[];
   /** Peer ingredient/beskrivelse likelihood — peer-first, domain prior fallback. */
   ingredientLikelihood?: IngredientLikelihoodPolicy | null;
+  /** Category probability — dip/meat Tilbehør gates on QA targets. */
+  probabilityPolicy?: ProbabilityPolicyMap | null;
 }): PlannedProductPayload {
   const live = input.live;
   const source = input.sourcePayload;
@@ -429,13 +435,22 @@ export function buildQaTargetPayload(input: {
   }
   // Re-sanitize union (clears drinks; reprices flat lists)
   let additions = polishAdditions([...addByKey.values()], name, catName);
-  // Grill fries / pommes / Menu-burgers: replace empty or pizza-dump Tilbehør with dips
+  // Grill fries / pommes plates: replace empty or pizza-dump Tilbehør with dips
   additions = preferGrillDipAdditions(additions, {
     name,
     categoryName: catName,
     description,
     variants: (live.variants ?? []).map((v) => ({ name: v.name })),
   });
+  additions = polishAdditions(additions, name, catName);
+  // Kind probability / hard priors: no dips on plain burgers/sandwiches/pizza
+  additions = filterAdditionsWithTrace({
+    name,
+    ...(catName ? { categoryNames: [catName] } : {}),
+    ...(description ? { description } : {}),
+    additions,
+    policy: input.probabilityPolicy ?? null,
+  }).after;
   additions = polishAdditions(additions, name, catName);
 
   const liveVars = polishVariants(
@@ -560,6 +575,27 @@ export function filterNeverWorseDeltas(input: {
         isForbiddenTilbehorName(String(a.name ?? "")),
       );
       if (beforeForbidden.length > 0 && afterForbidden.length === 0) {
+        kept.push(delta);
+        continue;
+      }
+      // Hard prior: strip dips from kinds that never allow them (burger/sandwich/pizza).
+      const beforeDipHeavy = beforeList.filter((a) =>
+        /\b(mayo|mayonnaise|remoulade|ketchup|salatmayo)\b/i.test(a.name),
+      );
+      const afterDipHeavy = afterList.filter((a) =>
+        /\b(mayo|mayonnaise|remoulade|ketchup|salatmayo)\b/i.test(
+          String(a.name ?? ""),
+        ),
+      );
+      if (
+        !productWantsGrillDips({
+          name: productName,
+          categoryName: input.liveCategoryName ?? "",
+        }) &&
+        beforeDipHeavy.length > 0 &&
+        afterDipHeavy.length < beforeDipHeavy.length &&
+        !/\b(pommes|frites|nuggets?)\b/i.test(productName)
+      ) {
         kept.push(delta);
         continue;
       }

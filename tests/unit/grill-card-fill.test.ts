@@ -194,9 +194,12 @@ describe("qaLiveImprove grill", () => {
     expect(target.additions.some((a) => /pommes|dyppelse/i.test(a.name))).toBe(
       false,
     );
-    expect(target.additions.map((a) => a.name)).toEqual(
-      expect.arrayContaining(["Salatmayonnaise", "Remoulade", "Ketchup"]),
-    );
+    // Plain burgers are sandwich_grill — dips not allowed (only fries plates).
+    expect(
+      target.additions.some((a) =>
+        /mayo|remoulade|ketchup/i.test(a.name),
+      ),
+    ).toBe(false);
   });
 
   it("never-worse allows stripping Menu variants", () => {

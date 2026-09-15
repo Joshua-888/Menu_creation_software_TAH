@@ -410,13 +410,40 @@ export function filterAdditionsWithTrace(input: {
   }
   const policy = input.policy;
   if (!policy) {
-    // Without peer policy still keep non-drink additions (already filtered above).
+    // Hard priors without peer artifact: drinks already cleared; dips only on
+    // finger_food / menu_with_fries (never pizza/burger/sandwich alone).
+    const kind = classifyProductKind(input);
+    const hardAllowDips =
+      kind === "finger_food" || kind === "menu_with_fries";
+    const removed: AdditionFilterTrace["removed"] = [];
+    const after: Array<{ name: string; priceOre: number }> = [];
+    const reasonCodes = new Set<AdditionFilterReasonCode>();
+    for (const a of before) {
+      if (isInvalidFoodComponent(a.name, input.name)) {
+        removed.push({ ...a, reason: "DIP_DENY_KIND" });
+        reasonCodes.add("DIP_DENY_KIND");
+        continue;
+      }
+      if (!hardAllowDips && isDipAddition(a.name)) {
+        removed.push({ ...a, reason: "DIP_DENY_KIND" });
+        reasonCodes.add("DIP_DENY_KIND");
+        continue;
+      }
+      if (isVegetarianContext(input) && isMeatAddition(a.name)) {
+        removed.push({ ...a, reason: "MEAT_FORBID_VEG" });
+        reasonCodes.add("MEAT_FORBID_VEG");
+        continue;
+      }
+      after.push(a);
+    }
+    const priced = repriceTilbehorList(after);
+    if (priced.length > 0) reasonCodes.add("KEPT");
     return {
       kind,
       before,
-      after: repriceTilbehorList(before),
-      removed: [],
-      reasonCodes: before.length ? ["KEPT"] : [],
+      after: priced,
+      removed,
+      reasonCodes: [...reasonCodes],
     };
   }
   const allowDips = productAllowsDips(input, policy);
