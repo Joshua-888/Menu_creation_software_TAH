@@ -1,8 +1,8 @@
 /**
- * Portal live-write gate — dry-run remains default.
- * Live path requires PORTAL_LIVE_WRITES=1 + allowlisted destination host.
+ * Portal live-write gate.
  *
- * Allowlist: PORTAL_LIVE_WRITE_HOSTS=host1.dk,host2.dk (comma-separated).
+ * Default ON when TAH admin credentials exist and the destination host is
+ * allowlisted. Set PORTAL_LIVE_WRITES=0 to force dry-run-only (kill switch).
  */
 
 import { M2B_ADAPTER_CAPABILITIES } from "../tah/contracts/evidence.js";
@@ -21,10 +21,26 @@ export {
 /** @deprecated use parseLiveWriteHostAllowlist */
 export const PORTAL_LIVE_WRITE_HOST_ALLOWLIST = DEFAULT_LIVE_WRITE_HOSTS;
 
+function hasTahAdminCredentials(
+  env: NodeJS.ProcessEnv = process.env,
+): boolean {
+  return Boolean(env.TAH_ADMIN_EMAIL?.trim() && env.TAH_ADMIN_PASSWORD?.trim());
+}
+
+/**
+ * Live writes are on by default when admin credentials are configured.
+ * Explicit PORTAL_LIVE_WRITES=0/false disables; =1/true forces on.
+ */
 export function isPortalLiveWritesEnabled(
   env: NodeJS.ProcessEnv = process.env,
 ): boolean {
-  return env.PORTAL_LIVE_WRITES === "1" || env.PORTAL_LIVE_WRITES === "true";
+  if (env.PORTAL_LIVE_WRITES === "0" || env.PORTAL_LIVE_WRITES === "false") {
+    return false;
+  }
+  if (env.PORTAL_LIVE_WRITES === "1" || env.PORTAL_LIVE_WRITES === "true") {
+    return true;
+  }
+  return hasTahAdminCredentials(env);
 }
 
 export function isDestinationHostAllowlistedForLiveWrites(
@@ -55,7 +71,13 @@ export function evaluatePortalLiveWriteGate(input: {
   const createCategoryCertified =
     M2B_ADAPTER_CAPABILITIES.write.createCategory === "CERTIFIED";
   const blockers: string[] = [];
-  if (!enabled) blockers.push("PORTAL_LIVE_WRITES not set to 1");
+  if (!enabled) {
+    blockers.push(
+      hasTahAdminCredentials(env)
+        ? "PORTAL_LIVE_WRITES=0 (kill switch)"
+        : "TAH_ADMIN_EMAIL / TAH_ADMIN_PASSWORD not configured",
+    );
+  }
   if (!allowlisted) {
     blockers.push(
       `destination host not allowlisted (need one of: ${allowlist.join(",")}; set PORTAL_LIVE_WRITE_HOSTS)`,

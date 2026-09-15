@@ -432,9 +432,8 @@ export function formatMenuReconcileMarkdown(
   }
   lines.push(
     `## Apply`,
-    `Set reconcile confirm (fingerprint must match) then re-run with live writes:`,
-    `- File: \`runs/decisions/reconcile-write-confirm.json\``,
-    `- Or \`RECONCILE_WRITE_CONFIRMED=1\` + \`RECONCILE_WRITE_FINGERPRINT=<fp>\``,
+    `With admin credentials configured and the host allowlisted, QA live execute applies Opdater UPDATEs automatically (no separate reconcile confirm).`,
+    `Kill switch: \`PORTAL_LIVE_WRITES=0\`.`,
     ``,
   );
   return lines.join("\n");

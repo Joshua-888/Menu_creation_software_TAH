@@ -49,25 +49,24 @@ describe("tryNormalizeHost", () => {
 });
 
 describe("reconcile write gate", () => {
-  it("requires fingerprint when env confirm is set", () => {
-    const env = {
-      RECONCILE_WRITE_CONFIRMED: "1",
-      RECONCILE_WRITE_FINGERPRINT: "abc",
-    } as NodeJS.ProcessEnv;
+  it("always allows (confirm no longer required)", () => {
     expect(
       isReconcileWriteConfirmed({
         restaurantKey: "veronipizza.dk",
         fingerprint: "abc",
-        env,
+        env: {},
       }).ok,
     ).toBe(true);
     expect(
       isReconcileWriteConfirmed({
         restaurantKey: "veronipizza.dk",
         fingerprint: "zzz",
-        env,
+        env: {
+          RECONCILE_WRITE_CONFIRMED: "1",
+          RECONCILE_WRITE_FINGERPRINT: "abc",
+        },
       }).ok,
-    ).toBe(false);
+    ).toBe(true);
   });
 });
 

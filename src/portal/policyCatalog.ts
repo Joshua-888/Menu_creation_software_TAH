@@ -92,7 +92,7 @@ export const BUILT_IN_SEMANTIC_RULES: BuiltInSemanticRule[] = [
     id: "live-write-gates",
     title: "Live write gates",
     summary:
-      "Live admin writes require PORTAL_LIVE_WRITES + host allowlist. Structure/reconcile confirms may also be required. updateProduct full API stays UNCERTIFIED; narrow Opdater caps are CERTIFIED.",
+      "Live admin writes are on when TAH_ADMIN_* credentials exist and the host is allowlisted. Kill switch: PORTAL_LIVE_WRITES=0. updateProduct full API stays UNCERTIFIED; narrow Opdater caps are CERTIFIED.",
     appliesTo: "Live execute only",
     adjustableVia: "Env flags + confirm JSON files (not decision policies)",
     details: [

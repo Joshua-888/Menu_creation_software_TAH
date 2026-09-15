@@ -35,7 +35,6 @@ import { resolvePortalDecisionDbPath } from "../learning/tilbehorOverride.js";
 import { DecisionStore } from "../decisions/store.js";
 import type { ProductPolicyTrace } from "../planning/index.js";
 import { repoRoot } from "./paths.js";
-import { assertReconcileWriteConfirmed } from "./reconcileWriteGate.js";
 
 function emptyDestinationSnapshot(host: string): DryRunDestinationSnapshot {
   return {
@@ -45,15 +44,18 @@ function emptyDestinationSnapshot(host: string): DryRunDestinationSnapshot {
   };
 }
 
-/** When PORTAL_DRYRUN_LIVE_DEST=1 + credentials + allowlisted host, dry-run uses live catalog. */
+/** Live catalog for dry-run: ON when admin credentials + allowlisted host.
+ * Set PORTAL_DRYRUN_LIVE_DEST=0 to force empty/offline dry-run. */
 export function shouldLoadLiveDestinationForDryRun(
   destinationHost: string,
   env: NodeJS.ProcessEnv = process.env,
 ): boolean {
-  const flag =
-    env.PORTAL_DRYRUN_LIVE_DEST === "1" ||
-    env.PORTAL_DRYRUN_LIVE_DEST === "true";
-  if (!flag) return false;
+  if (
+    env.PORTAL_DRYRUN_LIVE_DEST === "0" ||
+    env.PORTAL_DRYRUN_LIVE_DEST === "false"
+  ) {
+    return false;
+  }
   if (!env.TAH_ADMIN_EMAIL?.trim() || !env.TAH_ADMIN_PASSWORD?.trim()) {
     return false;
   }
@@ -210,8 +212,6 @@ export async function executePortalLiveWrites(input: {
   runsDbPath: string;
   /** QA_RECONCILE enables UPDATE ops + deep snapshot. */
   workflow?: "CREATE_MENU" | "QA_RECONCILE";
-  /** Required when executing UPDATE ops for QA. */
-  reconcileFingerprint?: string;
 }): Promise<{
   livePlan: MigrationWritePlan;
   result: ExecuteResult;
@@ -233,16 +233,6 @@ export async function executePortalLiveWrites(input: {
       restaurantKey: host,
       fingerprint: structure.fingerprint,
       confirmFilePath: structure.confirmPath,
-    });
-  }
-
-  if (isQa) {
-    if (!input.reconcileFingerprint) {
-      throw new Error("QA live execute requires reconcileFingerprint");
-    }
-    assertReconcileWriteConfirmed({
-      restaurantKey: input.restaurant,
-      fingerprint: input.reconcileFingerprint,
     });
   }
 

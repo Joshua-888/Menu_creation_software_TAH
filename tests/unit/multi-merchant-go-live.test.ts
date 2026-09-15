@@ -88,10 +88,9 @@ describe("default Tilbehør seed scoping", () => {
 });
 
 describe("dry-run live destination gate", () => {
-  it("requires flag + credentials + allowlist", () => {
+  it("turns on with credentials + allowlist; kill switch forces off", () => {
     expect(
       shouldLoadLiveDestinationForDryRun("shop-a.dk", {
-        PORTAL_DRYRUN_LIVE_DEST: "1",
         TAH_ADMIN_EMAIL: "a@b.c",
         TAH_ADMIN_PASSWORD: "x",
         PORTAL_LIVE_WRITE_HOSTS: "shop-a.dk",
@@ -100,7 +99,6 @@ describe("dry-run live destination gate", () => {
     ).toBe(true);
     expect(
       shouldLoadLiveDestinationForDryRun("shop-a.dk", {
-        PORTAL_DRYRUN_LIVE_DEST: "1",
         TAH_ADMIN_EMAIL: "a@b.c",
         TAH_ADMIN_PASSWORD: "x",
         PORTAL_LIVE_WRITE_HOSTS: "other.dk",
@@ -109,9 +107,16 @@ describe("dry-run live destination gate", () => {
     ).toBe(false);
     expect(
       shouldLoadLiveDestinationForDryRun("shop-a.dk", {
-        PORTAL_LIVE_WRITE_HOSTS: "shop-a.dk",
+        PORTAL_DRYRUN_LIVE_DEST: "0",
         TAH_ADMIN_EMAIL: "a@b.c",
         TAH_ADMIN_PASSWORD: "x",
+        PORTAL_LIVE_WRITE_HOSTS: "shop-a.dk",
+        PORTAL_LIVE_WRITE_HOSTS_STRICT: "1",
+      }),
+    ).toBe(false);
+    expect(
+      shouldLoadLiveDestinationForDryRun("shop-a.dk", {
+        PORTAL_LIVE_WRITE_HOSTS: "shop-a.dk",
       }),
     ).toBe(false);
   });

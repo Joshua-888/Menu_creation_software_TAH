@@ -170,10 +170,11 @@ describe("category ingredient Tilbehør", () => {
     const likelihood = {
       restaurantsAnalyzed: 1,
       hosts: ["peer.dk"],
-      thresholds: { allowMin: 0.35, denyMax: 0.1, minSupport: 2 },
+      thresholds: { allowMin: 0.35, denyMax: 0.12, minSupport: 3 },
       byKind: {
         pizza: [
           {
+            kind: "pizza" as const,
             nameKey: "ost",
             displayName: "Ost",
             nProductsInKind: 10,
@@ -261,7 +262,7 @@ describe("category ingredient Tilbehør", () => {
     const likelihood: AdditionLikelihoodPolicy = {
       restaurantsAnalyzed: 1,
       hosts: ["peer.dk"],
-      thresholds: { allowMin: 0.35, denyMax: 0.1, minSupport: 2 },
+      thresholds: { allowMin: 0.35, denyMax: 0.12, minSupport: 3 },
       byKind: {},
       proposedSets: [
         {

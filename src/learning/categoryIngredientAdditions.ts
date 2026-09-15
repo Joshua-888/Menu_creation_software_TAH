@@ -211,7 +211,7 @@ export function upsertCategoryIngredientAdditionFacts(input: {
 } {
   const compositions = composeCategoryIngredientAdditions({
     menu: input.menu,
-    likelihood: input.likelihood,
+    likelihood: input.likelihood ?? null,
   });
   const facts: AdditionSetFact[] = [];
   const categoriesWithUnion: string[] = [];

@@ -1,6 +1,7 @@
 /**
  * Migration worker — extract → domain → decisions/questions → dry-run artifacts.
- * Live admin writes only when PORTAL_LIVE_WRITES=1 + allowlisted host.
+ * Live admin writes when TAH_ADMIN_* credentials exist + allowlisted host
+ * (kill switch: PORTAL_LIVE_WRITES=0).
  */
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -51,7 +52,6 @@ import {
   portalLiveRunsDbPath,
 } from "./liveExecute.js";
 import { evaluatePortalLiveWriteGate } from "./liveWrites.js";
-import { isReconcileWriteConfirmed } from "./reconcileWriteGate.js";
 import { jobRunDir, portalDataDir, repoRoot } from "./paths.js";
 import { getPortalStore, type PortalStore } from "./store.js";
 import { DecisionStore } from "../decisions/store.js";
@@ -348,26 +348,11 @@ export async function runMigrationJob(
       destinationHost: job.destinationHost,
       deep: isQa,
     });
-    const requireLiveDestEnv =
-      process.env.PORTAL_DRYRUN_LIVE_DEST === "1" ||
-      process.env.PORTAL_DRYRUN_LIVE_DEST === "true";
-    if (isQa && destLoad.source !== "live") {
+    // Always require a real live catalog whenever credentials/allowlist enable it
+    // (and always for QA). Never plan against an empty fake destination.
+    if (destLoad.source !== "live") {
       throw new Error(
-        `QA_RECONCILE requires live destination snapshot (set PORTAL_DRYRUN_LIVE_DEST=1 + credentials + allowlisted host). ${destLoad.error ?? "gate blocked or empty"}`,
-      );
-    }
-    if (requireLiveDestEnv && destLoad.source !== "live") {
-      throw new Error(
-        `PORTAL_DRYRUN_LIVE_DEST=1 but destination snapshot is not live (${destLoad.error ?? "gate blocked or empty"})`,
-      );
-    }
-    if (
-      !isQa &&
-      liveGate.canLiveExecute &&
-      destLoad.source !== "live"
-    ) {
-      throw new Error(
-        `Live writes enabled but dry-run destination is empty — set PORTAL_DRYRUN_LIVE_DEST=1 so FOUND products are not falsely planned as CREATE. ${destLoad.error ?? ""}`,
+        `${isQa ? "QA_RECONCILE" : "Create"} requires a live destination snapshot. Configure TAH_ADMIN_EMAIL/PASSWORD and allowlist the host (PORTAL_LIVE_WRITE_HOSTS). ${destLoad.error ?? "gate blocked or empty"}`,
       );
     }
     const destination = destLoad.destination;
@@ -601,17 +586,7 @@ export async function runMigrationJob(
     let finalStatus: JobStatus =
       created.length > 0 ? "AWAITING_REVIEW" : "READY_DRY_RUN";
 
-    const reconcileGate = reconcileReport
-      ? isReconcileWriteConfirmed({
-          restaurantKey: job.restaurantKey,
-          fingerprint: reconcileReport.fingerprint,
-        })
-      : { ok: false, blockers: ["no_reconcile_report"] };
-
-    const willAutoLive =
-      liveGate.canLiveExecute &&
-      created.length === 0 &&
-      (!isQa || reconcileGate.ok);
+    const willAutoLive = liveGate.canLiveExecute && created.length === 0;
 
     if (willAutoLive) {
       try {
@@ -628,9 +603,6 @@ export async function runMigrationJob(
           canonical: recovered.menu,
           runsDbPath: portalLiveRunsDbPath(portalDataDir()),
           workflow: job.workflow,
-          ...(reconcileReport
-            ? { reconcileFingerprint: reconcileReport.fingerprint }
-            : {}),
         });
         writeJson(outDir, "live-writeplan.json", live.livePlan);
         writeJson(outDir, "live-destination-snapshot.json", live.destination);
@@ -654,13 +626,6 @@ export async function runMigrationJob(
         store.finishJobRun(runStub.id, finalStatus, metrics, message);
         return;
       }
-    } else if (isQa && liveGate.canLiveExecute && !reconcileGate.ok) {
-      store.updateJobStatus(jobId, "READY_DRY_RUN", {
-        remainingQuestions: created.length,
-        errorMessage: `QA dry-run ready. Live Opdater blocked: ${reconcileGate.blockers.join("; ")}`,
-      });
-      store.finishJobRun(runStub.id, "READY_DRY_RUN", metrics, null);
-      return;
     }
 
     store.updateJobStatus(jobId, finalStatus, {
@@ -717,32 +682,10 @@ export async function runPostReviewLiveIfReady(jobId: string): Promise<{
   const run = store.latestJobRun(jobId);
   if (!run?.runDir) return { ran: false, reason: "no_run_dir" };
 
-  let reconcileFingerprint: string | undefined;
   if (job.workflow === "QA_RECONCILE") {
     const reconcilePath = join(run.runDir, "menu-reconcile.json");
     if (!existsSync(reconcilePath)) {
       return { ran: false, reason: "qa_missing_reconcile_report" };
-    }
-    try {
-      const report = JSON.parse(readFileSync(reconcilePath, "utf8")) as {
-        fingerprint?: string;
-      };
-      reconcileFingerprint = report.fingerprint ?? "";
-    } catch {
-      return { ran: false, reason: "qa_reconcile_unreadable" };
-    }
-    if (!reconcileFingerprint) {
-      return { ran: false, reason: "qa_reconcile_missing_fingerprint" };
-    }
-    const gate = isReconcileWriteConfirmed({
-      restaurantKey: job.restaurantKey,
-      fingerprint: reconcileFingerprint,
-    });
-    if (!gate.ok) {
-      return {
-        ran: false,
-        reason: `reconcile_blocked:${gate.blockers.join(",")}`,
-      };
     }
   }
 
@@ -802,9 +745,6 @@ export async function runPostReviewLiveIfReady(jobId: string): Promise<{
       canonical,
       runsDbPath: portalLiveRunsDbPath(portalDataDir()),
       workflow: job.workflow,
-      ...(reconcileFingerprint
-        ? { reconcileFingerprint }
-        : {}),
     });
     writeJson(run.runDir, "live-writeplan.json", live.livePlan);
     writeJson(run.runDir, "live-destination-snapshot.json", live.destination);

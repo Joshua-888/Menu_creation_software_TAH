@@ -16,8 +16,21 @@ import {
 import { RunStore } from "../../src/runs/sqliteStore.js";
 
 describe("portal live write gate", () => {
-  it("stays off unless PORTAL_LIVE_WRITES=1", () => {
+  it("stays off without credentials; kill switch forces off", () => {
     expect(isPortalLiveWritesEnabled({} as NodeJS.ProcessEnv)).toBe(false);
+    expect(
+      isPortalLiveWritesEnabled({
+        TAH_ADMIN_EMAIL: "a@b.c",
+        TAH_ADMIN_PASSWORD: "x",
+      } as NodeJS.ProcessEnv),
+    ).toBe(true);
+    expect(
+      isPortalLiveWritesEnabled({
+        TAH_ADMIN_EMAIL: "a@b.c",
+        TAH_ADMIN_PASSWORD: "x",
+        PORTAL_LIVE_WRITES: "0",
+      } as NodeJS.ProcessEnv),
+    ).toBe(false);
     expect(
       isPortalLiveWritesEnabled({ PORTAL_LIVE_WRITES: "1" } as NodeJS.ProcessEnv),
     ).toBe(true);
@@ -26,9 +39,9 @@ describe("portal live write gate", () => {
       env: {},
     });
     expect(gated.canLiveExecute).toBe(false);
-    expect(gated.blockers.some((b: string) => /PORTAL_LIVE_WRITES/i.test(b))).toBe(
-      true,
-    );
+    expect(
+      gated.blockers.some((b: string) => /TAH_ADMIN_/i.test(b)),
+    ).toBe(true);
   });
 
   it("requires allowlisted Veroni host even when flag is on", () => {
@@ -41,10 +54,13 @@ describe("portal live write gate", () => {
     expect(gated.canLiveExecute).toBe(false);
   });
 
-  it("opens when flag + Veroni + createCategory CERTIFIED", () => {
+  it("opens when credentials + Veroni + createCategory CERTIFIED", () => {
     const gated = evaluatePortalLiveWriteGate({
       destinationHost: "veronipizza.dk",
-      env: { PORTAL_LIVE_WRITES: "1" },
+      env: {
+        TAH_ADMIN_EMAIL: "a@b.c",
+        TAH_ADMIN_PASSWORD: "x",
+      },
     });
     expect(gated.createCategoryCertified).toBe(true);
     expect(gated.canLiveExecute).toBe(true);
@@ -55,7 +71,8 @@ describe("portal live write gate", () => {
     const gated = evaluatePortalLiveWriteGate({
       destinationHost: "https://new-merchant.dk",
       env: {
-        PORTAL_LIVE_WRITES: "1",
+        TAH_ADMIN_EMAIL: "a@b.c",
+        TAH_ADMIN_PASSWORD: "x",
         PORTAL_LIVE_WRITE_HOSTS: "new-merchant.dk,second-merchant.dk",
       },
     });

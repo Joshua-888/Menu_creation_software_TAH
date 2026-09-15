@@ -12,7 +12,7 @@ export default async function QaJobPage() {
     <AppShell employeeName={emp.name}>
       <PageHeader
         title="Quality check menu"
-        subtitle="QA / reconcile — requires live dest. Produces menu-reconcile report and Opdater UPDATE plans (name/description/ingredients). Live apply needs RECONCILE_WRITE confirm."
+        subtitle="QA / reconcile against the live menu. Produces a reconcile report and applies Opdater updates (name/description/ingredients) when admin credentials are configured."
         backHref="/jobs"
         backLabel="Dashboard"
       />

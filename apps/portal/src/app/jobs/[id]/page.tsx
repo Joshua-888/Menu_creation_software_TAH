@@ -72,11 +72,9 @@ export default async function JobDetailPage({
         <div className="panel">
           <h2>Quality check</h2>
           <p className="muted">
-            QA dry-run requires a live destination snapshot. It writes{" "}
-            <code>menu-reconcile.json</code> and plans Opdater UPDATEs for
-            name / description / ingredients only. Live apply needs{" "}
-            <code>PORTAL_LIVE_WRITES</code> plus{" "}
-            <code>RECONCILE_WRITE_CONFIRMED=1</code> and fingerprint match.
+            QA diffs the intended menu (source + policies) against the live
+            destination. Opdater applies name / description / ingredients when
+            admin credentials are configured and the host is allowlisted.
           </p>
           {drySummary &&
           typeof drySummary === "object" &&
@@ -129,10 +127,10 @@ export default async function JobDetailPage({
         <div className="panel">
           <h2>Live writes enabled</h2>
           <p className="muted">
-            PORTAL_LIVE_WRITES=1 and host allowlisted. When the last review
-            question is cleared, the worker schedules gated live execute from
-            existing dry-run artifacts (hidden creates). If live is off, status
-            stays READY_DRY_RUN until you enable the flag and clear/re-answer.
+            Admin credentials configured and host allowlisted. When the last
+            review question is cleared, the worker schedules live execute from
+            existing dry-run artifacts (hidden creates). Kill switch:{" "}
+            <code>PORTAL_LIVE_WRITES=0</code>.
           </p>
           {liveResult ? (
             <pre

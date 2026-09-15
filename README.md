@@ -16,13 +16,14 @@ See [PLAN.md](PLAN.md) and [AGENTS.md](AGENTS.md).
 
 ## Operator Portal — deploy & invite employees
 
-Internal TakeAwayHero employee web app for merchant menu migrations (PDF upload + optional source URL). **Dry-run is the default.** Live admin writes require an explicit env flag (see below).
+Internal TakeAwayHero employee web app for merchant menu migrations (PDF upload + optional source URL). Live writes and live dry-run destinations turn on automatically when `TAH_ADMIN_*` credentials exist and the host is allowlisted. Kill switches: `PORTAL_LIVE_WRITES=0`, `PORTAL_DRYRUN_LIVE_DEST=0`.
 
 ### Local
 
 ```bash
 cp .env.example .env
 # set PORTAL_SESSION_SECRET, ADMIN_BOOTSTRAP_EMAIL, ADMIN_BOOTSTRAP_PASSWORD
+# set TAH_ADMIN_EMAIL / TAH_ADMIN_PASSWORD for live dry-run + writes
 npm install
 npm run portal:seed
 npm run portal:dev
@@ -35,16 +36,15 @@ Pre-push ship gate (no Playwright browsers / no heavy PDF OCR suite):
 npm run check:ship
 ```
 
-### Live writes (gated)
+### Live writes
 
-Dry-run remains the default. To unlock live executor writes against an allowlisted host:
+With admin credentials configured:
 
 1. Certify createCategory canary on Veroni: `npm run m67:category` (needs `TAH_ADMIN_*` in `.env`)
-2. Set `PORTAL_LIVE_WRITES=1`
-3. Destination host must be allowlisted (`veronipizza.dk` for this milestone)
-4. Provide `TAH_ADMIN_EMAIL` / `TAH_ADMIN_PASSWORD` for Playwright admin session
+2. Destination host must be allowlisted (`veronipizza.dk` by default; add others via `PORTAL_LIVE_WRITE_HOSTS`)
+3. Live execute runs after dry-run when there are no open review questions (creates stay hidden)
 
-Without the flag, the portal only writes dry-run artifacts. Customer Pasta create uses `allowCustomerCategory: true` at the executor call site after the canary gate.
+To force dry-run-only: `PORTAL_LIVE_WRITES=0`. Customer Pasta create uses `allowCustomerCategory: true` at the executor call site after the canary gate.
 
 Heavy Veroni PDF extraction tests (optional, slow):
 
@@ -66,7 +66,8 @@ npm run portal:seed -- --email colleague@takeawayhero.example --password '…' -
    - `PORTAL_DATA_DIR=/data/portal`
    - `PORTAL_SESSION_SECRET` (long random, min 16 chars) — **required** or the app will not boot pages in production
    - `ADMIN_BOOTSTRAP_EMAIL` / `ADMIN_BOOTSTRAP_PASSWORD`
-   - Leave `PORTAL_LIVE_WRITES` unset unless intentionally enabling gated live writes
+   - `TAH_ADMIN_EMAIL` / `TAH_ADMIN_PASSWORD` for live dry-run + writes
+   - Optional kill switch: `PORTAL_LIVE_WRITES=0`
 4. Prefer a **single running instance** while the portal uses local SQLite on the volume.
 5. Open `https://<railway-url>/login` with personal credentials.
 
