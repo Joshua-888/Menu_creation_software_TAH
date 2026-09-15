@@ -353,7 +353,20 @@ export function sanitizeIngredientList(
 export function sanitizeAdditionList(
   raw: Array<{ name: string; priceOre: number }>,
   productName?: string,
+  categoryName?: string,
 ): Array<{ name: string; priceOre: number }> {
+  // Hard prior: drinks never carry Tilbehør / dips — even if already live.
+  // (Duplicated lightly so this module stays free of learning-layer imports.)
+  const blob = `${productName ?? ""} ${categoryName ?? ""}`;
+  if (
+    /\b(soda|sodavand|cola|fanta|sprite|kildevand|\bvand\b|øl|beer|vin|juice|milkshake|shake|kaffe|\bte\b|\btea\b|kakao)\b/i.test(
+      blob,
+    ) ||
+    /\b(drikke|drinks)\b/i.test(blob)
+  ) {
+    return [];
+  }
+
   const cleaned: Array<{ name: string; priceOre: number }> = [];
   const seen = new Set<string>();
   for (const a of raw) {
@@ -492,7 +505,18 @@ export function ingredientListHasDefects(
 export function additionListHasDefects(
   additions: Array<{ name: string; priceOre?: number }>,
   productName?: string,
+  categoryName?: string,
 ): boolean {
+  const blob = `${productName ?? ""} ${categoryName ?? ""}`;
+  if (
+    (/\b(soda|sodavand|cola|fanta|sprite|kildevand|\bvand\b|øl|beer|vin|juice|milkshake|shake|kaffe|\bte\b|\btea\b|kakao)\b/i.test(
+      blob,
+    ) ||
+      /\b(drikke|drinks)\b/i.test(blob)) &&
+    additions.length > 0
+  ) {
+    return true;
+  }
   if (additions.length === 0) return false;
   for (const a of additions) {
     if (isInvalidFoodComponent(a.name, productName)) return true;

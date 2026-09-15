@@ -195,4 +195,55 @@ describe("QA merge applies menu-card policies", () => {
     expect(ufo.name.toLowerCase()).not.toMatch(/spaghetti/);
     expect(ufo.additions.some((a) => /tilbeh/i.test(a.name))).toBe(false);
   });
+
+  it("never keeps dips/Tilbehør on drinks (Sodavand)", () => {
+    const cleaned = sanitizeAdditionList(
+      [
+        { name: "Salatmayonnaise", priceOre: 1000 },
+        { name: "Remoulade", priceOre: 1000 },
+        { name: "Ketchup", priceOre: 1000 },
+      ],
+      "Sodavand",
+      "Drikkevarer",
+    );
+    expect(cleaned).toEqual([]);
+
+    const target = buildQaTargetPayload({
+      live: {
+        databaseId: "64",
+        menuNumber: "64",
+        name: "Sodavand",
+        description: "",
+        basePriceOre: 2500,
+        categoryIds: ["drinks"],
+        ingredients: [],
+        variants: [{ name: "Alm.", priceOre: 0 }],
+        additions: [
+          { name: "Salatmayonnaise", priceOre: 1000 },
+          { name: "Remoulade", priceOre: 1000 },
+          { name: "Ketchup", priceOre: 1000 },
+        ],
+      },
+      sourcePayload: {
+        sourceId: "s64",
+        menuNumber: "64",
+        name: "Sodavand",
+        description: "",
+        basePriceOre: 2500,
+        categoryIds: ["drinks"],
+        variants: [{ name: "Alm.", surchargeOre: 0 }],
+        ingredients: [],
+        additions: [
+          { name: "Salatmayonnaise", priceOre: 1000 },
+          { name: "Ketchup", priceOre: 1000 },
+        ],
+        intendedHidden: false,
+      },
+      liveCategoryName: "Drikkevarer",
+      destinationCategories: [
+        { databaseId: "drinks", name: "Drikkevarer" },
+      ],
+    });
+    expect(target.additions).toEqual([]);
+  });
 });

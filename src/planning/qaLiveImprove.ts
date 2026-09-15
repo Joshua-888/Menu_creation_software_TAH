@@ -120,6 +120,7 @@ export function polishVariants(
 export function polishAdditions(
   additions: Array<{ name: string; priceOre: number }>,
   productName?: string,
+  categoryName?: string,
 ): Array<{ name: string; priceOre: number }> {
   return sanitizeAdditionList(
     additions.map((a) => ({
@@ -127,6 +128,7 @@ export function polishAdditions(
       priceOre: a.priceOre,
     })),
     productName,
+    categoryName,
   );
 }
 
@@ -177,7 +179,11 @@ export function fieldQualityScore(
         (a): a is { name: string; priceOre?: number } =>
           typeof a.name === "string" && a.name.trim().length > 0,
       );
-      if (additionListHasDefects(named, ctx?.productName)) return 1;
+      if (
+        additionListHasDefects(named, ctx?.productName, ctx?.categoryName)
+      ) {
+        return 1;
+      }
       const clean = named.filter((a) => !REVIEW_STUB_RE.test(a.name));
       return Math.min(10, clean.length);
     }
@@ -313,9 +319,9 @@ export function buildQaTargetPayload(input: {
     }
   }
 
-  // Sanitize Tilbehør: never dish names / meta / junk; meat priced 2× veg
-  const liveAdds = polishAdditions(live.additions ?? [], name);
-  const sourceAdds = polishAdditions(source.additions, name);
+  // Sanitize Tilbehør: never on drinks; never dish names / meta / junk; meat 2× veg
+  const liveAdds = polishAdditions(live.additions ?? [], name, catName);
+  const sourceAdds = polishAdditions(source.additions, name, catName);
   const addByKey = new Map(
     liveAdds.map((a) => [a.name.trim().toLowerCase(), a]),
   );
@@ -323,8 +329,8 @@ export function buildQaTargetPayload(input: {
     const k = a.name.trim().toLowerCase();
     if (!addByKey.has(k)) addByKey.set(k, a);
   }
-  // Re-sanitize union (reprices flat lists)
-  const additions = polishAdditions([...addByKey.values()], name);
+  // Re-sanitize union (clears drinks; reprices flat lists)
+  const additions = polishAdditions([...addByKey.values()], name, catName);
 
   const liveVars = polishVariants(
     (live.variants ?? []).map((v) => ({

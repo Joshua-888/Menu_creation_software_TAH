@@ -18,10 +18,12 @@ import {
 } from "../learning/peerMenuStructure.js";
 import {
   filterAdditionsWithTrace,
+  classifyProductKind,
   type AdditionFilterTrace,
   type ProbabilityPolicyMap,
   type ProductKind,
 } from "../learning/categoryLikelihood.js";
+import { categoryExcludedFromStructuralFanOut } from "../learning/categorySizeVariantPolicy.js";
 
 export type MappedWriteFields = {
   variants: Array<{ name: string; surchargeOre: number }>;
@@ -134,6 +136,16 @@ export function fanOutRestaurantAdditions(input: {
     ...cat,
     products: cat.products.map((p) => {
       const menuNumber = p.sourceMenuNumber ?? p.assignedMenuNumber ?? null;
+      // Hard prior: never fan Tilbehør onto drinks / dip-diverse categories.
+      if (
+        categoryExcludedFromStructuralFanOut(cat.name) ||
+        classifyProductKind({
+          name: p.name,
+          categoryNames: [cat.name],
+        }) === "drinks"
+      ) {
+        return p;
+      }
       const sourceAdditions = (p.addOns ?? []).map((a) => ({
         name: a.name,
         priceMinor: a.price ?? null,

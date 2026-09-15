@@ -342,10 +342,13 @@ export function productAllowsDips(
 
 export function productForbidsAllTilbehor(
   input: { name: string; categoryNames?: string[] },
-  policy: ProbabilityPolicyMap,
+  policy?: ProbabilityPolicyMap | null,
 ): boolean {
   const kind = classifyProductKind(input);
-  return policy.policy.neverTilbehorKinds.includes(kind);
+  // Hard prior — never depends on peer policy being loaded.
+  if (kind === "drinks") return true;
+  if (policy?.policy.neverTilbehorKinds.includes(kind)) return true;
+  return false;
 }
 
 export function productForbidsMeatAdditions(
@@ -379,7 +382,7 @@ export function filterAdditionsForProduct(input: {
   categoryNames?: string[];
   description?: string;
   additions: Array<{ name: string; priceOre: number }>;
-  policy: ProbabilityPolicyMap;
+  policy?: ProbabilityPolicyMap | null;
 }): Array<{ name: string; priceOre: number }> {
   return filterAdditionsWithTrace(input).after;
 }
@@ -389,11 +392,11 @@ export function filterAdditionsWithTrace(input: {
   categoryNames?: string[];
   description?: string;
   additions: Array<{ name: string; priceOre: number }>;
-  policy: ProbabilityPolicyMap;
+  policy?: ProbabilityPolicyMap | null;
 }): AdditionFilterTrace {
   const kind = classifyProductKind(input);
   const before = input.additions.map((a) => ({ ...a }));
-  if (productForbidsAllTilbehor(input, input.policy)) {
+  if (productForbidsAllTilbehor(input, input.policy ?? null)) {
     return {
       kind,
       before,
@@ -405,8 +408,19 @@ export function filterAdditionsWithTrace(input: {
       reasonCodes: before.length ? ["NEVER_TILBEHOR_KIND"] : [],
     };
   }
-  const allowDips = productAllowsDips(input, input.policy);
-  const forbidMeat = productForbidsMeatAdditions(input, input.policy);
+  const policy = input.policy;
+  if (!policy) {
+    // Without peer policy still keep non-drink additions (already filtered above).
+    return {
+      kind,
+      before,
+      after: repriceTilbehorList(before),
+      removed: [],
+      reasonCodes: before.length ? ["KEPT"] : [],
+    };
+  }
+  const allowDips = productAllowsDips(input, policy);
+  const forbidMeat = productForbidsMeatAdditions(input, policy);
   const removed: AdditionFilterTrace["removed"] = [];
   const after: Array<{ name: string; priceOre: number }> = [];
   const reasonCodes = new Set<AdditionFilterReasonCode>();
@@ -430,9 +444,7 @@ export function filterAdditionsWithTrace(input: {
     after.push(a);
   }
   const priced = repriceTilbehorList(after);
-  if (priced.length > 0 && removed.length === 0) {
-    reasonCodes.add("KEPT");
-  } else if (priced.length > 0) {
+  if (priced.length > 0) {
     reasonCodes.add("KEPT");
   }
 

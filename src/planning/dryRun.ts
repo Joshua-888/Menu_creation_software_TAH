@@ -187,6 +187,15 @@ function toPayload(
       additions,
       policy: probabilityPolicy,
     }).after;
+  } else {
+    // Hard priors still apply without peer policy (esp. drinks → no Tilbehør).
+    additions = filterAdditionsWithTrace({
+      name: overrides?.name ?? product.name,
+      ...(categoryName ? { categoryNames: [categoryName] } : {}),
+      ...(desc ? { description: desc } : {}),
+      additions,
+      policy: null,
+    }).after;
   }
   const safeName = assessment.repaired.name || product.name;
   const safeIngredients = sanitizeIngredientList(
@@ -195,7 +204,11 @@ function toPayload(
       : ingredientList,
     safeName,
   );
-  const safeAdditions = sanitizeAdditionList(additions, safeName);
+  const safeAdditions = sanitizeAdditionList(
+    additions,
+    safeName,
+    categoryName,
+  );
   return {
     sourceId: product.sourceId,
     menuNumber:
@@ -342,27 +355,62 @@ export function buildDryRunWritePlan(input: {
     if (input.policyTraces) {
       input.policyTraces.push(...filtered.traces);
     }
-  } else if (input.policyTraces && fanOutMenus.length) {
-    for (const cat of canonical.categories) {
-      for (const p of cat.products) {
+  } else {
+    // No peer policy file — still enforce hard priors (drinks never Tilbehør).
+    const categories = canonical.categories.map((cat) => ({
+      ...cat,
+      products: cat.products.map((p) => {
+        const before = (p.addOns ?? []).map((a) => ({
+          name: a.name,
+          priceOre: a.price ?? 0,
+        }));
+        const filter = filterAdditionsWithTrace({
+          name: p.name,
+          categoryNames: [cat.name],
+          additions: before,
+          policy: null,
+        });
         const menuNumber = p.sourceMenuNumber ?? p.assignedMenuNumber ?? null;
-        if (menuNumber && fanOutMenus.includes(menuNumber)) {
+        if (input.policyTraces && menuNumber && fanOutMenus.includes(menuNumber)) {
           input.policyTraces.push({
             menuNumber,
             sourceId: p.sourceId,
             name: p.name,
             categoryName: cat.name,
-            kind: "other",
-            reasonCodes: ["FANOUT_TILBEHOR"],
-            additionsBefore: (p.addOns ?? []).map((a) => a.name),
-            additionsAfter: (p.addOns ?? []).map((a) => a.name),
-            removed: [],
+            kind: filter.kind,
+            reasonCodes: [
+              "FANOUT_TILBEHOR",
+              ...filter.reasonCodes.filter((r) => r !== "KEPT"),
+            ],
+            additionsBefore: filter.before.map((a) => a.name),
+            additionsAfter: filter.after.map((a) => a.name),
+            removed: filter.removed.map((a) => ({
+              name: a.name,
+              reason: a.reason,
+            })),
             fanOutTilbehor: true,
             structureNotes: [],
           });
         }
-      }
-    }
+        if (filter.after.length === 0 && before.length === 0) return p;
+        if (
+          filter.after.length === before.length &&
+          filter.removed.length === 0
+        ) {
+          return p;
+        }
+        return {
+          ...p,
+          addOns: filter.after.map((a, idx) => ({
+            sourceId: `${p.sourceId}::addon-hard-${idx}`,
+            name: a.name,
+            price: a.priceOre,
+            origin: "DERIVED" as const,
+          })),
+        };
+      }),
+    }));
+    canonical = { ...canonical, categories };
   }
 
   const catBySource = new Map(
