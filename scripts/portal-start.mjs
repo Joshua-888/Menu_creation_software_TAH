@@ -8,8 +8,13 @@ import { existsSync, readdirSync } from "node:fs";
 const port = process.env.PORT?.trim() || "3000";
 const host = process.env.HOST?.trim() || "0.0.0.0";
 
-// Prefer the Docker image browser cache — never force the /data volume copy
-// (that path can lack OS shared libraries like libglib).
+// Never use the volume browser cache — it was installed without OS libs and
+// still breaks even after Chromium binaries exist under /data/ms-playwright.
+if (process.env.PLAYWRIGHT_BROWSERS_PATH?.startsWith("/data/")) {
+  delete process.env.PLAYWRIGHT_BROWSERS_PATH;
+}
+
+// Prefer the Docker image browser cache when present.
 if (!process.env.PLAYWRIGHT_BROWSERS_PATH && existsSync("/ms-playwright")) {
   process.env.PLAYWRIGHT_BROWSERS_PATH = "/ms-playwright";
 }
