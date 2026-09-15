@@ -1,11 +1,11 @@
 # Railway — TakeAwayHero Menu Operator Portal
+# Docker image includes Chromium + OS libs (libglib etc.) for live admin writes.
 [build]
-builder = "RAILPACK"
-# Chromium is required for live destination snapshot + Opdater writes
-buildCommand = "npx playwright install --with-deps chromium && npm run portal:build"
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile.portal"
 
 [deploy]
 startCommand = "npm run portal:start"
 healthcheckPath = "/login"
-healthcheckTimeout = 120
+healthcheckTimeout = 180
 restartPolicyType = "ON_FAILURE"

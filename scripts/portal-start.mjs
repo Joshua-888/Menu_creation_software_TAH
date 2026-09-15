@@ -1,22 +1,20 @@
 /**
  * Cross-platform portal start — honors Railway/Docker PORT and binds 0.0.0.0.
- * Ensures Playwright Chromium exists (persisted on /data when available).
+ * Uses image-baked Playwright browsers (/ms-playwright) when present.
  */
 import { spawn, execSync } from "node:child_process";
-import { existsSync, mkdirSync, readdirSync } from "node:fs";
+import { existsSync, readdirSync } from "node:fs";
 
 const port = process.env.PORT?.trim() || "3000";
 const host = process.env.HOST?.trim() || "0.0.0.0";
 
-// Persist browsers on the Railway volume so we don't re-download every boot.
-if (!process.env.PLAYWRIGHT_BROWSERS_PATH && existsSync("/data")) {
-  const browserDir = "/data/ms-playwright";
-  mkdirSync(browserDir, { recursive: true });
-  process.env.PLAYWRIGHT_BROWSERS_PATH = browserDir;
+// Prefer the Docker image browser cache — never force the /data volume copy
+// (that path can lack OS shared libraries like libglib).
+if (!process.env.PLAYWRIGHT_BROWSERS_PATH && existsSync("/ms-playwright")) {
+  process.env.PLAYWRIGHT_BROWSERS_PATH = "/ms-playwright";
 }
 
-function chromiumInstalled() {
-  const root = process.env.PLAYWRIGHT_BROWSERS_PATH;
+function chromiumInstalled(root) {
   if (!root || !existsSync(root)) return false;
   try {
     return readdirSync(root).some((n) => /chromium/i.test(n));
@@ -25,16 +23,22 @@ function chromiumInstalled() {
   }
 }
 
-if (!chromiumInstalled()) {
+const browserRoot = process.env.PLAYWRIGHT_BROWSERS_PATH;
+if (!chromiumInstalled(browserRoot)) {
   console.log("[portal-start] Installing Playwright Chromium…");
-  execSync("npx playwright install chromium", {
-    stdio: "inherit",
-    env: process.env,
-  });
+  try {
+    execSync("npx playwright install --with-deps chromium", {
+      stdio: "inherit",
+      env: process.env,
+    });
+  } catch {
+    execSync("npx playwright install chromium", {
+      stdio: "inherit",
+      env: process.env,
+    });
+  }
 } else {
-  console.log(
-    `[portal-start] Playwright browsers present at ${process.env.PLAYWRIGHT_BROWSERS_PATH}`,
-  );
+  console.log(`[portal-start] Playwright browsers at ${browserRoot}`);
 }
 
 const child = spawn(
