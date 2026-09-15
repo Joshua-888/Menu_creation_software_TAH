@@ -19,7 +19,7 @@ describe("grillCardFill", () => {
         name: "Fiskefilet m. pommes frites",
         categoryName: "Grill",
       }),
-    ).toEqual(["Pommes frites"]);
+    ).toEqual(["Fiskefilet", "Pommes frites"]);
     expect(
       inferGrillIngredients({
         name: "Kebabmenu",
@@ -33,6 +33,25 @@ describe("grillCardFill", () => {
         description: "Pommes frites, M. pommes frites",
       }),
     ).toMatch(/pitabrød/i);
+  });
+
+  it("builds full baconburger ingredients with meat and sauces", () => {
+    const ings = inferGrillIngredients({
+      name: "Baconburger",
+      categoryName: "Grill",
+    });
+    expect(ings).toEqual(
+      expect.arrayContaining([
+        "Oksekød",
+        "Bacon",
+        "Salat",
+        "Tomat",
+        "Løg",
+        "Ketchup",
+        "Mayo",
+      ]),
+    );
+    expect(ings[0]).toMatch(/oksekød/i);
   });
 
   it("wants dips on fries plates and Menu burgers, not plain name-only sides without fries", () => {
@@ -121,12 +140,66 @@ describe("qaLiveImprove grill", () => {
       liveCategoryName: "Grill",
       destinationCategories: [{ databaseId: "grill", name: "Grill" }],
     });
-    expect(target.ingredients).toContain("Bacon");
+    expect(target.ingredients).toEqual(
+      expect.arrayContaining([
+        "Oksekød",
+        "Bacon",
+        "Salat",
+        "Tomat",
+        "Ketchup",
+        "Mayo",
+      ]),
+    );
+    expect(target.ingredients.length).toBeGreaterThanOrEqual(6);
     expect(target.additions.map((a) => a.name)).toEqual([
       "Salatmayonnaise",
       "Remoulade",
       "Ketchup",
     ]);
+  });
+
+  it("upgrades thin Baconburger ingredient list beyond a single token", () => {
+    const target = buildQaTargetPayload({
+      live: {
+        databaseId: "40",
+        menuNumber: "40",
+        name: "Baconburger",
+        description: "Bacon",
+        basePriceOre: 6900,
+        categoryIds: ["grill"],
+        ingredients: ["Bacon"],
+        variants: [
+          { name: "Alm.", priceOre: 0 },
+          { name: "Menu", priceOre: 5600 },
+        ],
+        additions: [
+          { name: "Salatmayonnaise", priceOre: 1000 },
+          { name: "Remoulade", priceOre: 1000 },
+          { name: "Ketchup", priceOre: 1000 },
+        ],
+      },
+      sourcePayload: {
+        sourceId: "s40",
+        menuNumber: "40",
+        name: "Baconburger",
+        description: "Bacon",
+        basePriceOre: 6900,
+        categoryIds: ["grill"],
+        variants: [
+          { name: "Alm.", surchargeOre: 0 },
+          { name: "Menu", surchargeOre: 5600 },
+        ],
+        ingredients: ["Bacon"],
+        additions: [],
+        intendedHidden: false,
+      },
+      liveCategoryName: "Grill",
+      destinationCategories: [{ databaseId: "grill", name: "Grill" }],
+    });
+    expect(target.ingredients).toEqual(
+      expect.arrayContaining(["Oksekød", "Bacon", "Ketchup", "Mayo"]),
+    );
+    expect(target.description.toLowerCase()).toContain("oksekød");
   });
 
   it("never-worse allows replacing pizza-dump Tilbehør on Pommes with dips", () => {

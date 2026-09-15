@@ -26,8 +26,10 @@ import {
   inferGrillDescription,
   inferGrillIngredients,
   isGrillCategory,
+  isBurgerProductName,
   preferGrillDipAdditions,
   productWantsGrillDips,
+  grillIngredientsInsufficient,
 } from "../domain/grillCardFill.js";
 import {
   looksLikeCategoryHeaderName,
@@ -168,6 +170,12 @@ export function fieldQualityScore(
       if (ingredientListHasDefects(list, ctx?.productName)) return 1;
       const clean = polishIngredientList(list, ctx?.productName);
       if (clean.length === 0) return 0;
+      if (
+        ctx?.productName &&
+        grillIngredientsInsufficient(clean, ctx.productName)
+      ) {
+        return 1;
+      }
       return Math.min(12, clean.length * 2);
     }
     case "variants": {
@@ -301,14 +309,17 @@ export function buildQaTargetPayload(input: {
       ingredients = polishIngredientList(proposal.ingredients, name);
     }
   }
-  // Grill / fries: derive card ingredients from the product name when empty.
-  if (ingredients.length === 0) {
+  // Grill / fries / burgers: fill or upgrade thin cards (e.g. only "Bacon").
+  if (
+    ingredients.length === 0 ||
+    grillIngredientsInsufficient(ingredients, name)
+  ) {
     const inferred = inferGrillIngredients({
       name,
       categoryName: catName,
       description: live.description ?? source.description,
     });
-    if (inferred.length) {
+    if (inferred.length > ingredients.length) {
       ingredients = polishIngredientList(inferred, name);
     }
   }
@@ -504,6 +515,28 @@ export function filterNeverWorseDeltas(input: {
         (grillTilbehorLooksWrong(beforeList, grillCtx) ||
           beforeList.length === 0) &&
         afterList.length > 0
+      ) {
+        kept.push(delta);
+        continue;
+      }
+    }
+    // Hard prior: upgrade thin burger ingredient cards (e.g. only "Bacon").
+    if (delta.field === "ingredients") {
+      const productName = input.intended.name || input.live.name;
+      const beforeList = Array.isArray(delta.before)
+        ? (delta.before as string[]).filter(
+            (x) => typeof x === "string" && x.trim().length > 0,
+          )
+        : [];
+      const afterList = Array.isArray(delta.after)
+        ? (delta.after as string[]).filter(
+            (x) => typeof x === "string" && x.trim().length > 0,
+          )
+        : [];
+      if (
+        isBurgerProductName(productName) &&
+        grillIngredientsInsufficient(beforeList, productName) &&
+        afterList.length >= 4
       ) {
         kept.push(delta);
         continue;
