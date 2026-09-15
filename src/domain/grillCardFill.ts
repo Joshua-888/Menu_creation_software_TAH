@@ -25,6 +25,8 @@ export type GrillIngredientSource =
 /**
  * Peer-first grill/burger card ingredients; domain prior is fallback only.
  * Corrections that land in peer observe + distill become lasting ALLOW rows.
+ * If peer ALLOW rows still fail the burger quality gate (no meat/sauce),
+ * merge domain prior so thin peer consensus cannot leave empty meat cards.
  */
 export function resolveGrillIngredients(input: {
   name: string;
@@ -43,19 +45,36 @@ export function resolveGrillIngredients(input: {
     ...(input.description ? { description: input.description } : {}),
     policy: input.ingredientPolicy ?? null,
   });
-  if (peer.ingredients.length >= 2) {
-    return {
-      ingredients: peer.ingredients,
-      description: peer.description,
-      source: peer.source === "NONE" ? "NONE" : peer.source,
-      bucketId: peer.bucketId,
-    };
-  }
   const prior = inferGrillIngredients({
     name: input.name,
     ...(input.categoryName ? { categoryName: input.categoryName } : {}),
     ...(input.description ? { description: input.description } : {}),
   });
+
+  if (peer.ingredients.length >= 2) {
+    if (!grillIngredientsInsufficient(peer.ingredients, input.name)) {
+      return {
+        ingredients: peer.ingredients,
+        description: peer.description,
+        source: peer.source === "NONE" ? "NONE" : peer.source,
+        bucketId: peer.bucketId,
+      };
+    }
+    // Peer consensus missing meat/sauce — merge domain prior tokens
+    const merged: string[] = [];
+    for (const x of [...prior, ...peer.ingredients]) {
+      pushUnique(merged, x);
+    }
+    if (merged.length >= 2) {
+      return {
+        ingredients: merged,
+        description: peer.description ?? (merged.length ? merged.join(", ") : null),
+        source: peer.source === "NONE" ? "DOMAIN_PRIOR" : peer.source,
+        bucketId: peer.bucketId,
+      };
+    }
+  }
+
   if (prior.length === 0) {
     return {
       ingredients: [],

@@ -164,4 +164,54 @@ describe("ingredientLikelihood", () => {
       ),
     );
   });
+
+  it("merges domain prior when peer ALLOW lacks burger meat/sauce", () => {
+    const thinPolicy = distillIngredientLikelihood([
+      {
+        host: "thin.dk",
+        restaurantKey: "thin.dk",
+        observedAt: "2026-01-01T00:00:00.000Z",
+        source: "fixture",
+        products: [
+          {
+            menuNumber: "1",
+            name: "Baconburger",
+            categoryNames: ["Grill"],
+            variants: [],
+            additions: [],
+            ingredients: ["Bacon", "Tomat", "Salat", "Løg"],
+            description: "Bacon, tomat, salat, løg",
+          },
+          {
+            menuNumber: "2",
+            name: "Bacon Burger",
+            categoryNames: ["Grill"],
+            variants: [],
+            additions: [],
+            ingredients: ["Bacon", "Tomat", "Salat", "Løg"],
+            description: "Bacon, tomat, salat, løg",
+          },
+          {
+            menuNumber: "3",
+            name: "Baconburger Menu",
+            categoryNames: ["Grill"],
+            variants: [],
+            additions: [],
+            ingredients: ["Bacon", "Tomat", "Salat", "Løg"],
+            description: "Bacon, tomat, salat, løg",
+          },
+        ],
+      },
+    ]);
+    const resolved = resolveGrillIngredients({
+      name: "Baconburger",
+      categoryName: "Grill",
+      ingredientPolicy: thinPolicy,
+    });
+    expect(resolved.ingredients.join(" ").toLowerCase()).toMatch(/oksekød|bøf/);
+    expect(resolved.ingredients.join(" ").toLowerCase()).toMatch(
+      /ketchup|mayo/,
+    );
+    expect(resolved.ingredients).toEqual(expect.arrayContaining(["Bacon"]));
+  });
 });
