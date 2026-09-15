@@ -155,4 +155,51 @@ describe("qaLiveImprove merge", () => {
       fieldQualityScore("description", ""),
     );
   });
+
+  it("always allows clearing dips off drinks (never-worse hard prior)", () => {
+    const live = baseLive({
+      name: "Sodavand",
+      menuNumber: "64",
+      description: "",
+      ingredients: [],
+      additions: [
+        { name: "Salatmayonnaise", priceOre: 1000 },
+        { name: "Ketchup", priceOre: 1000 },
+      ],
+    });
+    const intended = baseSource({
+      name: "Sodavand",
+      menuNumber: "64",
+      description: "",
+      ingredients: [],
+      additions: [],
+    });
+    expect(
+      fieldQualityScore("additions", [], {
+        productName: "Sodavand",
+        categoryName: "Drikkevarer",
+      }),
+    ).toBeGreaterThan(
+      fieldQualityScore("additions", live.additions, {
+        productName: "Sodavand",
+        categoryName: "Drikkevarer",
+      }),
+    );
+    const { kept, blocked } = filterNeverWorseDeltas({
+      live,
+      intended,
+      liveCategoryName: "Drikkevarer",
+      deltas: [
+        {
+          field: "additions",
+          before: live.additions,
+          after: [],
+          reasons: ["ADDITIONS_MISMATCH"],
+        },
+      ],
+    });
+    expect(blocked).toHaveLength(0);
+    expect(kept).toHaveLength(1);
+    expect(kept[0]?.field).toBe("additions");
+  });
 });

@@ -199,20 +199,53 @@ async function trimThenFillNamedPriceRows(
   const rows = form.locator(opts.rowSelector);
   let count = await rows.count();
   let guard = 0;
-  while (count > opts.rows.length && count > 0 && guard < 60) {
+  // Prefer removing excess rows (critical when clearing drinks to zero Tilbehør).
+  while (count > opts.rows.length && count > 0 && guard < 80) {
     const last = rows.nth(count - 1);
-    const btn = last.locator("button, a").last();
-    if (await btn.count()) await btn.click().catch(() => undefined);
-    else {
+    const before = count;
+    const remove = last.locator(
+      'button.remove, a.remove, button[title*="Fjern" i], a[title*="Fjern" i], button.btn-danger, td:last-child button, td:last-child a',
+    ).first();
+    if (await remove.count()) {
+      await remove.click().catch(() => undefined);
+    } else {
+      const fallback = last.locator("button, a").last();
+      if (await fallback.count()) {
+        await fallback.click().catch(() => undefined);
+      }
+    }
+    await page.waitForTimeout(120);
+    count = await rows.count();
+    if (count >= before) {
+      // Row did not detach — blank it and continue with remaining excess.
       await last.locator(opts.nameInput).fill("");
       if (await last.locator(opts.priceInput).count()) {
         await last.locator(opts.priceInput).fill("0");
       }
+      // If we still have more than target, try the previous row next iteration
+      // by treating blanked rows as removable via index shift when DOM shrinks.
+      if (count <= opts.rows.length) break;
+      // Force progress: if blanking last doesn't shrink, blank from the end
+      // downward without relying on delete controls.
+      for (let i = count - 1; i >= opts.rows.length; i--) {
+        const row = rows.nth(i);
+        await row.locator(opts.nameInput).fill("");
+        if (await row.locator(opts.priceInput).count()) {
+          await row.locator(opts.priceInput).fill("0");
+        }
+      }
       break;
     }
-    await page.waitForTimeout(120);
-    count = await rows.count();
     guard += 1;
+  }
+  // Absolute guarantee: every leftover excess row is blank (empty name = dropped by admin).
+  count = await rows.count();
+  for (let i = opts.rows.length; i < count; i++) {
+    const row = rows.nth(i);
+    await row.locator(opts.nameInput).fill("");
+    if (await row.locator(opts.priceInput).count()) {
+      await row.locator(opts.priceInput).fill("0");
+    }
   }
   for (let i = 0; i < opts.rows.length; i++) {
     count = await rows.count();

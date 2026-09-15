@@ -179,6 +179,15 @@ export function fieldQualityScore(
         (a): a is { name: string; priceOre?: number } =>
           typeof a.name === "string" && a.name.trim().length > 0,
       );
+      const drinkLike =
+        classifyMenuPlacementKind({
+          name: ctx?.productName ?? "",
+          categoryName: ctx?.categoryName ?? "",
+        }) === "drink";
+      // Drinks: empty Tilbehør is correct and must outrank any live dips.
+      if (drinkLike) {
+        return named.length === 0 ? 8 : 0;
+      }
       if (
         additionListHasDefects(named, ctx?.productName, ctx?.categoryName)
       ) {
@@ -413,6 +422,25 @@ export function filterNeverWorseDeltas(input: {
     const beforeScore = fieldQualityScore(delta.field, delta.before, ctx);
     const afterScore = fieldQualityScore(delta.field, delta.after, ctx);
     const defective = isLiveFieldDefective(delta.field, delta.before, ctx);
+    // Hard prior: always allow clearing Tilbehør / dips off drinks.
+    if (delta.field === "additions") {
+      const drinkLike =
+        classifyMenuPlacementKind({
+          name: input.intended.name || input.live.name,
+          ...(input.liveCategoryName
+            ? { categoryName: input.liveCategoryName }
+            : {}),
+        }) === "drink";
+      const afterList = Array.isArray(delta.after)
+        ? (delta.after as Array<{ name?: string }>).filter(
+            (a) => typeof a.name === "string" && a.name.trim().length > 0,
+          )
+        : [];
+      if (drinkLike && afterList.length === 0) {
+        kept.push(delta);
+        continue;
+      }
+    }
     if (!defective && afterScore < beforeScore) {
       blocked.push({ ...delta, blockReason: "BLOCKED_WORSE_THAN_LIVE" });
       continue;
