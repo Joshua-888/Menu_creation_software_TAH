@@ -43,6 +43,17 @@ Structural kinds: `Alm.`, `Familie` (Fam.), `Deep`, `Glutenfri`, `Fuldkorn`, `Hj
 
 Encoded on `MENU_STRUCTURE_SEMANTIC` as `categoryVariantFanOut` (mode `SOURCE_CATEGORY` / `PEER_OR_SOURCE` / `OFF`).
 
+### Menu is never a variant (hard SEMANTIC_RULE)
+
+**Menuer** is a category type for combo meals (e.g. burger + pommes + soda), where each product has its own required sub-choices.
+
+| Never | Instead |
+|-------|---------|
+| Variant named `Menu` on Grill/burger/pita/… | Separate product under **Menuer** |
+| `Alm.` + `Menu` as a size axis | Size axis is `Alm.` / `Familie` / Deep / … |
+
+QA and Create strip any `Menu` variant on write. Domain prior + never-worse always allow the strip.
+
 ### Category-ingredient Tilbehør (source-empty fill)
 
 When a product has **no source additions**, Tilbehør is composed from the **union of ingredients** across that category (including toppings parsed from Beskrivelse), then fanned out as a `RESTAURANT_CATEGORY` BUSINESS_FACT.

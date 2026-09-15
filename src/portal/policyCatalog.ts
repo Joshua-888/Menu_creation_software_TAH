@@ -55,6 +55,20 @@ export const BUILT_IN_SEMANTIC_RULES: BuiltInSemanticRule[] = [
     ],
   },
   {
+    id: "menu-never-variant",
+    title: "Menu is never a variant — Menuer is a category",
+    summary:
+      "A combo meal (burger + pommes + soda) must be its own product under a Menuer category with required sub-choices. Never encode Menu as Alm./Menu size variants on Grill or other items.",
+    appliesTo: "Create + QA variant polish / structure mapping / structural fan-out",
+    adjustableVia:
+      "Hard SEMANTIC_RULE (isForbiddenMenuVariantName); Menuer category policies when that category type is modeled",
+    details: [
+      "Strip any variant named Menu / Menü on write and QA",
+      "Size axis is Alm./Familie/Deep/… — not Menu",
+      "PDF BASE+Menu columns must not become a Menu variant on the dish card",
+    ],
+  },
+  {
     id: "category-probability",
     title: "Category probability — dips / Tilbehør kinds",
     summary:

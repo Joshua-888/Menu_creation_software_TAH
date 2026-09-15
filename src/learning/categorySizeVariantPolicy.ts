@@ -142,6 +142,22 @@ export function isStructuralCategoryVariantName(name: string): boolean {
   return matchStructuralVariant(name) != null;
 }
 
+/**
+ * Hard SEMANTIC_RULE: "Menu" is never a product variant.
+ * Combo meals (burger + pommes + soda) belong as separate products under a
+ * "Menuer" category, where each item has its own required sub-choices —
+ * not as Alm./Menu size variants on Grill/burger cards.
+ */
+export function isForbiddenMenuVariantName(name: string): boolean {
+  return /^(menu|menü)\.?$/i.test(name.trim());
+}
+
+export function stripForbiddenMenuVariants<T extends { name: string }>(
+  variants: readonly T[],
+): T[] {
+  return variants.filter((v) => !isForbiddenMenuVariantName(v.name));
+}
+
 export function isAlmSizeName(name: string): boolean {
   return STRUCTURAL_VARIANT_DEFS.find((d) => d.kind === "alm")!.match(name);
 }
@@ -274,7 +290,7 @@ function ensureStructuralVariants(
     if (m) {
       // Prefer first match; keep existing pricing if present
       if (!byKind.has(m.kind)) byKind.set(m.kind, v);
-    } else {
+    } else if (!isForbiddenMenuVariantName(v.name)) {
       nonStructural.push(v);
     }
   }
@@ -320,8 +336,7 @@ function ensureStructuralVariants(
     }
   }
 
-  // Drop meat/type-looking non-structural? Keep them — structure mapping may
-  // relocate meat when size axis present. Also keep other size names (Menu, cm).
+  // Keep non-structural (meat/type, cm sizes). Never keep "Menu" — Menuer category.
   const nextVariants = [...structuralOrdered, ...nonStructural];
 
   const beforeNames = before.map((v) => v.name).join("|");

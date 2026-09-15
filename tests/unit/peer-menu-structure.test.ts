@@ -70,7 +70,7 @@ describe("peer menu structure learning", () => {
     store.close();
   });
 
-  it("maps meat choices to variants when no size pair; to additions when Alm+Menu", () => {
+  it("maps meat choices to variants when no size pair; strips Menu (Menuer is a category)", () => {
     const pattern = distillStructurePatterns(loadFixtures());
     const pitaLike = {
       sourceId: "p1",
@@ -109,13 +109,12 @@ describe("peer menu structure learning", () => {
         { sourceId: "v2", name: "Menu", nameOrigin: "SOURCE" as const, surcharge: 5000, surchargeOrigin: "SOURCE" as const, isBase: false },
       ],
     };
-    const mappedWithSize = mapProductChoicesToWriteFields(
+    const mappedStripMenu = mapProductChoicesToWriteFields(
       withMenu as unknown as import("../../src/domain/schema/canonical.js").CanonicalProduct,
       pattern,
     );
-    expect(mappedWithSize.variants.some((v) => v.name === "Menu")).toBe(true);
-    expect(mappedWithSize.additions.map((a) => a.name)).toEqual(
-      expect.arrayContaining(["Kebab", "Kylling"]),
+    expect(mappedStripMenu.variants.some((v) => /menu/i.test(v.name))).toBe(
+      false,
     );
   });
 

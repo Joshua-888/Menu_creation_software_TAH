@@ -135,14 +135,8 @@ export function productWantsGrillDips(input: {
   if (/\bvalgfri\s+dyppelse\b/i.test(blob)) return true;
   if (/\bkebabmenu\b/i.test(name)) return true;
   if (/\bekstra\s*tilbeh/i.test(name)) return true;
-  // Burger/sandwich with a Menu size variant ⇒ fries menu deal
-  const hasMenuVariant = (input.variants ?? []).some((v) =>
-    /\bmenu\b/i.test(v.name),
-  );
-  if (
-    hasMenuVariant &&
-    /burger|sandwich|pita|pitabrød|dürüm|durum|cafeteria/i.test(name)
-  ) {
+  // Fries plates / named combo products (not Menu variants — Menu is Menuer category)
+  if (/\bmenu\b/i.test(name) && /burger|sandwich|kebab|pita|dürüm|durum/i.test(name)) {
     return true;
   }
   return false;

@@ -23,7 +23,11 @@ import {
   type ProbabilityPolicyMap,
   type ProductKind,
 } from "../learning/categoryLikelihood.js";
-import { categoryExcludedFromStructuralFanOut } from "../learning/categorySizeVariantPolicy.js";
+import {
+  categoryExcludedFromStructuralFanOut,
+  isForbiddenMenuVariantName,
+  stripForbiddenMenuVariants,
+} from "../learning/categorySizeVariantPolicy.js";
 
 export type MappedWriteFields = {
   variants: Array<{ name: string; surchargeOre: number }>;
@@ -32,11 +36,16 @@ export type MappedWriteFields = {
 };
 
 function hasSizePricing(product: CanonicalProduct): boolean {
-  const sizeish = product.variants.filter((v) => isSizeVariantName(v.name));
+  const sizeish = product.variants.filter(
+    (v) =>
+      isSizeVariantName(v.name) && !isForbiddenMenuVariantName(v.name),
+  );
   if (sizeish.length >= 2) return true;
-  // Alm. + Menu is a priced option pair on Veroni pita/dürüm
-  const names = product.variants.map((v) => v.name.toLowerCase());
-  if (names.includes("alm.") && names.some((n) => n === "menu" || n === "familie")) {
+  // Alm. + Familie is a priced size pair (never Alm. + Menu — Menu is Menuer).
+  const names = product.variants
+    .map((v) => v.name.toLowerCase().trim())
+    .filter((n) => !isForbiddenMenuVariantName(n));
+  if (names.includes("alm.") && names.some((n) => n === "familie" || n === "fam.")) {
     return true;
   }
   return false;
@@ -113,6 +122,13 @@ export function mapProductChoicesToWriteFields(
 
   if (variants.length === 0) {
     variants.push({ name: "Alm.", surchargeOre: 0 });
+  }
+
+  const stripped = stripForbiddenMenuVariants(variants);
+  if (stripped.length !== variants.length) {
+    notes.push("stripped_forbidden_Menu_variant");
+    variants.length = 0;
+    variants.push(...(stripped.length ? stripped : [{ name: "Alm.", surchargeOre: 0 }]));
   }
 
   return { variants, additions, mappingNotes: notes };

@@ -42,6 +42,10 @@ import {
 } from "./menuReconcile.js";
 import { proposePizzaToppingsFromDescription } from "../learning/pizzaToppings.js";
 import type { IngredientLikelihoodPolicy } from "../learning/ingredientLikelihood.js";
+import {
+  isForbiddenMenuVariantName,
+  stripForbiddenMenuVariants,
+} from "../learning/categorySizeVariantPolicy.js";
 import type { DestinationCategory } from "./categoryMapping.js";
 import { isTahCanaryProduct } from "./canaries.js";
 import type { CanonicalMenu } from "../domain/schema/canonical.js";
@@ -115,12 +119,14 @@ export function polishIngredientList(
 export function polishVariants(
   variants: Array<{ name: string; surchargeOre?: number; priceOre?: number }>,
 ): Array<{ name: string; surchargeOre: number }> {
-  const cleaned = variants
-    .map((v) => ({
-      name: formatProductName(v.name.replace(HYPHEN_BULLET_RE, "")),
-      surchargeOre: v.surchargeOre ?? v.priceOre ?? 0,
-    }))
-    .filter((v) => v.name && !REVIEW_STUB_RE.test(v.name));
+  const cleaned = stripForbiddenMenuVariants(
+    variants
+      .map((v) => ({
+        name: formatProductName(v.name.replace(HYPHEN_BULLET_RE, "")),
+        surchargeOre: v.surchargeOre ?? v.priceOre ?? 0,
+      }))
+      .filter((v) => v.name && !REVIEW_STUB_RE.test(v.name)),
+  );
   if (cleaned.length === 0) {
     return [{ name: "Alm.", surchargeOre: 0 }];
   }
@@ -184,6 +190,12 @@ export function fieldQualityScore(
         ? (value as Array<{ name?: string }>)
         : [];
       if (list.some((v) => REVIEW_STUB_RE.test(String(v.name ?? "")))) return 0;
+      // Hard prior: "Menu" as variant is always defective (Menuer category instead).
+      if (
+        list.some((v) => isForbiddenMenuVariantName(String(v.name ?? "")))
+      ) {
+        return 0;
+      }
       if (list.length === 0) return 1;
       return Math.min(8, 2 + list.length);
     }
@@ -428,10 +440,19 @@ export function buildQaTargetPayload(input: {
     })),
   );
   const sourceVars = polishVariants(source.variants);
+  const liveHadForbiddenMenu = (live.variants ?? []).some((v) =>
+    isForbiddenMenuVariantName(v.name),
+  );
   const liveVarDefective =
+    liveHadForbiddenMenu ||
     (live.variants ?? []).some((v) => REVIEW_STUB_RE.test(v.name)) ||
     (live.variants ?? []).length === 0;
-  const variants = liveVarDefective ? sourceVars : liveVars;
+  // Prefer polished live (Menu already stripped); fall back to source when live was empty/stub.
+  const variants = liveVarDefective && liveVars.length === 0
+    ? sourceVars
+    : liveVars.length
+      ? liveVars
+      : sourceVars;
 
   let basePriceOre = live.basePriceOre ?? 0;
   if (basePriceOre <= 0 && source.basePriceOre > 0) {
@@ -559,6 +580,25 @@ export function filterNeverWorseDeltas(input: {
         grillIngredientsInsufficient(beforeList, productName) &&
         afterList.length >= 4
       ) {
+        kept.push(delta);
+        continue;
+      }
+    }
+    // Hard prior: always strip forbidden "Menu" variants (Menuer is a category).
+    if (delta.field === "variants") {
+      const beforeList = Array.isArray(delta.before)
+        ? (delta.before as Array<{ name?: string }>)
+        : [];
+      const afterList = Array.isArray(delta.after)
+        ? (delta.after as Array<{ name?: string }>)
+        : [];
+      const beforeHadMenu = beforeList.some((v) =>
+        isForbiddenMenuVariantName(String(v.name ?? "")),
+      );
+      const afterHasMenu = afterList.some((v) =>
+        isForbiddenMenuVariantName(String(v.name ?? "")),
+      );
+      if (beforeHadMenu && !afterHasMenu) {
         kept.push(delta);
         continue;
       }

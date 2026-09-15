@@ -54,7 +54,7 @@ describe("grillCardFill", () => {
     expect(ings[0]).toMatch(/oksekød/i);
   });
 
-  it("wants dips on fries plates and Menu burgers, not plain name-only sides without fries", () => {
+  it("wants dips on fries plates and named combo products, not plain burgers", () => {
     expect(
       productWantsGrillDips({
         name: "Pommes",
@@ -66,14 +66,15 @@ describe("grillCardFill", () => {
       productWantsGrillDips({
         name: "Baconburger",
         categoryName: "Grill",
-        variants: [{ name: "Alm." }, { name: "Menu" }],
+        variants: [{ name: "Alm." }],
       }),
-    ).toBe(true);
+    ).toBe(false);
+    // Menu as variant is forbidden — does not unlock dips on the burger card
     expect(
       productWantsGrillDips({
         name: "Baconburger",
         categoryName: "Grill",
-        variants: [{ name: "Alm." }],
+        variants: [{ name: "Alm." }, { name: "Menu" }],
       }),
     ).toBe(false);
   });
@@ -106,7 +107,7 @@ describe("grillCardFill", () => {
 });
 
 describe("qaLiveImprove grill", () => {
-  it("fills Grill burger Menu cards with dips and name-derived ingredients", () => {
+  it("fills Grill burger cards with name-derived ingredients and strips Menu variants", () => {
     const target = buildQaTargetPayload({
       live: {
         databaseId: "40",
@@ -151,11 +152,52 @@ describe("qaLiveImprove grill", () => {
       ]),
     );
     expect(target.ingredients.length).toBeGreaterThanOrEqual(6);
-    expect(target.additions.map((a) => a.name)).toEqual([
-      "Salatmayonnaise",
-      "Remoulade",
-      "Ketchup",
-    ]);
+    expect(target.variants.map((v) => v.name)).toEqual(["Alm."]);
+    expect(target.variants.some((v) => /menu/i.test(v.name))).toBe(false);
+  });
+
+  it("never-worse always allows stripping Menu variants", () => {
+    const before = [
+      { name: "Alm.", priceOre: 0 },
+      { name: "Menu", priceOre: 5600 },
+    ];
+    const after = [{ name: "Alm.", surchargeOre: 0 }];
+    const { kept, blocked } = filterNeverWorseDeltas({
+      live: {
+        databaseId: "40",
+        menuNumber: "40",
+        name: "Baconburger",
+        description: "",
+        basePriceOre: 6900,
+        categoryIds: ["grill"],
+        ingredients: ["Oksekød", "Bacon", "Salat", "Ketchup", "Mayo"],
+        variants: before,
+        additions: [],
+      },
+      intended: {
+        sourceId: "s40",
+        menuNumber: "40",
+        name: "Baconburger",
+        description: "",
+        basePriceOre: 6900,
+        categoryIds: ["grill"],
+        variants: after,
+        ingredients: ["Oksekød", "Bacon", "Salat", "Ketchup", "Mayo"],
+        additions: [],
+        intendedHidden: false,
+      },
+      liveCategoryName: "Grill",
+      deltas: [
+        {
+          field: "variants",
+          before,
+          after,
+          reasons: ["VARIANTS_DRIFT"],
+        },
+      ],
+    });
+    expect(blocked).toHaveLength(0);
+    expect(kept).toHaveLength(1);
   });
 
   it("upgrades thin Baconburger ingredient list beyond a single token", () => {
@@ -168,10 +210,7 @@ describe("qaLiveImprove grill", () => {
         basePriceOre: 6900,
         categoryIds: ["grill"],
         ingredients: ["Bacon"],
-        variants: [
-          { name: "Alm.", priceOre: 0 },
-          { name: "Menu", priceOre: 5600 },
-        ],
+        variants: [{ name: "Alm.", priceOre: 0 }],
         additions: [
           { name: "Salatmayonnaise", priceOre: 1000 },
           { name: "Remoulade", priceOre: 1000 },
@@ -185,10 +224,7 @@ describe("qaLiveImprove grill", () => {
         description: "Bacon",
         basePriceOre: 6900,
         categoryIds: ["grill"],
-        variants: [
-          { name: "Alm.", surchargeOre: 0 },
-          { name: "Menu", surchargeOre: 5600 },
-        ],
+        variants: [{ name: "Alm.", surchargeOre: 0 }],
         ingredients: ["Bacon"],
         additions: [],
         intendedHidden: false,

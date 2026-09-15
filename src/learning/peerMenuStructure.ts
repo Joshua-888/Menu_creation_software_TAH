@@ -64,7 +64,7 @@ export type StructurePatternSummary = {
 };
 
 const SIZE_VARIANT_RE =
-  /^(alm\.?|fam\.?|familie|menu|lille|stor|deep|normal|gluten[\s-]?fri|fuldkorn|hj\.?|hjemmelavet|\d+\s*cm)$/i;
+  /^(alm\.?|fam\.?|familie|lille|stor|deep|normal|gluten[\s-]?fri|fuldkorn|hj\.?|hjemmelavet|\d+\s*cm)$/i;
 const MEAT_OR_TYPE_RE =
   /\b(kebab|kylling|skinke|falafel|okse|oksekød|rejer|mix|vegetar|grøntsager|champignon|broccoli|blomkål|indisk)\b/i;
 const TILBEHOR_HINT_RE =
