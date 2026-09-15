@@ -11,6 +11,7 @@ import { createWorker } from "tesseract.js";
 import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
 import { readFileSync } from "node:fs";
 import type { ClassifiedPdfPage, PdfTextItem, SourceCandidate } from "./types.js";
+import { rebuildLines } from "./ingest.js";
 import {
   pickBaseMenuPair,
   repairOcrPriceText,
@@ -743,4 +744,109 @@ export async function applyRenderedPageFallbackAsync(
     reassignBaseMenuColumnPrices(out, pages),
     pages,
   );
+}
+
+/**
+ * Image-only / empty-text PDF pages: full-page OCR → synthetic text items so
+ * layoutExtract can see menu numbers and names. Used when embedded PDF text is empty.
+ */
+export async function hydrateImageOnlyPagesWithOcr(
+  pages: ClassifiedPdfPage[],
+  sourceFile: string,
+): Promise<ClassifiedPdfPage[]> {
+  const totalItems = pages.reduce((n, p) => n + (p.items?.length ?? 0), 0);
+  if (totalItems >= 8) return pages;
+
+  const out: ClassifiedPdfPage[] = [];
+  for (const page of pages) {
+    if ((page.items?.length ?? 0) >= 8) {
+      out.push(page);
+      continue;
+    }
+    const ocrItems = await ocrFullPageToItems({
+      sourceFile,
+      pageNumber: page.pageNumber,
+      pageWidth: page.width,
+      pageHeight: page.height,
+    });
+    if (!ocrItems.length) {
+      out.push(page);
+      continue;
+    }
+    const lines = rebuildLines(ocrItems);
+    out.push({
+      ...page,
+      items: ocrItems,
+      lines,
+      rawText: lines.map((l) => l.text).join("\n"),
+      classification:
+        page.classification === "UNKNOWN" || page.classification === "COVER"
+          ? "MENU_CONTENT"
+          : page.classification,
+      classificationReason: `${page.classificationReason}|full-page-ocr:${ocrItems.length}`,
+    });
+  }
+  return out;
+}
+
+async function ocrFullPageToItems(input: {
+  sourceFile: string;
+  pageNumber: number;
+  pageWidth: number;
+  pageHeight: number;
+}): Promise<PdfTextItem[]> {
+  try {
+    const data = new Uint8Array(readFileSync(input.sourceFile));
+    const doc = await getDocument({ data, useSystemFonts: true }).promise;
+    const page = await doc.getPage(input.pageNumber);
+    const scale = 2.2;
+    const viewport = page.getViewport({ scale });
+    const { createCanvas } = await import("@napi-rs/canvas");
+    const canvas = createCanvas(viewport.width, viewport.height);
+    const ctx = canvas.getContext("2d");
+    await page.render({
+      canvasContext: ctx as unknown as CanvasRenderingContext2D,
+      viewport,
+      canvas: canvas as unknown as HTMLCanvasElement,
+    }).promise;
+    const png = canvas.toBuffer("image/png");
+
+    // Danish + English — Smash/Veroni menus are Danish takeaway copy.
+    const worker = await createWorker("dan+eng");
+    const {
+      data: { words },
+    } = await worker.recognize(png);
+    await worker.terminate();
+    try {
+      (doc as { destroy?: () => void }).destroy?.();
+    } catch {
+      /* pdfjs version variance */
+    }
+
+    const items: PdfTextItem[] = [];
+    for (const w of words ?? []) {
+      const raw = String(w.text ?? "").trim();
+      if (!raw) continue;
+      const conf = typeof w.confidence === "number" ? w.confidence : 0;
+      if (conf > 0 && conf < 35) continue;
+      const box = w.bbox;
+      if (!box) continue;
+      const x0 = box.x0 / scale;
+      const x1 = box.x1 / scale;
+      const y0 = box.y0 / scale;
+      const y1 = box.y1 / scale;
+      // Canvas y down → PDF y up
+      const pdfY = input.pageHeight - y1;
+      items.push({
+        str: repairScandinavianOcrName(raw),
+        x: Math.round(x0),
+        y: Math.round(pdfY),
+        width: Math.max(1, Math.round(x1 - x0)),
+        height: Math.max(1, Math.round(y1 - y0)),
+      });
+    }
+    return items;
+  } catch {
+    return [];
+  }
 }

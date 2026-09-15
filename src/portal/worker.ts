@@ -305,6 +305,17 @@ export async function runMigrationJob(
       sourceLabel = pdf!.originalName;
       adapterVersion = adapter.extractorVersion;
 
+      if (
+        extraction.uniqueProducts === 0 ||
+        (extraction.accounting.summary.extracted ?? 0) === 0
+      ) {
+        throw new Error(
+          `PDF extraction found no usable products across ${extraction.pageCount} page(s) ` +
+            `(candidates=${extraction.accounting.summary.candidatesDetected}, extracted=${extraction.accounting.summary.extracted}). ` +
+            `Image-only / low-quality scans often need a text PDF or a clearer photo. Retry Create with a better file.`,
+        );
+      }
+
       store.updateJobStatus(jobId, "DOMAIN");
       store.db
         .prepare(`UPDATE job_runs SET status = ? WHERE id = ?`)

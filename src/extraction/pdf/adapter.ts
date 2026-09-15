@@ -4,7 +4,7 @@ import { classifyPdfPages } from "./classify.js";
 import { ingestPdf } from "./ingest.js";
 import { detectSourceCandidatesLayout } from "./layoutExtract.js";
 import { detectOverlappingPages } from "./overlap.js";
-import { applyRenderedPageFallbackAsync } from "./renderedFallback.js";
+import { applyRenderedPageFallbackAsync, hydrateImageOnlyPagesWithOcr } from "./renderedFallback.js";
 import {
   reconcileCandidatesToSourceMenu,
   type ReconcileResult,
@@ -46,7 +46,12 @@ export class PdfSourceAdapter implements MenuExtractor {
       throw new Error("PdfSourceAdapter only accepts kind=pdf");
     }
     const ingested = await ingestPdf(source.filePath);
-    const classified = classifyPdfPages(ingested.pages);
+    let classified = classifyPdfPages(ingested.pages);
+    // Scanned / image-only PDFs have zero embedded text — OCR the page first.
+    classified = await hydrateImageOnlyPagesWithOcr(
+      classified,
+      source.filePath,
+    );
     const { links, pages } = detectOverlappingPages(classified);
     const candidates = await applyRenderedPageFallbackAsync(
       detectSourceCandidatesLayout(pages, source.filePath),
