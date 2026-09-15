@@ -14,6 +14,7 @@ import { normalizeAdditionName } from "../decisions/facts.js";
 import type { DecisionStore } from "../decisions/store.js";
 import type { AdditionLikelihoodPolicy } from "./additionLikelihood.js";
 import { isDipAddition } from "./categoryLikelihood.js";
+import { isForbiddenTilbehorName } from "../domain/menuCardQuality.js";
 import {
   categoryExcludedFromStructuralFanOut,
 } from "./categorySizeVariantPolicy.js";
@@ -74,12 +75,14 @@ function acceptIngredientToken(raw: string): string | null {
   const trimmed = raw.trim();
   if (!trimmed || trimmed.length < 2) return null;
   if (isDipAddition(trimmed)) return null;
+  if (isForbiddenTilbehorName(trimmed)) return null;
   if (JUNK_TOKEN_RE.test(trimmed)) return null;
   if (SIZE_TOKEN_RE.test(trimmed)) return null;
   if (/^\d+([.,]\d+)?$/.test(trimmed)) return null;
   const formatted = formatIngredientDisplay(trimmed);
   if (!formatted || formatted.length < 2) return null;
   if (isDipAddition(formatted)) return null;
+  if (isForbiddenTilbehorName(formatted)) return null;
   return formatted;
 }
 

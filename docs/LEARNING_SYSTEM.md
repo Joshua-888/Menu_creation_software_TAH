@@ -54,6 +54,16 @@ Encoded on `MENU_STRUCTURE_SEMANTIC` as `categoryVariantFanOut` (mode `SOURCE_CA
 
 QA and Create strip any `Menu` variant on write. Domain prior + never-worse always allow the strip.
 
+### Products are never Tilbehør (hard SEMANTIC_RULE — all categories)
+
+| Never as Tilbehør | Why |
+|-------------------|-----|
+| Pommes frites / M. pommes frites | Own product (or part of a Menuer), not an ekstra |
+| Valgfri dyppelse | Meta “choose a dip” prompt — not an individual ekstra |
+| Sodavand, Pitabrød | Own products / Menuer sub-choices |
+
+Named dips (Salatmayonnaise, Remoulade, Ketchup) remain valid Tilbehør where kind policy allows (e.g. fries plates). Applies on **every** category via `sanitizeAdditionList`.
+
 ### Category-ingredient Tilbehør (source-empty fill)
 
 When a product has **no source additions**, Tilbehør is composed from the **union of ingredients** across that category (including toppings parsed from Beskrivelse), then fanned out as a `RESTAURANT_CATEGORY` BUSINESS_FACT.

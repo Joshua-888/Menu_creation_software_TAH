@@ -54,6 +54,49 @@ describe("menuCardQuality policies", () => {
     expect(cleaned.map((a) => a.name)).toEqual(["Bacon", "Champignon"]);
   });
 
+  it("never allows pommes or valgfri dyppelse as Tilbehør on any category", () => {
+    const burger = sanitizeAdditionList(
+      [
+        { name: "M. pommes frites", priceOre: 1000 },
+        { name: "Pommes frites", priceOre: 1000 },
+        { name: "Valgfri dyppelse", priceOre: 1000 },
+        { name: "Salatmayonnaise", priceOre: 1000 },
+        { name: "Remoulade", priceOre: 1000 },
+        { name: "Ketchup", priceOre: 1000 },
+      ],
+      "Baconburger",
+      "Grill",
+    );
+    expect(burger.map((a) => a.name)).toEqual([
+      "Salatmayonnaise",
+      "Remoulade",
+      "Ketchup",
+    ]);
+
+    const pizza = sanitizeAdditionList(
+      [
+        { name: "Pommes frites", priceOre: 1500 },
+        { name: "Ekstra ost", priceOre: 1000 },
+        { name: "Valgfri dyppelse", priceOre: 1000 },
+      ],
+      "Margherita",
+      "Pizza",
+    );
+    expect(pizza.some((a) => /pommes|dyppelse/i.test(a.name))).toBe(false);
+    expect(pizza.some((a) => /ost/i.test(a.name))).toBe(true);
+
+    const sandwich = sanitizeAdditionList(
+      [
+        { name: "Sodavand", priceOre: 1500 },
+        { name: "Pitabrød", priceOre: 0 },
+        { name: "Bacon", priceOre: 2000 },
+      ],
+      "Club Sandwich",
+      "Sandwich",
+    );
+    expect(sandwich.map((a) => a.name)).toEqual(["Bacon"]);
+  });
+
   it("prices meat Tilbehør at double vegetable baseline", () => {
     expect(defaultTilbehorPriceOre("Bacon")).toBe(TILBEHOR_MEAT_PRICE_ORE);
     expect(defaultTilbehorPriceOre("Champignon")).toBe(TILBEHOR_VEG_PRICE_ORE);

@@ -25,7 +25,29 @@ const VEG_OR_CHEESE_RE =
   /\b(tomat|ost|champignon|løg|rødløg|salat|ananas|jalapeños?|jalapenos|paprika|oliven|avocado|agurk|spidskål|spinat|gorgonzola|mozzarella|parmesan|basilikum|oregano|majs|peberfrugt|syltet|falafel|hummus|karrydressing|dressing|naan|ris|nudler|pommes)\b/i;
 
 const DIP_ADDITION_RE =
-  /\b(mayo|mayonnaise|salatmayo|salatmayonnaise|remoulade|ketchup|kethup|bearnaise|bearnaisesauce|dressing|sauce|dyppelse)\b/i;
+  /\b(mayo|mayonnaise|salatmayo|salatmayonnaise|remoulade|ketchup|kethup|bearnaise|bearnaisesauce|dressing|sauce)\b/i;
+
+/**
+ * Hard SEMANTIC_RULE: these names are never Tilbehør on any category.
+ * - Pommes frites is a product (own card / Menuer include), not an ekstra row
+ * - "Valgfri dyppelse" is a meta prompt, not an individual ekstra
+ * - Sodavand / pitabrød likewise belong as products or Menuer sub-choices
+ */
+const FORBIDDEN_TILBEHOR_RE =
+  /^(m\.?\s*)?(pommes(\s*frites)?|frites|valgfri\s+dyppelse|valgbar\s+dyppelse|valgfri\s+sauce|dyppelse|sodavand|cola|fanta|sprite|kildevand|pitabrød|pita\s*brød)$/i;
+
+export function isForbiddenTilbehorName(name: string): boolean {
+  const t = name.trim().replace(/^\s*[-–—•]\s*/, "");
+  if (!t) return false;
+  if (FORBIDDEN_TILBEHOR_RE.test(t)) return true;
+  // Catch "M. pommes frites", "Ekstra pommes", etc.
+  if (/\b(pommes|frites)\b/i.test(t) && !/\b(mayo|ketchup|remoulade)\b/i.test(t)) {
+    return true;
+  }
+  if (/\bvalgfri\s+dyppelse\b/i.test(t) || /^dyppelse$/i.test(t)) return true;
+  if (/\b(sodavand|pitabrød)\b/i.test(t)) return true;
+  return false;
+}
 
 /** Real food tokens (Danish takeaway lexicon). Unknown non-food tokens are dropped. */
 const FOOD_LEXICON = new Set(
@@ -377,6 +399,7 @@ export function sanitizeAdditionList(
         .replace(/\blog\b/gi, "Løg")
         .replace(/\bkodsovs\b/gi, "Kødsovs");
       name = capitalizeFirstLetter(name);
+      if (isForbiddenTilbehorName(name)) continue;
       if (isInvalidFoodComponent(name, productName)) continue;
       // Tilbehør must be known food — never menu item titles
       if (!isKnownFoodToken(name) && !DIP_ADDITION_RE.test(name)) continue;
@@ -530,6 +553,7 @@ export function additionListHasDefects(
   }
   if (additions.length === 0) return false;
   for (const a of additions) {
+    if (isForbiddenTilbehorName(a.name)) return true;
     if (isInvalidFoodComponent(a.name, productName)) return true;
     if (!isKnownFoodToken(a.name) && !DIP_ADDITION_RE.test(a.name)) return true;
   }

@@ -156,7 +156,50 @@ describe("qaLiveImprove grill", () => {
     expect(target.variants.some((v) => /menu/i.test(v.name))).toBe(false);
   });
 
-  it("never-worse always allows stripping Menu variants", () => {
+  it("strips pommes and valgfri dyppelse from burger Tilbehør", () => {
+    const target = buildQaTargetPayload({
+      live: {
+        databaseId: "40",
+        menuNumber: "40",
+        name: "Baconburger",
+        description: "Bacon",
+        basePriceOre: 6900,
+        categoryIds: ["grill"],
+        ingredients: ["Bacon"],
+        variants: [{ name: "Alm.", priceOre: 0 }],
+        additions: [
+          { name: "M. pommes frites", priceOre: 1000 },
+          { name: "Pommes frites", priceOre: 1000 },
+          { name: "Valgfri dyppelse", priceOre: 1000 },
+          { name: "Salatmayonnaise", priceOre: 1000 },
+          { name: "Remoulade", priceOre: 1000 },
+          { name: "Ketchup", priceOre: 1000 },
+        ],
+      },
+      sourcePayload: {
+        sourceId: "s40",
+        menuNumber: "40",
+        name: "Baconburger",
+        description: "Bacon",
+        basePriceOre: 6900,
+        categoryIds: ["grill"],
+        variants: [{ name: "Alm.", surchargeOre: 0 }],
+        ingredients: ["Bacon"],
+        additions: [],
+        intendedHidden: false,
+      },
+      liveCategoryName: "Grill",
+      destinationCategories: [{ databaseId: "grill", name: "Grill" }],
+    });
+    expect(target.additions.some((a) => /pommes|dyppelse/i.test(a.name))).toBe(
+      false,
+    );
+    expect(target.additions.map((a) => a.name)).toEqual(
+      expect.arrayContaining(["Salatmayonnaise", "Remoulade", "Ketchup"]),
+    );
+  });
+
+  it("never-worse allows stripping Menu variants", () => {
     const before = [
       { name: "Alm.", priceOre: 0 },
       { name: "Menu", priceOre: 5600 },

@@ -13,13 +13,14 @@ import {
   stripTrailingPriceNoise,
 } from "../domain/textNormalize.js";
 import {
-  cleanDishDisplayName,
+  sanitizeAdditionList,
+  sanitizeIngredientList,
   dishNameHasIngredientDump,
   ingredientListHasDefects,
   additionListHasDefects,
   polishDescriptionText,
-  sanitizeAdditionList,
-  sanitizeIngredientList,
+  cleanDishDisplayName,
+  isForbiddenTilbehorName,
 } from "../domain/menuCardQuality.js";
 import {
   grillTilbehorLooksWrong,
@@ -207,6 +208,10 @@ export function fieldQualityScore(
         (a): a is { name: string; priceOre?: number } =>
           typeof a.name === "string" && a.name.trim().length > 0,
       );
+      // Hard prior: product-as-tilbehør (pommes, valgfri dyppelse, …) is always defective.
+      if (named.some((a) => isForbiddenTilbehorName(a.name))) {
+        return 0;
+      }
       const drinkLike =
         classifyMenuPlacementKind({
           name: ctx?.productName ?? "",
@@ -538,7 +543,23 @@ export function filterNeverWorseDeltas(input: {
             (a) => typeof a.name === "string" && a.name.trim().length > 0,
           )
         : [];
+      const beforeList = Array.isArray(delta.before)
+        ? (delta.before as Array<{ name: string }>).filter(
+            (a) => typeof a.name === "string" && a.name.trim().length > 0,
+          )
+        : [];
       if (drinkLike && afterList.length === 0) {
+        kept.push(delta);
+        continue;
+      }
+      // Hard prior: always strip forbidden Tilbehør (pommes, valgfri dyppelse, …).
+      const beforeForbidden = beforeList.filter((a) =>
+        isForbiddenTilbehorName(a.name),
+      );
+      const afterForbidden = afterList.filter((a) =>
+        isForbiddenTilbehorName(String(a.name ?? "")),
+      );
+      if (beforeForbidden.length > 0 && afterForbidden.length === 0) {
         kept.push(delta);
         continue;
       }
@@ -547,11 +568,6 @@ export function filterNeverWorseDeltas(input: {
         name: productName,
         categoryName: input.liveCategoryName ?? "",
       };
-      const beforeList = Array.isArray(delta.before)
-        ? (delta.before as Array<{ name: string }>).filter(
-            (a) => typeof a.name === "string" && a.name.trim().length > 0,
-          )
-        : [];
       if (
         productWantsGrillDips(grillCtx) &&
         (grillTilbehorLooksWrong(beforeList, grillCtx) ||

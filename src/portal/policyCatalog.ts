@@ -69,6 +69,19 @@ export const BUILT_IN_SEMANTIC_RULES: BuiltInSemanticRule[] = [
     ],
   },
   {
+    id: "forbidden-tilbehor-products",
+    title: "Products are never Tilbehør — all categories",
+    summary:
+      "Pommes frites, sodavand, pitabrød are own products (or Menuer sub-choices), never ekstra rows. Valgfri dyppelse is a meta prompt, not an individual Tilbehør. Applies to every category.",
+    appliesTo: "Create + QA addition sanitize on all categories",
+    adjustableVia: "Hard SEMANTIC_RULE (isForbiddenTilbehorName) in menuCardQuality",
+    details: [
+      "Forbidden names: Pommes frites / M. pommes frites, Valgfri dyppelse, Sodavand, Pitabrød",
+      "Named dips (mayo, remoulade, ketchup) remain valid Tilbehør where kind policy allows",
+      "Never-worse always allows stripping forbidden rows from live cards",
+    ],
+  },
+  {
     id: "category-probability",
     title: "Category probability — dips / Tilbehør kinds",
     summary:
