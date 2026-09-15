@@ -8,7 +8,9 @@
 import { M2B_ADAPTER_CAPABILITIES } from "../tah/contracts/evidence.js";
 import {
   DEFAULT_LIVE_WRITE_HOSTS,
+  formatLiveWriteHostAllowlist,
   isHostAllowlistedForLiveWrites,
+  LIVE_WRITE_HOSTS_ALLOW_ALL,
   normalizeDestinationHost,
   parseLiveWriteHostAllowlist,
 } from "../tah/write/hostAllowlist.js";
@@ -16,6 +18,8 @@ import {
 export {
   normalizeDestinationHost,
   parseLiveWriteHostAllowlist,
+  formatLiveWriteHostAllowlist,
+  LIVE_WRITE_HOSTS_ALLOW_ALL,
 } from "../tah/write/hostAllowlist.js";
 
 /** @deprecated use parseLiveWriteHostAllowlist */
@@ -62,7 +66,11 @@ export function evaluatePortalLiveWriteGate(input: {
   allowlist: string[];
 } {
   const env = input.env ?? process.env;
-  const allowlist = parseLiveWriteHostAllowlist(env);
+  const parsed = parseLiveWriteHostAllowlist(env);
+  const allowlist =
+    parsed === LIVE_WRITE_HOSTS_ALLOW_ALL
+      ? [LIVE_WRITE_HOSTS_ALLOW_ALL]
+      : parsed;
   const enabled = isPortalLiveWritesEnabled(env);
   const allowlisted = isDestinationHostAllowlistedForLiveWrites(
     input.destinationHost,
@@ -84,7 +92,7 @@ export function evaluatePortalLiveWriteGate(input: {
   }
   if (!allowlisted) {
     blockers.push(
-      `destination host not allowlisted (need one of: ${allowlist.join(",")}; set PORTAL_LIVE_WRITE_HOSTS)`,
+      `destination host not allowlisted (need one of: ${formatLiveWriteHostAllowlist(env)}; set PORTAL_LIVE_WRITE_HOSTS=* for any host)`,
     );
   }
   if (!createCategoryCertified) blockers.push("createCategory not certified");

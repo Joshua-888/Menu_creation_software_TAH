@@ -4,9 +4,9 @@ Use this before running **live production tests** on newly acquired merchants.
 
 ## Safety defaults
 
-- Live admin writes are **on** when `TAH_ADMIN_EMAIL` / `TAH_ADMIN_PASSWORD` are set and the destination host is allowlisted.
+- Live admin writes are **on** when `TAH_ADMIN_EMAIL` / `TAH_ADMIN_PASSWORD` are set.
+- Destination hosts: **any host by default**. Optional restrict via `PORTAL_LIVE_WRITE_HOSTS=shop1.dk,shop2.dk`. Use `PORTAL_LIVE_WRITE_HOSTS=*` explicitly for open. `PORTAL_LIVE_WRITE_HOSTS_STRICT=1` drops automatic Veroni merge when using a restrict list.
 - Kill switches: `PORTAL_LIVE_WRITES=0`, `PORTAL_DRYRUN_LIVE_DEST=0`.
-- Destination hosts must be on `PORTAL_LIVE_WRITE_HOSTS` (veronipizza.dk is included by default unless `STRICT`).
 - Job `restaurantKey` is the **destination hostname** (not merchant display name).
 - New merchants **do not** get Veroni Tilbehør mayo/ketchup defaults.
 - Peer probability policies apply to **Veroni only** by default (`PORTAL_APPLY_PEER_PROBABILITY_HOSTS` / `PORTAL_APPLY_PEER_PROBABILITY=1` to opt in).
@@ -23,39 +23,27 @@ ADMIN_BOOTSTRAP_PASSWORD=...
 
 # Live writes (default on with credentials; these are kill switches / allowlist)
 # PORTAL_LIVE_WRITES=0
-PORTAL_LIVE_WRITE_HOSTS=merchant1.dk,merchant2.dk
-# Optional: do not auto-include veronipizza.dk
-PORTAL_LIVE_WRITE_HOSTS_STRICT=1
+# Open to any destination (default). To restrict:
+# PORTAL_LIVE_WRITE_HOSTS=merchant1.dk,merchant2.dk
+# PORTAL_LIVE_WRITE_HOSTS_STRICT=1
 
 TAH_ADMIN_EMAIL=...
 TAH_ADMIN_PASSWORD=...
 # Point discovery/scripts at the merchant under test
 TAH_ADMIN_BASE_URL=https://merchant1.dk
-
-# Dry-run against live catalog is automatic with credentials + allowlist.
-# PORTAL_DRYRUN_LIVE_DEST=0  # only if you must force offline empty dest
-
-# Do NOT set unless that shop should inherit Veroni default dips
-# PORTAL_SEED_DEFAULT_TILBEHOR_HOSTS=
-
-# Only if applying peer-learned structure Tilbehør fan-out live
-# STRUCTURE_WRITE_REQUIRED=1
-# STRUCTURE_WRITE_CONFIRMED=1
-# STRUCTURE_WRITE_FINGERPRINT=<from peer-structure-summary.json>
 ```
 
 ## Per-merchant procedure
 
-1. Add both hosts to `PORTAL_LIVE_WRITE_HOSTS` (and restart portal/worker).
-2. Confirm TAH admin login works on each storefront (`/login` → `/admin/menu`).
-3. Create a portal job with the merchant PDF; destination host = that shop (`restaurantKey` becomes that hostname).
-4. Run worker through ARTIFACTS / REVIEW:
+1. Confirm TAH admin login works on that storefront (`/login` → `/admin/menu`) with the portal `TAH_ADMIN_*` credentials.
+2. Create a portal job with the merchant PDF; destination host = that shop (`restaurantKey` becomes that hostname).
+3. Run worker through ARTIFACTS / REVIEW:
    - Check `destination-snapshot-meta.json` → `source: "live"`.
    - Confirm dry-run creates are **storefront-visible** unless `PORTAL_CREATE_HIDDEN=1`.
    - Answer review questions; do not invent Tilbehør prices from peers.
-5. When the last question clears and live gate is open, post-review live execute runs automatically from canonical artifacts.
-6. Prefer a **small slice** first; verify products appear on the storefront after live write.
-7. Repeat for merchant 2 with its own job (never reuse Veroni decision facts).
+4. When the last question clears and live gate is open, post-review live execute runs automatically from canonical artifacts.
+5. Prefer a **small slice** first; verify products appear on the storefront after live write.
+6. Repeat for merchant 2 with its own job (never reuse Veroni decision facts).
 
 ## Verify before go-live
 

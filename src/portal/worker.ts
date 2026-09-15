@@ -264,7 +264,7 @@ export async function runMigrationJob(
             ? " Playwright Chromium is missing on the server — redeploy so portal-start can install it."
             : "";
         throw new Error(
-          `QA_RECONCILE requires a live destination snapshot. Set TAH_ADMIN_EMAIL and TAH_ADMIN_PASSWORD on the portal service, ensure the host is allowlisted (veronipizza.dk is default), and that Playwright can log into admin.${chromiumHint} ${detail}`,
+          `QA_RECONCILE requires a live destination snapshot. Set TAH_ADMIN_EMAIL and TAH_ADMIN_PASSWORD on the portal service, ensure the host is allowlisted (any host by default; set PORTAL_LIVE_WRITE_HOSTS to restrict), and that Playwright can log into admin.${chromiumHint} ${detail}`,
         );
       }
       preloadedDestination = {
@@ -457,7 +457,7 @@ export async function runMigrationJob(
         ? " Playwright Chromium is missing on the server — redeploy so portal-start can install it."
         : "";
       throw new Error(
-        `${isQa ? "QA_RECONCILE" : "Create"} requires a live destination snapshot. Set TAH_ADMIN_EMAIL and TAH_ADMIN_PASSWORD on the portal service, ensure the host is allowlisted (veronipizza.dk is default), and that Playwright can log into admin.${chromiumHint} ${detail}`,
+        `${isQa ? "QA_RECONCILE" : "Create"} requires a live destination snapshot. Set TAH_ADMIN_EMAIL and TAH_ADMIN_PASSWORD on the portal service, ensure the host is allowlisted (any host by default; set PORTAL_LIVE_WRITE_HOSTS to restrict), and that Playwright can log into admin.${chromiumHint} ${detail}`,
       );
     }
     const destination = destLoad.destination;

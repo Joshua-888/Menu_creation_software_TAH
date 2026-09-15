@@ -55,17 +55,29 @@ describe("portal live write gate", () => {
     ).toBe(true);
   });
 
-  it("requires allowlisted host even with credentials", () => {
-    const gated = evaluatePortalLiveWriteGate({
+  it("allows any host by default; restrict list can still deny", () => {
+    const open = evaluatePortalLiveWriteGate({
       destinationHost: "https://other-shop.example",
       env: {
         TAH_ADMIN_EMAIL: "a@b.c",
         TAH_ADMIN_PASSWORD: "x",
       },
     });
-    expect(gated.enabled).toBe(true);
-    expect(gated.allowlisted).toBe(false);
-    expect(gated.canLiveExecute).toBe(false);
+    expect(open.enabled).toBe(true);
+    expect(open.allowlisted).toBe(true);
+    expect(open.canLiveExecute).toBe(true);
+
+    const restricted = evaluatePortalLiveWriteGate({
+      destinationHost: "https://other-shop.example",
+      env: {
+        TAH_ADMIN_EMAIL: "a@b.c",
+        TAH_ADMIN_PASSWORD: "x",
+        PORTAL_LIVE_WRITE_HOSTS: "allowed-shop.dk",
+        PORTAL_LIVE_WRITE_HOSTS_STRICT: "1",
+      },
+    });
+    expect(restricted.allowlisted).toBe(false);
+    expect(restricted.canLiveExecute).toBe(false);
   });
 
   it("opens when credentials + Veroni + createCategory CERTIFIED", () => {

@@ -1,8 +1,16 @@
 /**
  * Shared live-write host allowlist (no portal/tah circular imports).
+ *
+ * Operator portal default: any destination host is allowed when live writes
+ * are enabled (credentials + kill switch). Set PORTAL_LIVE_WRITE_HOSTS to a
+ * comma list to restrict; use PORTAL_LIVE_WRITE_HOSTS_STRICT=1 to exclude the
+ * legacy Veroni default from that list.
  */
 
+/** Legacy canary host — only auto-merged when an explicit restrict list is set without STRICT. */
 export const DEFAULT_LIVE_WRITE_HOSTS = ["veronipizza.dk"] as const;
+
+export const LIVE_WRITE_HOSTS_ALLOW_ALL = "*" as const;
 
 export function normalizeDestinationHost(hostOrUrl: string): string {
   const raw = hostOrUrl.trim().toLowerCase();
@@ -14,30 +22,52 @@ export function normalizeDestinationHost(hostOrUrl: string): string {
   return raw.replace(/^www\./, "").replace(/:\d+$/, "");
 }
 
+function isAllowAllToken(token: string): boolean {
+  const t = token.trim().toLowerCase();
+  return t === "*" || t === "all" || t === "any";
+}
+
+/**
+ * Parsed allowlist. `"*"` means every destination host is permitted.
+ */
 export function parseLiveWriteHostAllowlist(
   env: NodeJS.ProcessEnv = process.env,
-): string[] {
+): string[] | typeof LIVE_WRITE_HOSTS_ALLOW_ALL {
   const raw = env.PORTAL_LIVE_WRITE_HOSTS?.trim();
-  const fromEnv = raw
-    ? raw
-        .split(",")
-        .map((s) => normalizeDestinationHost(s))
-        .filter(Boolean)
-    : [];
+  // Unset / empty / explicit * → any merchant the operator targets.
+  if (!raw || isAllowAllToken(raw)) {
+    return LIVE_WRITE_HOSTS_ALLOW_ALL;
+  }
+  const parts = raw
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (parts.some((p) => isAllowAllToken(p))) {
+    return LIVE_WRITE_HOSTS_ALLOW_ALL;
+  }
+  const fromEnv = parts
+    .map((s) => normalizeDestinationHost(s))
+    .filter(Boolean);
   const strict =
     env.PORTAL_LIVE_WRITE_HOSTS_STRICT === "1" ||
     env.PORTAL_LIVE_WRITE_HOSTS_STRICT === "true";
-  if (fromEnv.length > 0) {
-    if (strict) return [...new Set(fromEnv)];
-    return [...new Set([...fromEnv, ...DEFAULT_LIVE_WRITE_HOSTS])];
-  }
-  return [...DEFAULT_LIVE_WRITE_HOSTS];
+  if (strict) return [...new Set(fromEnv)];
+  return [...new Set([...fromEnv, ...DEFAULT_LIVE_WRITE_HOSTS])];
+}
+
+export function formatLiveWriteHostAllowlist(
+  env: NodeJS.ProcessEnv = process.env,
+): string {
+  const list = parseLiveWriteHostAllowlist(env);
+  return list === LIVE_WRITE_HOSTS_ALLOW_ALL ? "*" : list.join(",");
 }
 
 export function isHostAllowlistedForLiveWrites(
   destinationHost: string,
   env: NodeJS.ProcessEnv = process.env,
 ): boolean {
+  const list = parseLiveWriteHostAllowlist(env);
+  if (list === LIVE_WRITE_HOSTS_ALLOW_ALL) return true;
   const host = normalizeDestinationHost(destinationHost);
-  return parseLiveWriteHostAllowlist(env).includes(host);
+  return list.includes(host);
 }

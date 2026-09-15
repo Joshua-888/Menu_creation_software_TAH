@@ -12,8 +12,16 @@ import { isStructureWriteConfirmed } from "../../src/portal/structureWriteGate.j
 import { evaluatePortalLiveWriteGate } from "../../src/portal/liveWrites.js";
 
 describe("multi-merchant host allowlist", () => {
-  it("defaults to veronipizza.dk", () => {
-    expect(parseLiveWriteHostAllowlist({})).toEqual(["veronipizza.dk"]);
+  it("defaults to any destination host", () => {
+    expect(parseLiveWriteHostAllowlist({})).toBe("*");
+    expect(isHostAllowlistedForLiveWrites("smashmburger.dk", {})).toBe(true);
+    expect(isHostAllowlistedForLiveWrites("anyone.example", {})).toBe(true);
+  });
+
+  it("PORTAL_LIVE_WRITE_HOSTS=* keeps open gate", () => {
+    const env = { PORTAL_LIVE_WRITE_HOSTS: "*" } as NodeJS.ProcessEnv;
+    expect(parseLiveWriteHostAllowlist(env)).toBe("*");
+    expect(isHostAllowlistedForLiveWrites("smashmburger.dk", env)).toBe(true);
   });
 
   it("merges PORTAL_LIVE_WRITE_HOSTS with default unless STRICT", () => {
@@ -40,6 +48,19 @@ describe("multi-merchant host allowlist", () => {
       "shop-b.dk",
     ]);
     expect(isHostAllowlistedForLiveWrites("veronipizza.dk", env)).toBe(false);
+  });
+
+  it("opens live gate for any host when allowlist is open", () => {
+    const gated = evaluatePortalLiveWriteGate({
+      destinationHost: "smashmburger.dk",
+      env: {
+        TAH_ADMIN_EMAIL: "a@b.c",
+        TAH_ADMIN_PASSWORD: "x",
+      },
+    });
+    expect(gated.canLiveExecute).toBe(true);
+    expect(gated.allowlisted).toBe(true);
+    expect(gated.allowlist).toEqual(["*"]);
   });
 
   it("opens live gate for allowlisted new merchants", () => {
