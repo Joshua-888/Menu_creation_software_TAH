@@ -6,9 +6,9 @@
 
 import { VERONI_CANARY_TARGET, type TargetLockResult } from "./types.js";
 import {
+  formatLiveWriteHostAllowlist,
   isHostAllowlistedForLiveWrites,
   normalizeDestinationHost,
-  parseLiveWriteHostAllowlist,
 } from "./hostAllowlist.js";
 
 /**
@@ -82,7 +82,7 @@ export function assertAllowlistedAdminHost(input: {
     };
   }
   if (!isHostAllowlistedForLiveWrites(actual, input.env)) {
-    const list = parseLiveWriteHostAllowlist(input.env).join(",");
+    const list = formatLiveWriteHostAllowlist(input.env);
     return {
       ok: false,
       reason: `host_not_allowlisted:${actual}:allowlist=${list}`,
