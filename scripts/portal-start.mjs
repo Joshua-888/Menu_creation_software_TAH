@@ -1,6 +1,9 @@
 /**
  * Cross-platform portal start — honors Railway/Docker PORT and binds 0.0.0.0.
- * Uses image-baked Playwright browsers (/ms-playwright) when present.
+ *
+ * Critical: start Next.js FIRST so Railway healthchecks (/login) pass.
+ * Playwright Chromium is ensured in the background — never block HTTP ready.
+ * Prefer image-baked browsers at /ms-playwright (Dockerfile.portal).
  */
 import { spawn, execSync } from "node:child_process";
 import { existsSync, readdirSync } from "node:fs";
@@ -28,23 +31,46 @@ function chromiumInstalled(root) {
   }
 }
 
-const browserRoot = process.env.PLAYWRIGHT_BROWSERS_PATH;
-if (!chromiumInstalled(browserRoot)) {
-  console.log("[portal-start] Installing Playwright Chromium…");
-  try {
-    execSync("npx playwright install --with-deps chromium", {
-      stdio: "inherit",
-      env: process.env,
-    });
-  } catch {
-    execSync("npx playwright install chromium", {
-      stdio: "inherit",
-      env: process.env,
-    });
+function ensureChromiumAsync() {
+  const browserRoot = process.env.PLAYWRIGHT_BROWSERS_PATH;
+  if (chromiumInstalled(browserRoot)) {
+    console.log(`[portal-start] Playwright browsers at ${browserRoot}`);
+    return;
   }
-} else {
-  console.log(`[portal-start] Playwright browsers at ${browserRoot}`);
+  console.log(
+    "[portal-start] Chromium missing — installing in background (HTTP already up)…",
+  );
+  // Detach: do not block Next.js readiness / Railway healthcheck.
+  const installer = spawn(
+    process.platform === "win32" ? "npx.cmd" : "npx",
+    ["playwright", "install", "--with-deps", "chromium"],
+    {
+      stdio: "inherit",
+      env: process.env,
+      detached: false,
+    },
+  );
+  installer.on("exit", (code) => {
+    if (code === 0) {
+      console.log("[portal-start] Playwright Chromium install finished");
+      return;
+    }
+    console.warn(
+      `[portal-start] --with-deps failed (code ${code}); retrying chromium-only…`,
+    );
+    try {
+      execSync("npx playwright install chromium", {
+        stdio: "inherit",
+        env: process.env,
+      });
+      console.log("[portal-start] Playwright Chromium install finished");
+    } catch (err) {
+      console.error("[portal-start] Playwright install failed:", err);
+    }
+  });
 }
+
+ensureChromiumAsync();
 
 const child = spawn(
   process.execPath,

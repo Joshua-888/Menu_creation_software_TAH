@@ -1,5 +1,5 @@
 # Railway — TakeAwayHero Menu Operator Portal
-# Docker image includes Chromium + OS libs (libglib etc.) for live admin writes.
+# MUST use Docker so Chromium + OS libs are baked in (Railpack cold-starts 502).
 [build]
 builder = "DOCKERFILE"
 dockerfilePath = "Dockerfile.portal"
@@ -7,5 +7,6 @@ dockerfilePath = "Dockerfile.portal"
 [deploy]
 startCommand = "npm run portal:start"
 healthcheckPath = "/login"
-healthcheckTimeout = 180
+healthcheckTimeout = 300
 restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 5
