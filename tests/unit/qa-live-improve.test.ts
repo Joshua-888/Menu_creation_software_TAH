@@ -110,7 +110,7 @@ describe("qaLiveImprove merge", () => {
   it("drops REVIEW variant stubs and polishes glued ingredients", () => {
     expect(polishIngredientList(["- tomat", "ogæg", "syltet 120"])).toEqual([
       "Tomat",
-      "Og æg",
+      "Æg",
       "Syltet",
     ]);
 

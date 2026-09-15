@@ -15,6 +15,7 @@ import {
 } from "./additionLikelihood.js";
 import type { PeerMenuSnapshot } from "./peerMenuStructure.js";
 import { DEFAULT_EKSTRA_PRICE_ORE } from "./categoryIngredientAdditions.js";
+import { defaultTilbehorPriceOre } from "../domain/menuCardQuality.js";
 
 export type PeerAdditionPriceEntry = {
   nameKey: string;
@@ -162,7 +163,7 @@ export function lookupPeerAdditionPrice(
   }
 
   return {
-    priceOre: DEFAULT_EKSTRA_PRICE_ORE,
+    priceOre: defaultTilbehorPriceOre(name) || DEFAULT_EKSTRA_PRICE_ORE,
     source: "DEFAULT_10KR",
     samples: 0,
   };

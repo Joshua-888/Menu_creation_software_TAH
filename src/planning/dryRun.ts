@@ -62,6 +62,10 @@ import {
   liveSnapshotCategoryName,
   qaTargetHasWriteBlockingIssues,
 } from "./qaLiveImprove.js";
+import {
+  sanitizeAdditionList,
+  sanitizeIngredientList,
+} from "../domain/menuCardQuality.js";
 
 export type DryRunDestinationSnapshot = {
   host: string;
@@ -184,20 +188,26 @@ function toPayload(
       policy: probabilityPolicy,
     }).after;
   }
+  const safeName = assessment.repaired.name || product.name;
+  const safeIngredients = sanitizeIngredientList(
+    assessment.repaired.ingredients.length
+      ? assessment.repaired.ingredients
+      : ingredientList,
+    safeName,
+  );
+  const safeAdditions = sanitizeAdditionList(additions, safeName);
   return {
     sourceId: product.sourceId,
     menuNumber:
       product.assignedMenuNumber ?? product.sourceMenuNumber ?? "",
-    name: assessment.repaired.name || product.name,
+    name: safeName,
     description:
       assessment.repaired.description || desc,
     basePriceOre: product.basePrice ?? 0,
     categoryIds,
     variants: mapped.variants,
-    ingredients: assessment.repaired.ingredients.length
-      ? assessment.repaired.ingredients
-      : ingredientList,
-    additions,
+    ingredients: safeIngredients,
+    additions: safeAdditions,
     // Default: appear on storefront. Kill switch: PORTAL_CREATE_HIDDEN=1
     intendedHidden: shouldCreateProductsHidden(),
   };

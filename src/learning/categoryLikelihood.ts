@@ -6,6 +6,10 @@
  */
 
 import type { PeerMenuSnapshot } from "./peerMenuStructure.js";
+import {
+  isInvalidFoodComponent,
+  repriceTilbehorList,
+} from "../domain/menuCardQuality.js";
 
 export type ProductKind =
   | "drinks"
@@ -408,6 +412,11 @@ export function filterAdditionsWithTrace(input: {
   const reasonCodes = new Set<AdditionFilterReasonCode>();
 
   for (const a of before) {
+    if (isInvalidFoodComponent(a.name, input.name)) {
+      removed.push({ ...a, reason: "DIP_DENY_KIND" });
+      reasonCodes.add("DIP_DENY_KIND");
+      continue;
+    }
     if (!allowDips && isDipAddition(a.name)) {
       removed.push({ ...a, reason: "DIP_DENY_KIND" });
       reasonCodes.add("DIP_DENY_KIND");
@@ -420,16 +429,17 @@ export function filterAdditionsWithTrace(input: {
     }
     after.push(a);
   }
-  if (after.length > 0 && removed.length === 0) {
+  const priced = repriceTilbehorList(after);
+  if (priced.length > 0 && removed.length === 0) {
     reasonCodes.add("KEPT");
-  } else if (after.length > 0) {
+  } else if (priced.length > 0) {
     reasonCodes.add("KEPT");
   }
 
   return {
     kind,
     before,
-    after,
+    after: priced,
     removed,
     reasonCodes: [...reasonCodes],
   };

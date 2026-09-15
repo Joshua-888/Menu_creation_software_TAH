@@ -1,0 +1,518 @@
+/**
+ * Premium menu-card quality policies.
+ *
+ * Hard rules operators expect:
+ * - One real food item per ingredient / Tilbehør row (never "Skinkeog ananas")
+ * - Never use dish names, "Tilbehør", or gibberish as ingredients/additions
+ * - Product name is a dish title — not an ingredient dump
+ * - Tilbehør prices vary: meat ≈ 2× vegetable/dip baseline
+ */
+
+import { capitalizeFirstLetter, formatProductName } from "./textNormalize.js";
+
+/** Baseline vegetable / dip Tilbehør price (10 kr). */
+export const TILBEHOR_VEG_PRICE_ORE = 1000;
+/** Meat Tilbehør price (20 kr) — typically double greens. */
+export const TILBEHOR_MEAT_PRICE_ORE = 2000;
+
+const META_TOKEN_RE =
+  /^(tilbehør|tilbehor|ekstra|extras?|valgfri|valgbar|tilvalg|ingrediens(er)?|beskrivelse|menu|alm\.?|fam\.?|familie|review|diverse|andet)$/i;
+
+const MEAT_ADDITION_RE =
+  /\b(skinke|bacon|kebab|kylling|kødstrimler|kødsovs|kødsauce|pepperoni|parmaskinke|okse|oksekød|bøf|rejer|tun|musling|chorizo|pølse|hakket|kødboller|salami|kød)\b/i;
+
+const VEG_OR_CHEESE_RE =
+  /\b(tomat|ost|champignon|løg|rødløg|salat|ananas|jalapeños?|jalapenos|paprika|oliven|avocado|agurk|spidskål|spinat|gorgonzola|mozzarella|parmesan|basilikum|oregano|majs|peberfrugt|syltet|falafel|hummus|karrydressing|dressing|naan|ris|nudler|pommes)\b/i;
+
+const DIP_ADDITION_RE =
+  /\b(mayo|mayonnaise|salatmayo|salatmayonnaise|remoulade|ketchup|kethup|bearnaise|bearnaisesauce|dressing|sauce|dyppelse)\b/i;
+
+/** Real food tokens (Danish takeaway lexicon). Unknown non-food tokens are dropped. */
+const FOOD_LEXICON = new Set(
+  [
+    "tomat",
+    "ost",
+    "skinke",
+    "bacon",
+    "æg",
+    "egg",
+    "kebab",
+    "champignon",
+    "pepperoni",
+    "ananas",
+    "parmaskinke",
+    "kødsovs",
+    "kødsauce",
+    "syltet paprika",
+    "paprika",
+    "bearnaisesauce",
+    "bearnaise",
+    "løg",
+    "log",
+    "rødløg",
+    "tun",
+    "rejer",
+    "musling",
+    "gorgonzola",
+    "kødstrimler",
+    "jalapenos",
+    "jalapeños",
+    "salat",
+    "dressing",
+    "falafel",
+    "oliven",
+    "kylling",
+    "ananas",
+    "pommes",
+    "pommes frites",
+    "salatmayonnaise",
+    "salatmayo",
+    "mayonnaise",
+    "mayo",
+    "remoulade",
+    "ketchup",
+    "agurk",
+    "avocado",
+    "spidskål",
+    "hummus",
+    "karrydressing",
+    "spinat",
+    "parmesan",
+    "flødesovs",
+    "penne",
+    "spaghetti",
+    "tigerrejer",
+    "naanbrød",
+    "naan",
+    "ris",
+    "nudler",
+    "kartofler",
+    "oksefyld",
+    "grøntsager",
+    "indisk ost",
+    "mozzarella",
+    "basilikum",
+    "oregano",
+    "majs",
+    "peberfrugt",
+    "salami",
+    "chorizo",
+    "pølse",
+    "hakket",
+    "kødboller",
+    "oksekød",
+    "bøf",
+    "reje",
+    "muslinger",
+    "syltet",
+  ].map((s) => s.toLowerCase()),
+);
+
+/**
+ * Dish / pizza style names that are never ingredients or Tilbehør.
+ * (Product titles, not food components.)
+ */
+const DISH_NAME_BLOCKLIST = new Set(
+  [
+    "margarita",
+    "margherita",
+    "hawaii",
+    "nordgårds",
+    "nordgards",
+    "nordgàrds",
+    "preben",
+    "sofi",
+    "patricia",
+    "kalista",
+    "elia",
+    "tobi",
+    "log", // when alone as dish #9 name — handled carefully
+    "seafood",
+    "dagulas",
+    "brianboss",
+    "benja", // OCR junk / made-up
+    "josu",
+    "jega",
+    "karan",
+    "seetha",
+    "glori",
+    "bambino",
+    "tino bambino",
+  ].map((s) => s.toLowerCase()),
+);
+
+const KNOWN_JUNK_RE =
+  /^(benja|nordsjæls|nordsjaels|xyz|test|asdf|foo|bar|lorem)$/i;
+
+function normKey(s: string): string {
+  return s
+    .trim()
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ");
+}
+
+export function isMetaMenuToken(name: string): boolean {
+  return META_TOKEN_RE.test(name.trim());
+}
+
+export function isDishNameBlockedAsFoodToken(name: string): boolean {
+  const k = normKey(name);
+  if (!k) return false;
+  if (DISH_NAME_BLOCKLIST.has(k)) return true;
+  if (KNOWN_JUNK_RE.test(k)) return true;
+  return false;
+}
+
+export function isKnownFoodToken(name: string): boolean {
+  const k = normKey(name);
+  if (!k) return false;
+  if (FOOD_LEXICON.has(k)) return true;
+  // Multi-word: all parts known, or whole phrase in lexicon
+  if (k.includes(" ")) {
+    if (FOOD_LEXICON.has(k)) return true;
+    const parts = k.split(" ");
+    if (parts.every((p) => FOOD_LEXICON.has(p) || DIP_ADDITION_RE.test(p))) {
+      return true;
+    }
+  }
+  if (DIP_ADDITION_RE.test(k) || MEAT_ADDITION_RE.test(k) || VEG_OR_CHEESE_RE.test(k)) {
+    return true;
+  }
+  return false;
+}
+
+/** True when token must never appear as ingredient or Tilbehør. */
+export function isInvalidFoodComponent(
+  name: string,
+  productName?: string,
+): boolean {
+  const t = name.trim();
+  if (!t) return true;
+  if (isMetaMenuToken(t)) return true;
+  if (isDishNameBlockedAsFoodToken(t)) return true;
+  if (KNOWN_JUNK_RE.test(t)) return true;
+  if (productName) {
+    const pn = normKey(productName.replace(/^\d+\.\s*/, ""));
+    const tk = normKey(t);
+    if (pn && tk && (pn === tk || pn.startsWith(tk + " ") || tk === pn.split(/\s+/)[0])) {
+      // Exact product title as component (e.g. Margarita on Margarita)
+      if (pn === tk) return true;
+    }
+  }
+  // Reject unknown single-token non-food (Benja, etc.)
+  if (!isKnownFoodToken(t) && !/[,\s]/.test(t) && t.length <= 24) {
+    // Allow compound dish-legal foods we haven't listed if they contain a known root
+    if (!MEAT_ADDITION_RE.test(t) && !VEG_OR_CHEESE_RE.test(t) && !DIP_ADDITION_RE.test(t)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Split OCR-glued "Skinkeog ananas" / "Skinkeog pølse" into separate foods.
+ * Also splits "X og Y" already-spaced pairs when both are foods.
+ */
+export function splitGluedFoodToken(raw: string): string[] {
+  let s = raw.trim().replace(/\s+/g, " ");
+  if (!s) return [];
+
+  // Explicit known glues
+  const explicit: Array<[RegExp, string[]]> = [
+    [/^(skinke)\s*og\s*(ananas)$/i, ["Skinke", "Ananas"]],
+    [/^(skinke)og(ananas)$/i, ["Skinke", "Ananas"]],
+    [/^(skinke)\s*og\s*(pølse|polse)$/i, ["Skinke", "Pølse"]],
+    [/^(skinke)og(pølse|polse)$/i, ["Skinke", "Pølse"]],
+    [/^(skinke)\s*og\s*(bacon)$/i, ["Skinke", "Bacon"]],
+    [/^(skinke)og(bacon)$/i, ["Skinke", "Bacon"]],
+    [/^(ost)\s*og\s*(løg|log)$/i, ["Ost", "Løg"]],
+    [/^(ost)og(løg|log)$/i, ["Ost", "Løg"]],
+  ];
+  for (const [re, parts] of explicit) {
+    if (re.test(s)) return parts;
+  }
+
+  // General: WordogWord (no spaces) where both sides look like food
+  const glued = s.match(/^([A-Za-zÆØÅæøå]{2,})og([A-Za-zÆØÅæøå]{2,})$/i);
+  if (glued) {
+    const a = glued[1]!;
+    const b = glued[2]!;
+    // "ogæg" → og + æg (conjunction + food)
+    if (/^og$/i.test(a) && isKnownFoodToken(b)) {
+      return [capitalizeFirstLetter(b)];
+    }
+    if (isKnownFoodToken(a) && isKnownFoodToken(b)) {
+      return [capitalizeFirstLetter(a), capitalizeFirstLetter(b)];
+    }
+  }
+
+  // "X og Y" spaced — only split when both are food (not "Tomat og ost" as one cell;
+  // that belongs in description). For ingredient cells, prefer split.
+  const spacedOg = s.match(/^(.+?)\s+og\s+(.+)$/i);
+  if (spacedOg) {
+    const a = spacedOg[1]!.trim();
+    const b = spacedOg[2]!.trim();
+    if (
+      isKnownFoodToken(a) &&
+      isKnownFoodToken(b) &&
+      !/,/.test(a) &&
+      !/,/.test(b)
+    ) {
+      return [capitalizeFirstLetter(a), capitalizeFirstLetter(b)];
+    }
+  }
+
+  return [s];
+}
+
+export type AdditionPriceTier = "meat" | "vegetable" | "dip" | "other";
+
+export function classifyTilbehorPriceTier(name: string): AdditionPriceTier {
+  if (DIP_ADDITION_RE.test(name)) return "dip";
+  if (MEAT_ADDITION_RE.test(name)) return "meat";
+  if (VEG_OR_CHEESE_RE.test(name)) return "vegetable";
+  return "other";
+}
+
+export function defaultTilbehorPriceOre(name: string): number {
+  const tier = classifyTilbehorPriceTier(name);
+  if (tier === "meat") return TILBEHOR_MEAT_PRICE_ORE;
+  return TILBEHOR_VEG_PRICE_ORE;
+}
+
+/**
+ * Reprice Tilbehør when the list is flat (all same price) or zero/missing.
+ * Meat → 20 kr, veg/dip/other → 10 kr.
+ */
+export function repriceTilbehorList(
+  additions: Array<{ name: string; priceOre: number }>,
+): Array<{ name: string; priceOre: number }> {
+  if (additions.length === 0) return [];
+  const prices = additions.map((a) => a.priceOre).filter((p) => p > 0);
+  const allSame =
+    prices.length >= 2 && prices.every((p) => p === prices[0]);
+  const anyMissing = additions.some((a) => !a.priceOre || a.priceOre <= 0);
+  const shouldReprice = allSame || anyMissing;
+
+  return additions.map((a) => {
+    const logical = defaultTilbehorPriceOre(a.name);
+    if (!shouldReprice && a.priceOre > 0) {
+      // Still bump meat that was incorrectly priced at veg baseline
+      if (
+        classifyTilbehorPriceTier(a.name) === "meat" &&
+        a.priceOre <= TILBEHOR_VEG_PRICE_ORE
+      ) {
+        return { name: a.name, priceOre: TILBEHOR_MEAT_PRICE_ORE };
+      }
+      return a;
+    }
+    return { name: a.name, priceOre: logical };
+  });
+}
+
+/**
+ * Expand, split, and sanitize ingredient rows for a product.
+ */
+export function sanitizeIngredientList(
+  raw: readonly string[],
+  productName?: string,
+): string[] {
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const item of raw) {
+    let base = item.replace(/^\s*[-–—•]\s*/, "").trim();
+    base = base.replace(/\bogæg\b/gi, "æg").replace(/\bogost\b/gi, "ost");
+    base = base.replace(/\s+\d{2,4}\s*(kr\.?)?\s*$/gi, "").trim();
+    // Drop leading dangling "og "
+    base = base.replace(/^og\s+/i, "").trim();
+    for (const part of splitGluedFoodToken(base)) {
+      let s = part.trim().replace(/\s+/g, " ");
+      if (!s) continue;
+      // OCR
+      s = s
+        .replace(/\blog\b/gi, "løg")
+        .replace(/\bkodsovs\b/gi, "kødsovs")
+        .replace(/\bpolse\b/gi, "pølse");
+      s = capitalizeFirstLetter(s);
+      if (/\d{2,4}/.test(s)) continue;
+      if (isInvalidFoodComponent(s, productName)) continue;
+      const key = normKey(s);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push(s);
+    }
+  }
+  return out;
+}
+
+/**
+ * Sanitize Tilbehør: drop dish names / meta / junk; reprice logically.
+ */
+export function sanitizeAdditionList(
+  raw: Array<{ name: string; priceOre: number }>,
+  productName?: string,
+): Array<{ name: string; priceOre: number }> {
+  const cleaned: Array<{ name: string; priceOre: number }> = [];
+  const seen = new Set<string>();
+  for (const a of raw) {
+    for (const part of splitGluedFoodToken(a.name.replace(/^\s*[-–—•]\s*/, ""))) {
+      let name = formatProductName(part);
+      if (!name) continue;
+      name = name
+        .replace(/\blog\b/gi, "Løg")
+        .replace(/\bkodsovs\b/gi, "Kødsovs");
+      name = capitalizeFirstLetter(name);
+      if (isInvalidFoodComponent(name, productName)) continue;
+      // Tilbehør must be known food — never menu item titles
+      if (!isKnownFoodToken(name) && !DIP_ADDITION_RE.test(name)) continue;
+      const key = normKey(name);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      cleaned.push({ name, priceOre: a.priceOre });
+    }
+  }
+  return repriceTilbehorList(cleaned);
+}
+
+/**
+ * Polish description lists: split glues, fix "og,", drop meta tokens.
+ */
+export function polishDescriptionText(
+  description: string,
+  productName?: string,
+): string {
+  let d = description.trim();
+  if (!d) return "";
+  // Fix "Tomat og, ost" → treat as list
+  d = d.replace(/\s+og\s*,\s*/gi, ", ");
+  d = d.replace(/,\s*og\s+/gi, ", ");
+  d = d.replace(/\s{2,}/g, " ");
+
+  // Split on commas and rejoin sanitized parts
+  const parts = d
+    .split(/\s*,\s*/)
+    .flatMap((p) => splitGluedFoodToken(p))
+    .map((p) =>
+      capitalizeFirstLetter(
+        p
+          .replace(/\blog\b/gi, "løg")
+          .replace(/\bkodsovs\b/gi, "kødsovs")
+          .replace(/\bpolse\b/gi, "pølse")
+          .trim(),
+      ),
+    )
+    .filter((p) => p && !isInvalidFoodComponent(p, productName));
+
+  // Deduplicate
+  const seen = new Set<string>();
+  const uniq: string[] = [];
+  for (const p of parts) {
+    const k = normKey(p);
+    if (seen.has(k)) continue;
+    seen.add(k);
+    uniq.push(p);
+  }
+  return uniq.join(", ");
+}
+
+/**
+ * Strip ingredient dumps from dish titles.
+ * "Ufo –Glori kodsovs, spaghetti, syltet paprika og log" → "Ufo Glori"
+ */
+export function cleanDishDisplayName(rawName: string): {
+  name: string;
+  movedToDescription: string[];
+} {
+  let name = rawName.trim().replace(/\s+/g, " ");
+  name = name.replace(/^\d+\.\s*/, "");
+  const moved: string[] = [];
+
+  // If commas (or " og " with multiple foods), keep title head only
+  if (/,/.test(name) || (/\bog\b/i.test(name) && name.split(/\s+/).length > 5)) {
+    const head = name.split(",")[0]!.trim();
+    const rest = name
+      .slice(head.length)
+      .replace(/^[\s,]+/, "")
+      .trim();
+    if (rest) {
+      moved.push(
+        ...rest
+          .split(/\s*(?:,|\bog\b)\s*/i)
+          .map((x) => x.trim())
+          .filter(Boolean),
+      );
+    }
+    name = head;
+  }
+
+  // Normalize dash variants: "Ufo –Glori" / "Ufo - Glori"
+  name = name.replace(/\s*[-–—]\s*/g, " ").replace(/\s+/g, " ").trim();
+
+  // Strip trailing food lexicon tokens from the title (kodsovs, spaghetti…)
+  const tokens = name.split(/\s+/);
+  while (tokens.length > 1) {
+    const last = tokens[tokens.length - 1]!;
+    const lastKey = normKey(last);
+    if (
+      FOOD_LEXICON.has(lastKey) ||
+      MEAT_ADDITION_RE.test(last) ||
+      VEG_OR_CHEESE_RE.test(last) ||
+      /^(kodsovs|kødsovs|spaghetti|syltet|paprika|log|løg)$/i.test(last)
+    ) {
+      moved.unshift(tokens.pop()!);
+      continue;
+    }
+    break;
+  }
+  name = tokens.join(" ").trim();
+
+  // OCR in remaining short title
+  name = name.replace(/\bkodsovs\b/gi, "").replace(/\s+/g, " ").trim();
+  name = formatProductName(name);
+
+  return {
+    name: name || formatProductName(rawName),
+    movedToDescription: moved,
+  };
+}
+
+export function ingredientListHasDefects(
+  ingredients: readonly string[],
+  productName?: string,
+): boolean {
+  for (const i of ingredients) {
+    if (/^[A-Za-zÆØÅæøå]{3,}og[A-Za-zÆØÅæøå]{3,}$/i.test(i.trim())) return true;
+    if (isInvalidFoodComponent(i, productName)) return true;
+  }
+  return false;
+}
+
+export function additionListHasDefects(
+  additions: Array<{ name: string; priceOre?: number }>,
+  productName?: string,
+): boolean {
+  if (additions.length === 0) return false;
+  for (const a of additions) {
+    if (isInvalidFoodComponent(a.name, productName)) return true;
+    if (!isKnownFoodToken(a.name) && !DIP_ADDITION_RE.test(a.name)) return true;
+  }
+  const prices = additions.map((a) => a.priceOre ?? 0).filter((p) => p > 0);
+  if (
+    prices.length >= 2 &&
+    prices.every((p) => p === prices[0]) &&
+    additions.some((a) => classifyTilbehorPriceTier(a.name) === "meat") &&
+    additions.some((a) => classifyTilbehorPriceTier(a.name) !== "meat")
+  ) {
+    return true; // flat pricing across meat + veg
+  }
+  return false;
+}
+
+export function dishNameHasIngredientDump(name: string): boolean {
+  const n = name.trim();
+  if (/,/.test(n) && n.split(",").length >= 2) return true;
+  if (/\b(kodsovs|kødsovs|spaghetti|syltet paprika)\b/i.test(n)) return true;
+  return false;
+}

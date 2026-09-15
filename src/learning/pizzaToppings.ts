@@ -9,6 +9,7 @@ import {
 import { formatIngredientDisplay } from "../domain/textNormalize.js";
 import { isDipAddition } from "./categoryLikelihood.js";
 import { classifyProductKind } from "./categoryLikelihood.js";
+import { splitGluedFoodToken, isInvalidFoodComponent } from "../domain/menuCardQuality.js";
 
 export type PizzaToppingProposal = {
   ingredients: string[];
@@ -58,12 +59,15 @@ export function parseToppingListFromDescription(
     // Skip price-only / garbage tokens
     if (/^\d+([.,]\d+)?$/.test(part)) continue;
     if (/^(inkl\.?|med|menu|alm\.?)$/i.test(part)) continue;
-    const formatted = formatIngredientDisplay(part);
-    if (!formatted || formatted.length < 2) continue;
-    const key = formatted.toLowerCase();
-    if (seen.has(key)) continue;
-    seen.add(key);
-    toppings.push(formatted);
+    for (const piece of splitGluedFoodToken(part)) {
+      const formatted = formatIngredientDisplay(piece);
+      if (!formatted || formatted.length < 2) continue;
+      if (isInvalidFoodComponent(formatted)) continue;
+      const key = formatted.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      toppings.push(formatted);
+    }
   }
 
   return { toppings, excludedDips };

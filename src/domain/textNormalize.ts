@@ -8,6 +8,14 @@ import {
   getLearnedOcrIngredientFixes,
   type OcrIngredientFix,
 } from "./learnedTextFixes.js";
+import {
+  cleanDishDisplayName,
+  dishNameHasIngredientDump,
+  isInvalidFoodComponent,
+  polishDescriptionText,
+  sanitizeIngredientList,
+  splitGluedFoodToken,
+} from "./menuCardQuality.js";
 
 const BASE_OCR_INGREDIENT_FIXES: OcrIngredientFix[] = [
   [/\blog\b/gi, "løg"],
@@ -70,6 +78,11 @@ export function formatIngredientDisplay(raw: string): string {
   if (!s) return "";
   s = s.replace(/^[-–—•]\s*/, "");
   s = s.replace(/\bogæg\b/gi, "og æg").replace(/\bogost\b/gi, "og ost");
+  // Prefer first part if still glued after known fixes — callers should use
+  // sanitizeIngredientList / splitGluedFoodToken for full expansion.
+  const split = splitGluedFoodToken(s);
+  if (split.length === 1) s = split[0]!;
+  else return split.map((p) => formatIngredientDisplay(p)).filter(Boolean).join(", ");
   s = stripTrailingPriceNoise(s);
   // Drop dangling conjunctions left by OCR splits
   s = s.replace(/\s+og$/i, "").trim();
@@ -143,34 +156,47 @@ export function assessLabelQuality(
   const rawDesc = (input.description ?? "").trim();
   const rawIngredients = [...(input.ingredients ?? [])];
 
-  const repairedIngredients: string[] = [];
+  const repairedIngredients = sanitizeIngredientList(rawIngredients, rawName);
   for (const ing of rawIngredients) {
-    const to = formatIngredientDisplay(ing);
-    if (!to) {
+    const expanded = splitGluedFoodToken(ing);
+    if (expanded.length > 1) {
+      repairs.push({
+        field: "ingredient",
+        from: ing,
+        to: expanded.join(", "),
+        reason: "split_glued_ingredients",
+      });
+    } else if (isInvalidFoodComponent(ing, rawName)) {
       repairs.push({
         field: "ingredient",
         from: ing,
         to: "",
-        reason: "dropped_empty_or_price_only",
-      });
-      continue;
-    }
-    if (to !== ing.trim().replace(/\s+/g, " ")) {
-      repairs.push({
-        field: "ingredient",
-        from: ing,
-        to,
-        reason: "ingredient_hygiene",
+        reason: "dropped_invalid_food_component",
       });
     }
-    if (ingredientStillPriceHeavy(ing, to)) {
-      reasons.push(`ingredient_still_numeric:${to}`);
+  }
+  for (const ing of rawIngredients) {
+    if (/^\d{2,4}$/.test(ing.trim()) || /\d{2,4}/.test(ing)) {
+      const formatted = formatIngredientDisplay(ing);
+      if (ingredientStillPriceHeavy(ing, formatted)) {
+        reasons.push(`ingredient_still_numeric:${formatted || ing}`);
+      }
     }
-    repairedIngredients.push(to);
   }
 
   let repairedName = formatProductName(rawName);
-  if (repairedName !== rawName && rawName) {
+  if (dishNameHasIngredientDump(repairedName) || dishNameHasIngredientDump(rawName)) {
+    const cleaned = cleanDishDisplayName(rawName);
+    if (cleaned.name && cleaned.name !== repairedName) {
+      repairs.push({
+        field: "name",
+        from: rawName,
+        to: cleaned.name,
+        reason: "stripped_ingredient_dump_from_name",
+      });
+      repairedName = cleaned.name;
+    }
+  } else if (repairedName !== rawName && rawName) {
     repairs.push({
       field: "name",
       from: rawName,
@@ -180,7 +206,10 @@ export function assessLabelQuality(
   }
 
   let repairedDescription = rawDesc
-    ? formatProductName(stripTrailingPriceNoise(rawDesc))
+    ? polishDescriptionText(
+        formatProductName(stripTrailingPriceNoise(rawDesc)),
+        repairedName,
+      )
     : "";
   if (
     !repairedDescription &&
@@ -209,6 +238,9 @@ export function assessLabelQuality(
   if (looksLikeIngredientListName(repairedName || rawName)) {
     reasons.push("name_looks_like_ingredient_list");
   }
+  if (dishNameHasIngredientDump(repairedName)) {
+    reasons.push("name_still_has_ingredient_dump");
+  }
   if (
     repairedName &&
     repairedIngredients.length >= 3 &&
@@ -217,12 +249,20 @@ export function assessLabelQuality(
   ) {
     reasons.push("name_equals_ingredient_dump");
   }
+  if (rawIngredients.some((i) => isInvalidFoodComponent(i, repairedName))) {
+    // Auto-dropped in repaired; mark repair path unless still present
+    if (repairedIngredients.some((i) => isInvalidFoodComponent(i, repairedName))) {
+      reasons.push("invalid_ingredient_tokens");
+    }
+  }
 
   const blocking = reasons.some(
     (r) =>
       r === "garbage_product_name" ||
       r === "name_looks_like_ingredient_list" ||
-      r === "name_equals_ingredient_dump",
+      r === "name_equals_ingredient_dump" ||
+      r === "name_still_has_ingredient_dump" ||
+      r === "invalid_ingredient_tokens",
   );
   const numericIssues = reasons.some((r) =>
     r.startsWith("ingredient_still_numeric"),

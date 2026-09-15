@@ -9,10 +9,18 @@ import type { PlannedProductPayload } from "../runner/writePlan.js";
 import {
   assessLabelQuality,
   formatDescriptionFromIngredients,
-  formatIngredientDisplay,
   formatProductName,
   stripTrailingPriceNoise,
 } from "../domain/textNormalize.js";
+import {
+  cleanDishDisplayName,
+  dishNameHasIngredientDump,
+  ingredientListHasDefects,
+  additionListHasDefects,
+  polishDescriptionText,
+  sanitizeAdditionList,
+  sanitizeIngredientList,
+} from "../domain/menuCardQuality.js";
 import {
   looksLikeCategoryHeaderName,
   recoverProductLabelsForReconcile,
@@ -87,17 +95,11 @@ export function findPreferredCategoryForKind(
   return soft ?? null;
 }
 
-export function polishIngredientList(raw: readonly string[]): string[] {
-  const out: string[] = [];
-  for (const item of raw) {
-    let s = item.replace(HYPHEN_BULLET_RE, "").trim();
-    s = s.replace(/\bogæg\b/gi, "og æg").replace(/\bogost\b/gi, "og ost");
-    s = formatIngredientDisplay(s);
-    if (!s || REVIEW_STUB_RE.test(s)) continue;
-    if (/\d{2,4}/.test(s)) continue;
-    out.push(s);
-  }
-  return out;
+export function polishIngredientList(
+  raw: readonly string[],
+  productName?: string,
+): string[] {
+  return sanitizeIngredientList(raw, productName);
 }
 
 export function polishVariants(
@@ -117,13 +119,15 @@ export function polishVariants(
 
 export function polishAdditions(
   additions: Array<{ name: string; priceOre: number }>,
+  productName?: string,
 ): Array<{ name: string; priceOre: number }> {
-  return additions
-    .map((a) => ({
-      name: formatProductName(a.name.replace(HYPHEN_BULLET_RE, "")),
+  return sanitizeAdditionList(
+    additions.map((a) => ({
+      name: a.name.replace(HYPHEN_BULLET_RE, ""),
       priceOre: a.priceOre,
-    }))
-    .filter((a) => a.name && !REVIEW_STUB_RE.test(a.name));
+    })),
+    productName,
+  );
 }
 
 /** Field quality: higher is better. Defective live scores low so fixes can apply. */
@@ -138,6 +142,7 @@ export function fieldQualityScore(
       if (!n) return 0;
       if (looksLikeCategoryHeaderName(n)) return 0;
       if (REVIEW_STUB_RE.test(n)) return 0;
+      if (dishNameHasIngredientDump(n)) return 1;
       return Math.min(10, 4 + Math.min(6, Math.floor(n.length / 8)));
     }
     case "description": {
@@ -145,11 +150,14 @@ export function fieldQualityScore(
       if (!d) return 0;
       if (/\b\d{2,4}\b/.test(d)) return 1;
       if (/,\s*og\s*,/i.test(d) || /og,\s*$/i.test(d)) return 2;
+      if (/[A-Za-zÆØÅæøå]{3,}og[A-Za-zÆØÅæøå]{3,}/i.test(d)) return 2;
+      if (/\s+og\s*,\s*/i.test(d)) return 2;
       return Math.min(12, 3 + Math.min(9, Math.floor(d.length / 12)));
     }
     case "ingredients": {
       const list = Array.isArray(value) ? (value as string[]) : [];
-      const clean = polishIngredientList(list);
+      if (ingredientListHasDefects(list, ctx?.productName)) return 1;
+      const clean = polishIngredientList(list, ctx?.productName);
       if (clean.length === 0) return 0;
       return Math.min(12, clean.length * 2);
     }
@@ -163,11 +171,14 @@ export function fieldQualityScore(
     }
     case "additions": {
       const list = Array.isArray(value)
-        ? (value as Array<{ name?: string }>)
+        ? (value as Array<{ name?: string; priceOre?: number }>)
         : [];
-      const clean = list.filter(
-        (a) => a.name && !REVIEW_STUB_RE.test(String(a.name)),
+      const named = list.filter(
+        (a): a is { name: string; priceOre?: number } =>
+          typeof a.name === "string" && a.name.trim().length > 0,
       );
+      if (additionListHasDefects(named, ctx?.productName)) return 1;
+      const clean = named.filter((a) => !REVIEW_STUB_RE.test(a.name));
       return Math.min(10, clean.length);
     }
     case "basePrice": {
@@ -228,9 +239,19 @@ export function buildQaTargetPayload(input: {
   } else {
     name = formatProductName(name);
   }
+  // Strip ingredient dumps from titles (Ufo Glori kodsovs, spaghetti…)
+  if (dishNameHasIngredientDump(name) || dishNameHasIngredientDump(live.name)) {
+    const cleaned = cleanDishDisplayName(live.name);
+    name = cleaned.name || name;
+  } else {
+    const cleaned = cleanDishDisplayName(name);
+    if (cleaned.movedToDescription.length > 0) {
+      name = cleaned.name || name;
+    }
+  }
 
-  let ingredients = polishIngredientList(live.ingredients ?? []);
-  const sourceIngredients = polishIngredientList(source.ingredients);
+  let ingredients = polishIngredientList(live.ingredients ?? [], name);
+  const sourceIngredients = polishIngredientList(source.ingredients, name);
   if (ingredients.length === 0 && sourceIngredients.length > 0) {
     ingredients = sourceIngredients;
   }
@@ -242,7 +263,7 @@ export function buildQaTargetPayload(input: {
       existingIngredients: [],
     });
     if (proposal?.ingredients?.length) {
-      ingredients = polishIngredientList(proposal.ingredients);
+      ingredients = polishIngredientList(proposal.ingredients, name);
     }
   }
 
@@ -250,14 +271,29 @@ export function buildQaTargetPayload(input: {
   description = stripPriceLeakFromDescription(
     stripTrailingPriceNoise(description),
   );
-  const sourceDesc = stripPriceLeakFromDescription(
-    stripTrailingPriceNoise(source.description || ""),
+  description = polishDescriptionText(description, name);
+  const sourceDesc = polishDescriptionText(
+    stripPriceLeakFromDescription(
+      stripTrailingPriceNoise(source.description || ""),
+    ),
+    name,
   );
-  const liveDescScore = fieldQualityScore("description", description);
-  const sourceDescScore = fieldQualityScore("description", sourceDesc);
-  if (liveDescScore <= 1) {
-    if (sourceDescScore > liveDescScore) description = sourceDesc;
-    else if (ingredients.length > 0) {
+  const liveDescScore = fieldQualityScore(
+    "description",
+    live.description ?? "",
+    { productName: name, categoryName: catName },
+  );
+  const polishedDescScore = fieldQualityScore("description", description, {
+    productName: name,
+    categoryName: catName,
+  });
+  // Always prefer polished description when live had grammar/glue defects
+  if (liveDescScore <= 2 && polishedDescScore > liveDescScore) {
+    // keep polished `description`
+  } else if (liveDescScore <= 1) {
+    if (fieldQualityScore("description", sourceDesc) > liveDescScore) {
+      description = sourceDesc;
+    } else if (ingredients.length > 0) {
       description = formatDescriptionFromIngredients(ingredients);
     }
   } else if (
@@ -266,11 +302,20 @@ export function buildQaTargetPayload(input: {
     liveDescScore < 4
   ) {
     description = formatDescriptionFromIngredients(ingredients);
+  } else if (ingredients.length > 0) {
+    // Prefer description rebuilt from clean ingredients when live desc still glued
+    const fromIng = formatDescriptionFromIngredients(ingredients);
+    if (
+      /[A-Za-zÆØÅæøå]{3,}og[A-Za-zÆØÅæøå]{3,}/i.test(live.description ?? "") ||
+      /\s+og\s*,\s*/i.test(live.description ?? "")
+    ) {
+      description = fromIng || description;
+    }
   }
 
-  // Keep live additions when richer; union missing source additions
-  const liveAdds = polishAdditions(live.additions ?? []);
-  const sourceAdds = polishAdditions(source.additions);
+  // Sanitize Tilbehør: never dish names / meta / junk; meat priced 2× veg
+  const liveAdds = polishAdditions(live.additions ?? [], name);
+  const sourceAdds = polishAdditions(source.additions, name);
   const addByKey = new Map(
     liveAdds.map((a) => [a.name.trim().toLowerCase(), a]),
   );
@@ -278,7 +323,8 @@ export function buildQaTargetPayload(input: {
     const k = a.name.trim().toLowerCase();
     if (!addByKey.has(k)) addByKey.set(k, a);
   }
-  const additions = [...addByKey.values()];
+  // Re-sanitize union (reprices flat lists)
+  const additions = polishAdditions([...addByKey.values()], name);
 
   const liveVars = polishVariants(
     (live.variants ?? []).map((v) => ({
@@ -524,6 +570,15 @@ export function qaTargetHasWriteBlockingIssues(
     ) {
       return "EMPTY_INGREDIENTS_FOR_FOOD";
     }
+  }
+  if (ingredientListHasDefects(payload.ingredients, payload.name)) {
+    return "INVALID_INGREDIENT_TOKENS";
+  }
+  if (additionListHasDefects(payload.additions, payload.name)) {
+    return "INVALID_OR_FLAT_TILBEHOR";
+  }
+  if (dishNameHasIngredientDump(payload.name)) {
+    return "NAME_INGREDIENT_DUMP";
   }
   return null;
 }
