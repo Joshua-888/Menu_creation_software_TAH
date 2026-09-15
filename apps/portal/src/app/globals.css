@@ -770,8 +770,38 @@ textarea {
 .option-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
+  gap: 0.75rem;
   margin-top: 0.75rem;
+  align-items: flex-start;
+}
+
+.option-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  max-width: 18rem;
+}
+
+.option-help {
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.review-guide {
+  margin-bottom: 1.25rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: rgba(227, 78, 67, 0.05);
+}
+
+.review-guide ul {
+  margin: 0.5rem 0 0.75rem;
+  padding-left: 1.2rem;
+}
+
+.review-guide li {
+  margin: 0.35rem 0;
 }
 
 .home-hero {
