@@ -1,8 +1,8 @@
 # Railway — TakeAwayHero Menu Operator Portal
-# MUST use Docker so Chromium + OS libs are baked in (Railpack cold-starts 502).
+# Prefer Railpack until Docker Metal builds are stable (recent DOCKERFILE deploys
+# fail at schedule). portal:start still brings HTTP up before Chromium download.
 [build]
-builder = "DOCKERFILE"
-dockerfilePath = "Dockerfile.portal"
+builder = "RAILPACK"
 
 [deploy]
 startCommand = "npm run portal:start"
