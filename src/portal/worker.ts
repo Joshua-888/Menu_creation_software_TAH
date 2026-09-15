@@ -75,6 +75,54 @@ function writeJson(dir: string, name: string, data: unknown): void {
   writeFileSync(join(dir, name), JSON.stringify(data, null, 2), "utf8");
 }
 
+/** Plain-language review copy — operators should not need engine jargon. */
+function operatorFacingIssueCopy(issue: ValidationIssue): {
+  title: string;
+  prompt: string;
+  options: Array<{ id: string; label: string; resolution: string; help: string }>;
+} {
+  const ref = issue.entityId ? shortProductRef(issue.entityId) : "this product";
+  const options = [
+    {
+      id: "accept_as_is",
+      label: "Continue anyway",
+      resolution: "ACCEPT_EXCEPTION",
+      help: "Keep going with the extracted menu. Does not teach a lasting rule.",
+    },
+    {
+      id: "needs_source_fix",
+      label: "PDF is unclear — re-upload later",
+      resolution: "NEEDS_SOURCE_FIX",
+      help: "Marks the source as bad. Does not auto re-scan; start a new job with a cleaner PDF.",
+    },
+    {
+      id: "skip_product",
+      label: "Leave this product alone",
+      resolution: "SKIP_PRODUCT",
+      help: "Don’t treat this line as something to fix/write right now.",
+    },
+  ];
+
+  if (issue.code === "MALFORMED_PRODUCT_CHOICE") {
+    return {
+      title: `Broken option link · ${ref}`,
+      prompt: `The PDF mentioned a choice/option for “${ref}” that we could not match to a real menu item (often a half-read name like a calzone or rice dish). Peer practices for prices and Tilbehør still apply automatically — this question is only about this broken option.\n\nTechnical detail: ${issue.message}`,
+      options,
+    };
+  }
+
+  return {
+    title: `Needs a decision · ${ref}`,
+    prompt: `${issue.message}\n\nPeer menu practices still run automatically. Your answer here only clears this review item for this job — it does not lock in a global rule unless the question is a learned policy case.`,
+    options,
+  };
+}
+
+function shortProductRef(entityId: string): string {
+  const tail = entityId.split(":").pop() ?? entityId;
+  return tail.replace(/::choice-pending$/i, "").slice(0, 48);
+}
+
 function issuesToQuestions(
   job: MigrationJob,
   menu: CanonicalMenu,
@@ -96,28 +144,13 @@ function issuesToQuestions(
   for (const issue of blocked.slice(0, 80)) {
     const productRef = issue.entityId || null;
     const batchKey = `${issue.code}:${issue.field ?? "menu"}`;
+    const copy = operatorFacingIssueCopy(issue);
     questions.push({
       decisionCaseId: null,
       questionType: issue.code,
-      title: `${issue.code}${productRef ? ` · ${productRef}` : ""}`,
-      prompt: issue.message,
-      optionsJson: JSON.stringify([
-        {
-          id: "accept_as_is",
-          label: "Accept as-is (document exception)",
-          resolution: "ACCEPT_EXCEPTION",
-        },
-        {
-          id: "needs_source_fix",
-          label: "Needs better source / re-extract",
-          resolution: "NEEDS_SOURCE_FIX",
-        },
-        {
-          id: "skip_product",
-          label: "Skip product in dry-run plan",
-          resolution: "SKIP_PRODUCT",
-        },
-      ]),
+      title: copy.title,
+      prompt: copy.prompt,
+      optionsJson: JSON.stringify(copy.options),
       productRef,
       batchKey,
     });

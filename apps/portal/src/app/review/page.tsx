@@ -21,7 +21,7 @@ export default async function ReviewPage({
     <AppShell employeeName={emp.name}>
       <PageHeader
         title="Review queue"
-        subtitle="Unresolved questions only. One answer can batch-resolve similar items."
+        subtitle="Clear blockers in plain language. Peer menu practices already run automatically — these answers do not lock in lasting rules for this queue type."
         backHref={job ? `/jobs/${job}` : "/jobs"}
         backLabel={job ? "Back to job" : "Dashboard"}
       />
