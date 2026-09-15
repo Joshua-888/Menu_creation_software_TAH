@@ -2,6 +2,7 @@ export * from "./peerMenuStructure.js";
 export * from "./structurePolicy.js";
 export * from "./categoryLikelihood.js";
 export * from "./additionLikelihood.js";
+export * from "./ingredientLikelihood.js";
 export * from "./categoryIngredientAdditions.js";
 export * from "./peerArtifacts.js";
 export * from "./policyApplicationReport.js";

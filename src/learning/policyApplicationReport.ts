@@ -12,6 +12,7 @@ import {
 import { join } from "node:path";
 import type { StructurePatternSummary } from "./peerMenuStructure.js";
 import type { ProbabilityPolicyMap } from "./categoryLikelihood.js";
+import type { IngredientLikelihoodPolicy } from "./ingredientLikelihood.js";
 import type { ProductPolicyTrace } from "../planning/structureMapping.js";
 import {
   decisionsDir,
@@ -52,6 +53,18 @@ export type PolicyApplicationReport = {
       hardPriors: string[];
       rules: string[];
     } | null;
+    ingredientLikelihood: {
+      knowledgeKind: "SEMANTIC_RULE";
+      fingerprint: string;
+      restaurantsAnalyzed: number;
+      subtypeBuckets: Array<{
+        id: string;
+        nProducts: number;
+        allowCount: number;
+        topAllow: string[];
+      }>;
+      rules: string[];
+    } | null;
     restaurantBusinessFacts: Array<{
       knowledgeKind: "BUSINESS_FACT";
       name: string;
@@ -78,6 +91,7 @@ export function buildPolicyApplicationReport(input: {
   host?: string;
   structurePattern?: StructurePatternSummary | null;
   probabilityPolicy?: ProbabilityPolicyMap | null;
+  ingredientLikelihood?: IngredientLikelihoodPolicy | null;
   productTraces: ProductPolicyTrace[];
   businessFacts?: Array<{ name: string; detail: string }>;
   peerObserve?: LatestPeerObservePointer | null;
@@ -97,6 +111,7 @@ export function buildPolicyApplicationReport(input: {
 
   const structure = input.structurePattern ?? null;
   const prob = input.probabilityPolicy ?? null;
+  const ing = input.ingredientLikelihood ?? null;
 
   return {
     runId: input.runId,
@@ -139,6 +154,27 @@ export function buildPolicyApplicationReport(input: {
               "Sandwich/burger dips only when menu-with-fries",
             ],
             rules: prob.rules,
+          }
+        : null,
+      ingredientLikelihood: ing
+        ? {
+            knowledgeKind: "SEMANTIC_RULE",
+            fingerprint: ing.fingerprint,
+            restaurantsAnalyzed: ing.restaurantsAnalyzed,
+            subtypeBuckets: Object.entries(ing.bySubtype).map(
+              ([id, bucket]) => ({
+                id,
+                nProducts: bucket!.nProducts,
+                allowCount: bucket!.ingredients.filter(
+                  (i) => i.decision === "ALLOW",
+                ).length,
+                topAllow: bucket!.ingredients
+                  .filter((i) => i.decision === "ALLOW")
+                  .slice(0, 6)
+                  .map((i) => i.displayName),
+              }),
+            ),
+            rules: ing.rules,
           }
         : null,
       restaurantBusinessFacts: (input.businessFacts ?? []).map((f) => ({
@@ -219,6 +255,25 @@ export function formatPolicyApplicationMarkdown(
       ...p.hardPriors.map((h) => `  - ${h}`),
       ``,
     );
+  }
+
+  lines.push(`## SEMANTIC_RULE — peer ingredient + beskrivelse`);
+  const ing = report.knowledge.ingredientLikelihood;
+  if (!ing) {
+    lines.push(`_No ingredient likelihood loaded (domain prior may apply)._`, ``);
+  } else {
+    lines.push(
+      `- Fingerprint: \`${ing.fingerprint}\``,
+      `- Peers analyzed: ${ing.restaurantsAnalyzed}`,
+      `- Precedence: PEER_SUBTYPE → PEER_KIND → DOMAIN_PRIOR`,
+      ``,
+    );
+    for (const b of ing.subtypeBuckets) {
+      lines.push(
+        `- **${b.id}** n=${b.nProducts} ALLOW=${b.allowCount}: ${b.topAllow.join(", ") || "(none)"}`,
+      );
+    }
+    lines.push(``);
   }
 
   lines.push(`## BUSINESS_FACT — restaurant`);

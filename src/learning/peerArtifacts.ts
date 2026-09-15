@@ -16,11 +16,15 @@ import type { ProbabilityPolicyMap } from "./categoryLikelihood.js";
 import { distillProbabilityPolicy } from "./categoryLikelihood.js";
 import type { AdditionLikelihoodPolicy } from "./additionLikelihood.js";
 import { distillAdditionLikelihood } from "./additionLikelihood.js";
+import type { IngredientLikelihoodPolicy } from "./ingredientLikelihood.js";
+import { distillIngredientLikelihood } from "./ingredientLikelihood.js";
 
 export const LATEST_PEER_OBSERVE_FILENAME = "latest-peer-observe.json";
 export const PEER_PROBABILITY_POLICY_FILENAME = "peer-probability-policy.json";
 export const PEER_ADDITION_LIKELIHOOD_FILENAME =
   "peer-addition-likelihood.json";
+export const PEER_INGREDIENT_LIKELIHOOD_FILENAME =
+  "peer-ingredient-likelihood.json";
 export const PEER_STRUCTURE_SUMMARY_FILENAME = "peer-structure-summary.json";
 export const LATEST_POLICY_APPLICATION_FILENAME =
   "latest-policy-application.json";
@@ -49,6 +53,10 @@ export function peerProbabilityPolicyPath(repoRoot: string): string {
 
 export function peerAdditionLikelihoodPath(repoRoot: string): string {
   return join(decisionsDir(repoRoot), PEER_ADDITION_LIKELIHOOD_FILENAME);
+}
+
+export function peerIngredientLikelihoodPath(repoRoot: string): string {
+  return join(decisionsDir(repoRoot), PEER_INGREDIENT_LIKELIHOOD_FILENAME);
 }
 
 export function peerStructureSummaryPath(repoRoot: string): string {
@@ -208,6 +216,39 @@ export function writeAdditionLikelihoodArtifact(
   const dir = decisionsDir(repoRoot);
   mkdirSync(dir, { recursive: true });
   const path = peerAdditionLikelihoodPath(repoRoot);
+  writeFileSync(path, JSON.stringify(policy, null, 2));
+  return path;
+}
+
+export function loadIngredientLikelihood(
+  repoRoot: string,
+): IngredientLikelihoodPolicy | null {
+  const path = peerIngredientLikelihoodPath(repoRoot);
+  if (existsSync(path)) {
+    try {
+      return JSON.parse(
+        readFileSync(path, "utf8"),
+      ) as IngredientLikelihoodPolicy;
+    } catch {
+      return null;
+    }
+  }
+  try {
+    const snaps = loadPeerSnapshots(repoRoot);
+    if (snaps.length === 0) return null;
+    return distillIngredientLikelihood(snaps);
+  } catch {
+    return null;
+  }
+}
+
+export function writeIngredientLikelihoodArtifact(
+  repoRoot: string,
+  policy: IngredientLikelihoodPolicy,
+): string {
+  const dir = decisionsDir(repoRoot);
+  mkdirSync(dir, { recursive: true });
+  const path = peerIngredientLikelihoodPath(repoRoot);
   writeFileSync(path, JSON.stringify(policy, null, 2));
   return path;
 }

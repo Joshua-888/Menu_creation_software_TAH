@@ -24,12 +24,12 @@ import {
 import {
   grillTilbehorLooksWrong,
   inferGrillDescription,
-  inferGrillIngredients,
   isGrillCategory,
   isBurgerProductName,
   preferGrillDipAdditions,
   productWantsGrillDips,
   grillIngredientsInsufficient,
+  resolveGrillIngredients,
 } from "../domain/grillCardFill.js";
 import {
   looksLikeCategoryHeaderName,
@@ -41,6 +41,7 @@ import {
   type ReconcileReasonCode,
 } from "./menuReconcile.js";
 import { proposePizzaToppingsFromDescription } from "../learning/pizzaToppings.js";
+import type { IngredientLikelihoodPolicy } from "../learning/ingredientLikelihood.js";
 import type { DestinationCategory } from "./categoryMapping.js";
 import { isTahCanaryProduct } from "./canaries.js";
 import type { CanonicalMenu } from "../domain/schema/canonical.js";
@@ -262,6 +263,8 @@ export function buildQaTargetPayload(input: {
   sourcePayload: PlannedProductPayload;
   liveCategoryName?: string;
   destinationCategories: DestinationCategory[];
+  /** Peer ingredient/beskrivelse likelihood — peer-first, domain prior fallback. */
+  ingredientLikelihood?: IngredientLikelihoodPolicy | null;
 }): PlannedProductPayload {
   const live = input.live;
   const source = input.sourcePayload;
@@ -309,18 +312,28 @@ export function buildQaTargetPayload(input: {
       ingredients = polishIngredientList(proposal.ingredients, name);
     }
   }
-  // Grill / fries / burgers: fill or upgrade thin cards (e.g. only "Bacon").
+  // Grill / fries / burgers: peer-first fill, then domain prior (e.g. only "Bacon").
+  let peerGrillDescription: string | null = null;
   if (
     ingredients.length === 0 ||
     grillIngredientsInsufficient(ingredients, name)
   ) {
-    const inferred = inferGrillIngredients({
+    const resolved = resolveGrillIngredients({
       name,
       categoryName: catName,
       description: live.description ?? source.description,
+      ...(input.ingredientLikelihood != null
+        ? { ingredientPolicy: input.ingredientLikelihood }
+        : {}),
     });
-    if (inferred.length > ingredients.length) {
-      ingredients = polishIngredientList(inferred, name);
+    if (resolved.ingredients.length > ingredients.length) {
+      ingredients = polishIngredientList(resolved.ingredients, name);
+      if (
+        resolved.source === "PEER_SUBTYPE" ||
+        resolved.source === "PEER_KIND"
+      ) {
+        peerGrillDescription = resolved.description;
+      }
     }
   }
 
@@ -329,6 +342,14 @@ export function buildQaTargetPayload(input: {
     stripTrailingPriceNoise(description),
   );
   description = polishDescriptionText(description, name);
+  if (
+    peerGrillDescription &&
+    (!description ||
+      description.length < 12 ||
+      grillIngredientsInsufficient(description.split(/\s*,\s*/), name))
+  ) {
+    description = peerGrillDescription;
+  }
   const grillDesc = inferGrillDescription({
     name,
     categoryName: catName,

@@ -129,6 +129,7 @@ async function observeHost(page: Page, baseUrl: string): Promise<PeerMenuSnapsho
           priceOre: a.priceOre ?? 0,
         })),
         ingredients: full.ingredients.map((ing) => ing.name),
+        description: full.description ?? "",
       });
     } catch (err) {
       console.log(

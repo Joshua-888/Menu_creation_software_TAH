@@ -15,8 +15,10 @@ import {
   resolvePeerObserveDir,
   writeProbabilityPolicyArtifact,
   writeAdditionLikelihoodArtifact,
+  writeIngredientLikelihoodArtifact,
 } from "../src/learning/peerArtifacts.js";
 import { distillAdditionLikelihood } from "../src/learning/additionLikelihood.js";
+import { distillIngredientLikelihood } from "../src/learning/ingredientLikelihood.js";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const peerDir = resolvePeerObserveDir(root);
@@ -46,6 +48,13 @@ writeFileSync(
   JSON.stringify(additionLikelihood, null, 2),
 );
 writeAdditionLikelihoodArtifact(root, additionLikelihood);
+
+const ingredientLikelihood = distillIngredientLikelihood(snaps);
+writeFileSync(
+  join(outDir, "ingredient-likelihood.json"),
+  JSON.stringify(ingredientLikelihood, null, 2),
+);
+writeIngredientLikelihoodArtifact(root, ingredientLikelihood);
 
 // Keep structure fingerprint aligned for confirm gates (extend summary)
 const summaryPath = join(root, "runs", "decisions", "peer-structure-summary.json");
@@ -142,6 +151,19 @@ console.log(
             isDip: a.isDip,
           })),
         })),
+      },
+      ingredientLikelihood: {
+        fingerprint: ingredientLikelihood.fingerprint,
+        subtypes: Object.entries(ingredientLikelihood.bySubtype).map(
+          ([id, b]) => ({
+            id,
+            n: b!.nProducts,
+            allow: b!.ingredients
+              .filter((i) => i.decision === "ALLOW")
+              .slice(0, 8)
+              .map((i) => i.displayName),
+          }),
+        ),
       },
       fingerprint: merged.fingerprint,
       outDir,

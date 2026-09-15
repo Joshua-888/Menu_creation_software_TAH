@@ -47,6 +47,12 @@ import {
 import { menuNumbersWithKeepTilbehorOverride } from "../learning/tilbehorOverride.js";
 import { proposePizzaToppingsFromDescription } from "../learning/pizzaToppings.js";
 import { applyCategoryVariantFanOut } from "../learning/categorySizeVariantPolicy.js";
+import type { IngredientLikelihoodPolicy } from "../learning/ingredientLikelihood.js";
+import {
+  grillIngredientsInsufficient,
+  preferGrillDipAdditions,
+  resolveGrillIngredients,
+} from "../domain/grillCardFill.js";
 import {
   capabilitiesForReconcileFields,
   diffProductReconcile,
@@ -151,13 +157,15 @@ function toPayload(
   structurePattern?: StructurePatternSummary | null,
   probabilityPolicy?: ProbabilityPolicyMap | null,
   categoryName?: string,
+  ingredientLikelihood?: IngredientLikelihoodPolicy | null,
 ): PlannedProductPayload {
+  const productName = overrides?.name ?? product.name;
   const desc = overrides?.description ?? product.description ?? "";
   let ingredientList =
     overrides?.ingredients ?? product.ingredients.map((i) => i.display);
   if (!ingredientList.some((i) => i.trim().length > 0)) {
     const proposal = proposePizzaToppingsFromDescription({
-      name: overrides?.name ?? product.name,
+      name: productName,
       ...(categoryName ? { categoryName } : {}),
       description: desc,
       existingIngredients: ingredientList,
@@ -166,8 +174,24 @@ function toPayload(
       ingredientList = proposal.ingredients;
     }
   }
+  if (
+    ingredientList.length === 0 ||
+    grillIngredientsInsufficient(ingredientList, productName)
+  ) {
+    const resolved = resolveGrillIngredients({
+      name: productName,
+      ...(categoryName ? { categoryName } : {}),
+      description: desc,
+      ...(ingredientLikelihood != null
+        ? { ingredientPolicy: ingredientLikelihood }
+        : {}),
+    });
+    if (resolved.ingredients.length > ingredientList.length) {
+      ingredientList = resolved.ingredients;
+    }
+  }
   const assessment = assessLabelQuality({
-    name: overrides?.name ?? product.name,
+    name: productName,
     description: desc,
     ingredients: ingredientList,
   });
@@ -181,7 +205,7 @@ function toPayload(
       }));
   if (probabilityPolicy) {
     additions = filterAdditionsWithTrace({
-      name: overrides?.name ?? product.name,
+      name: productName,
       ...(categoryName ? { categoryNames: [categoryName] } : {}),
       ...(desc ? { description: desc } : {}),
       additions,
@@ -190,13 +214,19 @@ function toPayload(
   } else {
     // Hard priors still apply without peer policy (esp. drinks → no Tilbehør).
     additions = filterAdditionsWithTrace({
-      name: overrides?.name ?? product.name,
+      name: productName,
       ...(categoryName ? { categoryNames: [categoryName] } : {}),
       ...(desc ? { description: desc } : {}),
       additions,
       policy: null,
     }).after;
   }
+  additions = preferGrillDipAdditions(additions, {
+    name: productName,
+    ...(categoryName ? { categoryName } : {}),
+    description: desc,
+    variants: mapped.variants.map((v) => ({ name: v.name })),
+  });
   const safeName = assessment.repaired.name || product.name;
   const safeIngredients = sanitizeIngredientList(
     assessment.repaired.ingredients.length
@@ -209,13 +239,19 @@ function toPayload(
     safeName,
     categoryName,
   );
+  let description = assessment.repaired.description || desc;
+  if (
+    (!description || description.length < 8) &&
+    safeIngredients.length >= 2
+  ) {
+    description = safeIngredients.join(", ");
+  }
   return {
     sourceId: product.sourceId,
     menuNumber:
       product.assignedMenuNumber ?? product.sourceMenuNumber ?? "",
     name: safeName,
-    description:
-      assessment.repaired.description || desc,
+    description,
     basePriceOre: product.basePrice ?? 0,
     categoryIds,
     variants: mapped.variants,
@@ -269,6 +305,8 @@ export function buildDryRunWritePlan(input: {
   structurePattern?: StructurePatternSummary | null;
   /** Category-likelihood policy; dips/meat filtered in plan when set. */
   probabilityPolicy?: ProbabilityPolicyMap | null;
+  /** Peer ingredient/beskrivelse likelihood — peer-first card fill. */
+  ingredientLikelihood?: IngredientLikelihoodPolicy | null;
   /** Optional sink filled with per-product policy traces for owner reports. */
   policyTraces?: ProductPolicyTrace[];
   /**
@@ -701,6 +739,7 @@ export function buildDryRunWritePlan(input: {
           structurePattern,
           input.probabilityPolicy,
           category.name,
+          input.ingredientLikelihood,
         );
         const liveCategoryName =
           liveSnapshotCategoryName(live, input.destination.categories) ||
@@ -711,6 +750,9 @@ export function buildDryRunWritePlan(input: {
           sourcePayload,
           liveCategoryName,
           destinationCategories: input.destination.categories,
+          ...(input.ingredientLikelihood != null
+            ? { ingredientLikelihood: input.ingredientLikelihood }
+            : {}),
         });
         const liveRecovered = recoverProductLabelsForReconcile({
           name: live.name,
@@ -922,6 +964,7 @@ export function buildDryRunWritePlan(input: {
             structurePattern,
             input.probabilityPolicy,
             category.name,
+            input.ingredientLikelihood,
           ),
           requiredCapabilities: required,
           missingCapabilities: [],

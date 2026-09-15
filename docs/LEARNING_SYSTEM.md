@@ -28,7 +28,7 @@ Peer customer menus (observe) → distill **SEMANTIC_RULE** (variant/addition pl
 
 | Knowledge | What it may encode | What it must not encode |
 |-----------|--------------------|-------------------------|
-| `SEMANTIC_RULE` | Where choices go (variants vs additions); which *kinds* may receive dips; **category structural-variant fan-out** (Alm/Fam, Deep, Glutenfri, Fuldkorn, Hj. on eligible food categories) | Peer prices, peer option name lists copied as Veroni facts |
+| `SEMANTIC_RULE` | Where choices go (variants vs additions); which *kinds* may receive dips; **category structural-variant fan-out** (Alm/Fam, Deep, Glutenfri, Fuldkorn, Hj. on eligible food categories); **P(ingredient \| kind/subtype)** for card fill | Peer prices, peer option name lists copied as Veroni facts |
 | `BUSINESS_FACT` | This restaurant’s Tilbehør list / prices (operator or source) | Invented menu contents |
 
 ### Category structural-variant fan-out (structure SEMANTIC_RULE)
@@ -66,6 +66,15 @@ Peer observe also distills **P(additionName | product_kind)** (Alm/Familie suffi
 - Mayo/ketchup restaurant seed still fans out, then probability strips dips from pizza
 
 So Veroni pizza #1 gets peer-consensus ekstra toppings (ost, pepperoni, …), **not** mayo dips.
+
+### Peer ingredient + beskrivelse likelihood (M73+)
+
+Peer observe distills **P(ingredient | burger_subtype)** and **P(ingredient | product_kind)** plus Beskrivelse samples that look like ingredient lists.
+
+- Artifacts: `runs/decisions/peer-ingredient-likelihood.json`
+- Create + QA fill empty/thin Grill cards **peer-first** (`PEER_SUBTYPE` → `PEER_KIND`), then Danish burger / grill **domain prior** fallback
+- Corrections that land on peer menus (re-observe → distill) become lasting ALLOW rows — not one-off hardcodes
+- Never invents when neither peers nor domain prior apply; never copies peer prices into ingredients
 
 Hard safety priors (always applied with probability policy):
 
@@ -109,6 +118,8 @@ Artifacts:
 
 - `runs/decisions/latest-peer-observe.json` — pointer to latest peer snapshot dir
 - `runs/decisions/peer-probability-policy.json` — category likelihood policy
+- `runs/decisions/peer-addition-likelihood.json` — Tilbehør name likelihood by kind
+- `runs/decisions/peer-ingredient-likelihood.json` — card ingredient/beskrivelse likelihood by kind/subtype
 - `runs/decisions/peer-structure-summary.json` — structure fingerprint (+ confirm gate)
 - `runs/decisions/latest-policy-application.json` / `.md` — **what rules shaped the plan**
 - `runs/decisions/policy-application/<runId>.json` — per-run history
@@ -120,6 +131,7 @@ Artifacts:
 3. Check sections:
    - **SEMANTIC_RULE — menu structure** (fingerprint, meat-choice placement, category structural-variant fan-out, peer hosts)
    - **SEMANTIC_RULE — category probability** (dip allow/deny kinds, hard priors)
+   - **SEMANTIC_RULE — peer ingredient + beskrivelse** (burger subtypes, ALLOW ingredients)
    - **BUSINESS_FACT — restaurant** (e.g. Veroni Tilbehør list)
    - **Per-product decisions** (kind, additions before→after, reason codes like `DIP_DENY_KIND`, `CATEGORY_STRUCTURAL_VARIANT_FANOUT`)
 

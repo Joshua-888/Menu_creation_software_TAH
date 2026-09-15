@@ -28,6 +28,7 @@ import {
   distillProbabilityPolicy,
 } from "../src/learning/categoryLikelihood.js";
 import { distillAdditionLikelihood } from "../src/learning/additionLikelihood.js";
+import { distillIngredientLikelihood } from "../src/learning/ingredientLikelihood.js";
 import {
   defaultStructurePattern,
   loadActiveStructurePattern,
@@ -40,6 +41,7 @@ import {
   writeLatestPeerObservePointer,
   writeProbabilityPolicyArtifact,
   writeAdditionLikelihoodArtifact,
+  writeIngredientLikelihoodArtifact,
   peerProbabilityPolicyPath,
   readLatestPeerObservePointer,
 } from "../src/learning/peerArtifacts.js";
@@ -242,6 +244,9 @@ async function main() {
   const additionLikelihood = distillAdditionLikelihood(snaps);
   writeAdditionLikelihoodArtifact(root, additionLikelihood);
 
+  const ingredientLikelihood = distillIngredientLikelihood(snaps);
+  writeIngredientLikelihoodArtifact(root, ingredientLikelihood);
+
   const mergedFingerprint = `${structureSummary.fingerprint}::${probabilityPolicy.fingerprint}`;
   const summaryForGate: StructurePatternSummary = {
     ...structureSummary,
@@ -299,12 +304,17 @@ async function main() {
       host: VERONI_CANARY_TARGET.host,
       structurePattern: pattern,
       probabilityPolicy,
+      ingredientLikelihood,
       productTraces,
       businessFacts: [
         {
           name: "Veroni Tilbehør",
           detail:
             "Salatmayonnaise, Remoulade, Ketchup @ 10 kr — RESTAURANT BUSINESS_FACT (not peer-copied)",
+        },
+        {
+          name: "Peer ingredient likelihood",
+          detail: `Fingerprint ${ingredientLikelihood.fingerprint}; subtypes ${Object.keys(ingredientLikelihood.bySubtype).join(", ") || "(none)"}`,
         },
       ],
       probabilityPolicyPath: peerProbabilityPolicyPath(root),

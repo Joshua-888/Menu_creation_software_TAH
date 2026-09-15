@@ -19,6 +19,8 @@ export type PeerProductSnapshot = {
   variants: Array<{ name: string; priceOre?: number | null }>;
   additions: Array<{ name: string; priceOre?: number | null }>;
   ingredients?: string[];
+  /** Beskrivelse when observed — used for ingredient/description likelihood. */
+  description?: string;
 };
 
 export type PeerMenuSnapshot = {

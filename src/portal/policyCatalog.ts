@@ -8,6 +8,7 @@ import type { DecisionStore } from "../decisions/store.js";
 import type { DecisionPolicy, PolicyStatus } from "../decisions/types.js";
 import {
   peerAdditionLikelihoodPath,
+  peerIngredientLikelihoodPath,
   peerProbabilityPolicyPath,
   peerStructureSummaryPath,
 } from "../learning/peerArtifacts.js";
@@ -77,6 +78,20 @@ export const BUILT_IN_SEMANTIC_RULES: BuiltInSemanticRule[] = [
     details: [
       "Precedence: EXACT_PRODUCT → category-ingredient union → RESTAURANT Tilbehør → peer category only if union empty",
       "Not applied to drinks / dip / diverse",
+    ],
+  },
+  {
+    id: "peer-ingredient-beskrivelse",
+    title: "Peer ingredient + beskrivelse likelihood",
+    summary:
+      "P(ingredient | burger_subtype / product_kind) from peer menucards. QA/Create fill empty or thin Grill cards peer-first; Danish burger baseline is fallback prior only.",
+    appliesTo: "Create + QA grill/burger card ingredients + Beskrivelse",
+    adjustableVia:
+      "peer-ingredient-likelihood.json via m71 observe → m73/m76 distill; corrections on peers become lasting ALLOW rows",
+    details: [
+      "Artifact: runs/decisions/peer-ingredient-likelihood.json",
+      "Precedence: PEER_SUBTYPE → PEER_KIND → DOMAIN_PRIOR (grillCardFill)",
+      "Never invents when neither peers nor domain prior apply",
     ],
   },
   {
@@ -201,6 +216,28 @@ export function loadArtifactPolicyViews(repoRoot: string): ArtifactPolicyView[] 
       : "Not generated yet — run m73/m76 addition likelihood.",
     ...(add?.rules?.length
       ? { preview: add.rules.slice(0, 8).join("\n") }
+      : {}),
+  });
+
+  const ingPath = peerIngredientLikelihoodPath(repoRoot);
+  const ing = safeReadJson(ingPath) as {
+    fingerprint?: string;
+    bySubtype?: Record<string, { nProducts?: number; ingredients?: unknown[] }>;
+    byKind?: Record<string, unknown>;
+    rules?: string[];
+  } | null;
+  const subtypeKeys = Object.keys(ing?.bySubtype ?? {});
+  out.push({
+    id: "peer-ingredient-likelihood",
+    title: "Peer ingredient + beskrivelse likelihood",
+    path: ingPath,
+    present: ing != null,
+    ...(ing?.fingerprint ? { fingerprint: ing.fingerprint } : {}),
+    summary: ing
+      ? `Subtypes: ${subtypeKeys.map((k) => `${k}(n=${ing.bySubtype?.[k]?.nProducts ?? 0})`).join(", ") || "(none)"}; kinds=${Object.keys(ing.byKind ?? {}).length}`
+      : "Not generated yet — run m71 observe then m73/m76 ingredient likelihood.",
+    ...(ing?.rules?.length
+      ? { preview: ing.rules.slice(0, 8).join("\n") }
       : {}),
   });
 

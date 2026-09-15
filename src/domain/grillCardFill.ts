@@ -11,6 +11,66 @@
 
 import { formatProductName } from "./textNormalize.js";
 import { isDipAddition } from "../learning/categoryLikelihood.js";
+import {
+  proposePeerIngredients,
+  type IngredientLikelihoodPolicy,
+} from "../learning/ingredientLikelihood.js";
+
+export type GrillIngredientSource =
+  | "PEER_SUBTYPE"
+  | "PEER_KIND"
+  | "DOMAIN_PRIOR"
+  | "NONE";
+
+/**
+ * Peer-first grill/burger card ingredients; domain prior is fallback only.
+ * Corrections that land in peer observe + distill become lasting ALLOW rows.
+ */
+export function resolveGrillIngredients(input: {
+  name: string;
+  categoryName?: string;
+  description?: string;
+  ingredientPolicy?: IngredientLikelihoodPolicy | null;
+}): {
+  ingredients: string[];
+  description: string | null;
+  source: GrillIngredientSource;
+  bucketId: string | null;
+} {
+  const peer = proposePeerIngredients({
+    name: input.name,
+    ...(input.categoryName ? { categoryNames: [input.categoryName] } : {}),
+    ...(input.description ? { description: input.description } : {}),
+    policy: input.ingredientPolicy ?? null,
+  });
+  if (peer.ingredients.length >= 2) {
+    return {
+      ingredients: peer.ingredients,
+      description: peer.description,
+      source: peer.source === "NONE" ? "NONE" : peer.source,
+      bucketId: peer.bucketId,
+    };
+  }
+  const prior = inferGrillIngredients({
+    name: input.name,
+    ...(input.categoryName ? { categoryName: input.categoryName } : {}),
+    ...(input.description ? { description: input.description } : {}),
+  });
+  if (prior.length === 0) {
+    return {
+      ingredients: [],
+      description: null,
+      source: "NONE",
+      bucketId: null,
+    };
+  }
+  return {
+    ingredients: prior,
+    description: null,
+    source: "DOMAIN_PRIOR",
+    bucketId: null,
+  };
+}
 
 /** Veroni #49-style restaurant dips (10 kr). */
 export const GRILL_DIP_ADDITIONS: Array<{ name: string; priceOre: number }> = [

@@ -28,6 +28,7 @@ import { canonicalMenuFromLiveDestination } from "../planning/qaLiveImprove.js";
 import type { DryRunDestinationSnapshot } from "../planning/dryRun.js";
 import {
   loadAdditionLikelihood,
+  loadIngredientLikelihood,
   loadPeerSnapshots,
   loadProbabilityPolicyForRestaurant,
   peerProbabilityPolicyPath,
@@ -483,6 +484,7 @@ export async function runMigrationJob(
       root,
       job.restaurantKey,
     );
+    const ingredientLikelihood = loadIngredientLikelihood(root);
     const plan = buildDryRunWritePlan({
       runId: runStub.id,
       restaurant: job.restaurantKey,
@@ -498,6 +500,7 @@ export async function runMigrationJob(
       capabilities: M2B_ADAPTER_CAPABILITIES,
       decisionStore,
       ...(probabilityPolicy ? { probabilityPolicy } : {}),
+      ...(ingredientLikelihood ? { ingredientLikelihood } : {}),
       policyTraces,
       ...(isQa
         ? { emitReconcileUpdates: true, reconcileDiffs }
@@ -578,6 +581,7 @@ export async function runMigrationJob(
       host: job.destinationHost,
       structurePattern,
       probabilityPolicy,
+      ingredientLikelihood,
       productTraces: policyTraces,
       peerObserve: readLatestPeerObservePointer(root),
       ...(probabilityPolicy
@@ -625,6 +629,14 @@ export async function runMigrationJob(
               },
             ]
           : []),
+        ...(ingredientLikelihood
+          ? [
+              {
+                name: "Peer ingredient likelihood",
+                detail: `Fingerprint ${ingredientLikelihood.fingerprint}; subtypes ${Object.keys(ingredientLikelihood.bySubtype).join(", ") || "(none)"} — peer-first card fill with domain prior fallback`,
+              },
+            ]
+          : []),
       ],
     });
     writeJson(outDir, "policy-application.json", policyReport.report);
@@ -644,6 +656,8 @@ export async function runMigrationJob(
         productTraces: policyTraces.length,
         reportPath: policyReport.jsonPath,
         probabilityFingerprint: probabilityPolicy?.fingerprint ?? null,
+        ingredientLikelihoodFingerprint:
+          ingredientLikelihood?.fingerprint ?? null,
         structureFingerprint: structurePattern?.fingerprint ?? null,
         tilbehorOverrideQuestions: overrideQuestions.length,
       },
