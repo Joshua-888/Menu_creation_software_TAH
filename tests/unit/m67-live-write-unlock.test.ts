@@ -44,10 +44,24 @@ describe("portal live write gate", () => {
     ).toBe(true);
   });
 
-  it("requires allowlisted Veroni host even when flag is on", () => {
+  it("requires credentials even when PORTAL_LIVE_WRITES=1", () => {
+    const gated = evaluatePortalLiveWriteGate({
+      destinationHost: "veronipizza.dk",
+      env: { PORTAL_LIVE_WRITES: "1" },
+    });
+    expect(gated.canLiveExecute).toBe(false);
+    expect(
+      gated.blockers.some((b: string) => /TAH_ADMIN_/i.test(b)),
+    ).toBe(true);
+  });
+
+  it("requires allowlisted host even with credentials", () => {
     const gated = evaluatePortalLiveWriteGate({
       destinationHost: "https://other-shop.example",
-      env: { PORTAL_LIVE_WRITES: "1" },
+      env: {
+        TAH_ADMIN_EMAIL: "a@b.c",
+        TAH_ADMIN_PASSWORD: "x",
+      },
     });
     expect(gated.enabled).toBe(true);
     expect(gated.allowlisted).toBe(false);

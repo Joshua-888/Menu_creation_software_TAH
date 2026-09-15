@@ -13,6 +13,7 @@ import { JobStatusPoller } from "../../../components/JobStatusPoller";
 import { PolicyApplicationPanel } from "../../../components/PolicyApplicationPanel";
 import { PageHeader } from "../../../components/PageHeader";
 import { DeleteJobButton } from "../../../components/DeleteJobButton";
+import { QaFindingsPanel } from "../../../components/QaFindingsPanel";
 
 export default async function JobDetailPage({
   params,
@@ -57,7 +58,7 @@ export default async function JobDetailPage({
 
   return (
     <AppShell employeeName={emp.name}>
-      <JobStatusPoller status={job.status} />
+      <JobStatusPoller status={job.status} errorMessage={job.errorMessage} />
       <PageHeader
         title={job.merchantName}
         subtitle={`${job.destinationHost} · ${
@@ -70,57 +71,13 @@ export default async function JobDetailPage({
 
       {job.workflow === "QA_RECONCILE" ? (
         <div className="panel">
-          <h2>Quality check</h2>
+          <h2>Quality check findings</h2>
           <p className="muted">
-            QA diffs the intended menu (source + policies) against the live
-            destination. Opdater rewrites the full product card — name,
-            description, price, variants, ingredients, and additions — when
-            admin credentials are configured and the host is allowlisted.
+            Diffs the intended menu (PDF + policies) against the live
+            destination, then Opdater rewrites the full product card when live
+            writes are available.
           </p>
-          {drySummary &&
-          typeof drySummary === "object" &&
-          drySummary.reconcile &&
-          typeof drySummary.reconcile === "object" ? (
-            <div className="metrics" style={{ marginTop: "0.75rem" }}>
-              <div className="metric">
-                <strong>
-                  {String(
-                    (drySummary.reconcile as { withDiffs?: number }).withDiffs ??
-                      0,
-                  )}
-                </strong>
-                <span className="muted">Diffs</span>
-              </div>
-              <div className="metric">
-                <strong>
-                  {String(
-                    (drySummary.reconcile as { updatable?: number })
-                      .updatable ?? 0,
-                  )}
-                </strong>
-                <span className="muted">Updatable</span>
-              </div>
-              <div className="metric">
-                <strong>
-                  {String(
-                    (drySummary.reconcile as { blocked?: number }).blocked ?? 0,
-                  )}
-                </strong>
-                <span className="muted">Blocked</span>
-              </div>
-              <div className="metric">
-                <strong style={{ fontSize: "0.95rem" }}>
-                  {String(
-                    (drySummary.reconcile as { fingerprint?: string })
-                      .fingerprint ?? "—",
-                  )}
-                </strong>
-                <span className="muted">Fingerprint</span>
-              </div>
-            </div>
-          ) : (
-            <p className="muted">No reconcile artifact yet — wait for dry-run.</p>
-          )}
+          <QaFindingsPanel jobId={job.id} />
         </div>
       ) : null}
 

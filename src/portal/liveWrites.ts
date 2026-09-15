@@ -78,6 +78,10 @@ export function evaluatePortalLiveWriteGate(input: {
         : "TAH_ADMIN_EMAIL / TAH_ADMIN_PASSWORD not configured",
     );
   }
+  // Even PORTAL_LIVE_WRITES=1 cannot execute without real admin login.
+  if (enabled && !hasTahAdminCredentials(env)) {
+    blockers.push("TAH_ADMIN_EMAIL / TAH_ADMIN_PASSWORD not configured");
+  }
   if (!allowlisted) {
     blockers.push(
       `destination host not allowlisted (need one of: ${allowlist.join(",")}; set PORTAL_LIVE_WRITE_HOSTS)`,
@@ -85,7 +89,7 @@ export function evaluatePortalLiveWriteGate(input: {
   }
   if (!createCategoryCertified) blockers.push("createCategory not certified");
   return {
-    enabled,
+    enabled: enabled && hasTahAdminCredentials(env),
     allowlisted,
     createCategoryCertified,
     canLiveExecute: blockers.length === 0,

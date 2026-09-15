@@ -352,7 +352,7 @@ export async function runMigrationJob(
     // (and always for QA). Never plan against an empty fake destination.
     if (destLoad.source !== "live") {
       throw new Error(
-        `${isQa ? "QA_RECONCILE" : "Create"} requires a live destination snapshot. Configure TAH_ADMIN_EMAIL/PASSWORD and allowlist the host (PORTAL_LIVE_WRITE_HOSTS). ${destLoad.error ?? "gate blocked or empty"}`,
+        `${isQa ? "QA_RECONCILE" : "Create"} requires a live destination snapshot. Set TAH_ADMIN_EMAIL and TAH_ADMIN_PASSWORD on the portal service, ensure the host is allowlisted (veronipizza.dk is default), and that Playwright can log into admin. ${destLoad.error ?? "gate blocked or empty"}`,
       );
     }
     const destination = destLoad.destination;

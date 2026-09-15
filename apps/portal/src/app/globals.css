@@ -613,6 +613,94 @@ textarea {
   }
 }
 
+.job-progress {
+  padding: 1rem 1.2rem;
+  margin-bottom: 1rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-soft);
+}
+
+.job-progress.is-working {
+  border-color: rgba(227, 78, 67, 0.45);
+  background: linear-gradient(
+    120deg,
+    rgba(227, 78, 67, 0.08),
+    rgba(255, 255, 255, 0.9) 45%
+  );
+}
+
+.job-progress.is-failed {
+  border-color: rgba(180, 40, 40, 0.55);
+  background: rgba(180, 40, 40, 0.06);
+}
+
+.job-progress-head {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+}
+
+.job-progress-spinner {
+  width: 0.9rem;
+  height: 0.9rem;
+  border: 2px solid rgba(227, 78, 67, 0.25);
+  border-top-color: var(--accent, #e34e43);
+  border-radius: 50%;
+  animation: job-spin 0.8s linear infinite;
+}
+
+@keyframes job-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.job-progress-error {
+  margin: 0.5rem 0 0;
+  color: #8b1e1e;
+  font-weight: 600;
+}
+
+.job-progress-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  list-style: none;
+  margin: 0.85rem 0 0;
+  padding: 0;
+}
+
+.job-progress-steps li {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  padding: 0.25rem 0.55rem;
+  border-radius: 0.3rem;
+  color: var(--ink-soft);
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.job-progress-steps li.done {
+  color: #1f6b3a;
+  background: rgba(40, 140, 80, 0.12);
+}
+
+.job-progress-steps li.active {
+  color: #8b1e1e;
+  background: rgba(227, 78, 67, 0.16);
+}
+
+.qa-findings-list {
+  margin: 0.85rem 0 0;
+  padding-left: 1.1rem;
+  display: grid;
+  gap: 0.55rem;
+}
+
 .status-pill {
   display: inline-block;
   font-size: 0.75rem;

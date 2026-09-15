@@ -1,7 +1,8 @@
 # Railway — TakeAwayHero Menu Operator Portal
 [build]
 builder = "RAILPACK"
-buildCommand = "npm run portal:build"
+# Chromium is required for live destination snapshot + Opdater writes
+buildCommand = "npx playwright install --with-deps chromium && npm run portal:build"
 
 [deploy]
 startCommand = "npm run portal:start"

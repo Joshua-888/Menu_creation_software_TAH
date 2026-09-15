@@ -46,7 +46,8 @@ describe("multi-merchant host allowlist", () => {
     const gated = evaluatePortalLiveWriteGate({
       destinationHost: "shop-a.dk",
       env: {
-        PORTAL_LIVE_WRITES: "1",
+        TAH_ADMIN_EMAIL: "a@b.c",
+        TAH_ADMIN_PASSWORD: "x",
         PORTAL_LIVE_WRITE_HOSTS: "shop-a.dk,shop-b.dk",
         PORTAL_LIVE_WRITE_HOSTS_STRICT: "1",
       },
