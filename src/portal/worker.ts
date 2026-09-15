@@ -351,8 +351,14 @@ export async function runMigrationJob(
     // Always require a real live catalog whenever credentials/allowlist enable it
     // (and always for QA). Never plan against an empty fake destination.
     if (destLoad.source !== "live") {
+      const detail = destLoad.error ?? "gate blocked or empty";
+      const chromiumHint = /Executable doesn't exist|playwright install/i.test(
+        detail,
+      )
+        ? " Playwright Chromium is missing on the server — redeploy so portal-start can install it."
+        : "";
       throw new Error(
-        `${isQa ? "QA_RECONCILE" : "Create"} requires a live destination snapshot. Set TAH_ADMIN_EMAIL and TAH_ADMIN_PASSWORD on the portal service, ensure the host is allowlisted (veronipizza.dk is default), and that Playwright can log into admin. ${destLoad.error ?? "gate blocked or empty"}`,
+        `${isQa ? "QA_RECONCILE" : "Create"} requires a live destination snapshot. Set TAH_ADMIN_EMAIL and TAH_ADMIN_PASSWORD on the portal service, ensure the host is allowlisted (veronipizza.dk is default), and that Playwright can log into admin.${chromiumHint} ${detail}`,
       );
     }
     const destination = destLoad.destination;
