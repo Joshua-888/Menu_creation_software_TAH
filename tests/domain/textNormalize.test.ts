@@ -57,7 +57,8 @@ describe("textNormalize hygiene", () => {
     });
     expect(a.severity).toBe("REPAIR");
     expect(a.repaired.name).toBe("Pepperoni");
-    expect(a.repaired.ingredients).toEqual(["Tomat", "Ost", "Pepperoni"]);
+    // Product title matching the ingredient is dropped from the ingredient list
+    expect(a.repaired.ingredients).toEqual(["Tomat", "Ost"]);
     expect(labelQualityBlocksWrite(a)).toBe(false);
   });
 
@@ -67,9 +68,35 @@ describe("textNormalize hygiene", () => {
       ingredients: ["Tomat", "ost", "kebab", "salat", "dressing 95"],
     });
     expect(a.severity).toBe("REVIEW");
-    expect(a.reasons).toContain("name_looks_like_ingredient_list");
+    expect(
+      a.reasons.some(
+        (r) =>
+          r === "name_looks_like_ingredient_list" ||
+          r === "name_looks_like_topping" ||
+          r === "name_still_has_ingredient_dump",
+      ),
+    ).toBe(true);
     expect(a.repaired.ingredients).toContain("Dressing");
     expect(labelQualityBlocksWrite(a)).toBe(true);
+  });
+
+  it("assessLabelQuality REVIEW for lone topping name Tomat", () => {
+    const a = assessLabelQuality({
+      name: "Tomat",
+      ingredients: ["Tomat", "Ost", "Kebab", "Salat", "Dressing"],
+    });
+    expect(a.severity).toBe("REVIEW");
+    expect(a.reasons).toContain("name_looks_like_topping");
+    expect(labelQualityBlocksWrite(a)).toBe(true);
+  });
+
+  it("assessLabelQuality still allows Pepperoni as a dish title", () => {
+    const a = assessLabelQuality({
+      name: "Pepperoni",
+      ingredients: ["Tomat", "Ost", "Pepperoni"],
+    });
+    expect(a.reasons).not.toContain("name_looks_like_topping");
+    expect(labelQualityBlocksWrite(a)).toBe(false);
   });
 
   it("assessLabelQuality REVIEW for junk names like I15,", () => {

@@ -82,6 +82,32 @@ export const BUILT_IN_SEMANTIC_RULES: BuiltInSemanticRule[] = [
     ],
   },
   {
+    id: "never-topping-as-product-name",
+    title: "Toppings are never product names",
+    summary:
+      "Never promote ingredients[0] or the first Beskrivelse topping into the dish title. Lone Tomat/Ost/Salat/Dressing titles are REVIEW/blocked. Salatpizza rows recover as Salatpizza + protein.",
+    appliesTo: "Create + QA label recovery / label quality / never-worse",
+    adjustableVia:
+      "Hard SEMANTIC_RULE (looksLikeToppingAsProductName, recoverSalatpizzaDishName)",
+    details: [
+      "Header-like Salatpizza → Salatpizza kebab/skinke/… from protein toppings",
+      "Never-worse refuses writing Tomat (or other base toppings) as a name",
+      "Pepperoni/Hawaii-style dish titles that coincide with toppings remain allowed",
+    ],
+  },
+  {
+    id: "burger-ekstra-after-dip-strip",
+    title: "Plain burgers keep ekstra Tilbehør after dip strip",
+    summary:
+      "Stripping mayo/pommes/valgfri dyppelse from plain burgers must refill paid ekstra (Bacon, Ost, Salat, …). Empty Tilbehør after strip is not acceptable.",
+    appliesTo: "Create + QA addition polish (preferBurgerEkstraAdditions)",
+    adjustableVia: "Hard domain prior BURGER_EKSTRA_ADDITIONS in grillCardFill",
+    details: [
+      "Fries/menus still get dip Tilbehør via preferGrillDipAdditions",
+      "Plain sandwich_grill never keeps dips as Tilbehør",
+    ],
+  },
+  {
     id: "category-probability",
     title: "Category probability — dips / Tilbehør kinds",
     summary:

@@ -7,9 +7,17 @@ import { createHash } from "node:crypto";
 import type { AdapterCapabilities } from "../tah/contracts/evidence.js";
 import type { PlannedProductPayload } from "../runner/writePlan.js";
 import { formatProductName } from "../domain/textNormalize.js";
+import { looksLikeToppingAsProductName } from "../domain/menuCardQuality.js";
 import {
   isStructuralCategoryVariantName,
 } from "../learning/categorySizeVariantPolicy.js";
+
+/** Proteins that distinguish Salatpizza rows when the PDF left only a section header. */
+const SALATPIZZA_PROTEIN_RE =
+  /^(kebab|skinke|kylling|kødstrimler|kodstrimler|falafel|bacon|pepperoni|tun|rejer|oksekød|bøf|pølse)$/i;
+
+const SALATPIZZA_BASE_TOPPING_RE =
+  /^(tomat|ost|salat|dressing|mayonnaise|mayo|løg|rødløg)$/i;
 
 export type ReconcileField =
   | "name"
@@ -107,6 +115,7 @@ export function looksLikeCategoryHeaderName(name: string): boolean {
 
 /**
  * Pull dish name from Beskrivelse like "Margarita 77, Tomat og, ost".
+ * Never returns a topping token ("Tomat") — that caused Salatpizza→Tomat.
  */
 export function recoverDishNameFromDescription(
   description: string,
@@ -124,7 +133,44 @@ export function recoverDishNameFromDescription(
   if (/^\d+$/.test(cleaned)) return null;
   if (looksLikeCategoryHeaderName(cleaned)) return null;
   if (isStructuralCategoryVariantName(cleaned)) return null;
+  if (looksLikeToppingAsProductName(cleaned)) return null;
   return formatProductName(cleaned);
+}
+
+/**
+ * Infer "Salatpizza kebab" from protein toppings when the live title is a
+ * section header or a promoted base topping like "Tomat".
+ */
+export function recoverSalatpizzaDishName(input: {
+  name: string;
+  description?: string | null;
+  ingredients?: readonly string[];
+  categoryName?: string;
+}): string | null {
+  const name = input.name.trim();
+  const cat = (input.categoryName ?? "").trim();
+  const ings = [...(input.ingredients ?? [])];
+  const descParts = (input.description ?? "")
+    .split(/[,;|]/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const tokens = [...ings, ...descParts];
+  const salatContext =
+    /salatpizza/i.test(name) ||
+    /salatpizza/i.test(cat) ||
+    (looksLikeToppingAsProductName(name) &&
+      tokens.some((t) => /^salat$/i.test(t.trim())) &&
+      tokens.some((t) => /dressing/i.test(t)));
+  if (!salatContext) return null;
+
+  for (const t of tokens) {
+    const raw = t.trim().replace(/^\d+\.\s*/, "");
+    if (!raw || SALATPIZZA_BASE_TOPPING_RE.test(raw)) continue;
+    if (SALATPIZZA_PROTEIN_RE.test(raw)) {
+      return formatProductName(`Salatpizza ${raw}`);
+    }
+  }
+  return null;
 }
 
 /** Strip leaked menu prices from description text. */
@@ -138,13 +184,16 @@ export function stripPriceLeakFromDescription(description: string): string {
 }
 
 /**
- * Repair labels for reconcile: header names → dish from description;
+ * Repair labels for reconcile: header / topping-as-name → real dish title;
  * strip price leaks from description.
+ *
+ * NEVER promotes ingredients[0] or the first description topping into the name.
  */
 export function recoverProductLabelsForReconcile(input: {
   name: string;
   description?: string | null;
   ingredients?: readonly string[];
+  categoryName?: string;
 }): {
   name: string;
   description: string;
@@ -154,13 +203,18 @@ export function recoverProductLabelsForReconcile(input: {
   let name = input.name.trim();
   let description = (input.description ?? "").trim();
 
-  if (looksLikeCategoryHeaderName(name)) {
+  const needsNameRecovery =
+    looksLikeCategoryHeaderName(name) || looksLikeToppingAsProductName(name);
+
+  if (needsNameRecovery) {
     const recovered =
-      recoverDishNameFromDescription(description) ||
-      (input.ingredients?.[0]
-        ? formatProductName(input.ingredients[0])
-        : null);
-    if (recovered) {
+      recoverSalatpizzaDishName({
+        name,
+        description,
+        ingredients: input.ingredients,
+        ...(input.categoryName ? { categoryName: input.categoryName } : {}),
+      }) || recoverDishNameFromDescription(description);
+    if (recovered && !looksLikeToppingAsProductName(recovered)) {
       reasons.push("NAME_HEADER_LIKE");
       name = recovered;
       // Drop recovered name token from description if it leads

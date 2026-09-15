@@ -205,6 +205,32 @@ export function isKnownFoodToken(name: string): boolean {
   return false;
 }
 
+/**
+ * Hard SEMANTIC_RULE: these tokens are toppings/sauces, never dish titles.
+ * Promoting ingredients[0] ("Tomat") into the product name must never happen.
+ * Distinct from dish titles that also appear as toppings (Pepperoni, Hawaii).
+ */
+const NEVER_DISH_PRODUCT_NAME_RE =
+  /^(tomat|ost|salat|dressing|mayonnaise|mayo|salatmayo|salatmayonnaise|remoulade|ketchup|kethup|løg|rødløg|champignon|spaghetti|penne|basilikum|oregano|majs|oliven|agurk|avocado|hummus)$/i;
+
+/**
+ * True when a product name is clearly a topping/sauce, not a dish title.
+ * Blocks the Salatpizza→"Tomat" class of QA disasters permanently.
+ */
+export function looksLikeToppingAsProductName(name: string): boolean {
+  const n = name.trim().replace(/^\d+\.\s*/, "").trim();
+  if (!n) return false;
+  if (NEVER_DISH_PRODUCT_NAME_RE.test(n)) return true;
+  // "Tomat og ost" / "Ost, salat" — topping soup mistaken for a title
+  if (
+    /^(tomat|ost|salat|dressing|løg|champignon)\b/i.test(n) &&
+    /\b(og|,|;)\b/i.test(n)
+  ) {
+    return true;
+  }
+  return false;
+}
+
 /** True when token must never appear as ingredient or Tilbehør. */
 export function isInvalidFoodComponent(
   name: string,
@@ -487,8 +513,15 @@ export function cleanDishDisplayName(rawName: string): {
   name = name.replace(/\s*[-–—]\s*/g, " ").replace(/\s+/g, " ").trim();
 
   // Strip trailing food lexicon tokens from the title (kodsovs, spaghetti…)
+  // Exception: "Salatpizza kebab" / "Vegetarpizza falafel" — protein is the dish title.
   const tokens = name.split(/\s+/);
   while (tokens.length > 1) {
+    if (
+      tokens.length === 2 &&
+      /^(salatpizza|vegetarpizza)$/i.test(tokens[0]!)
+    ) {
+      break;
+    }
     const last = tokens[tokens.length - 1]!;
     const lastKey = normKey(last);
     if (

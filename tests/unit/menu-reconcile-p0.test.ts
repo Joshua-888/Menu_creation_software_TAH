@@ -35,6 +35,33 @@ describe("menuReconcile label recovery", () => {
     expect(out.reasons).toContain("NAME_HEADER_LIKE");
     expect(out.name.toLowerCase()).toContain("margarita");
   });
+
+  it("never promotes first topping Tomat as Salatpizza product name", () => {
+    const out = recoverProductLabelsForReconcile({
+      name: "Salatpizza",
+      description: "Tomat, Ost, Kebab, Salat, Dressing",
+      ingredients: ["Tomat", "Ost", "Kebab", "Salat", "Dressing"],
+      categoryName: "Salatpizza",
+    });
+    expect(out.name.toLowerCase()).not.toBe("tomat");
+    expect(out.name.toLowerCase()).toMatch(/salatpizza\s+kebab/);
+  });
+
+  it("repairs live Tomat titles back to Salatpizza + protein", () => {
+    const out = recoverProductLabelsForReconcile({
+      name: "Tomat",
+      description: "Ost, Skinke, Salat, Dressing",
+      ingredients: ["Ost", "Skinke", "Salat", "Dressing"],
+      categoryName: "Salatpizza",
+    });
+    expect(out.name.toLowerCase()).toMatch(/salatpizza\s+skinke/);
+  });
+
+  it("recoverDishNameFromDescription refuses topping-first soup", () => {
+    expect(
+      recoverDishNameFromDescription("Tomat, Ost, Kebab, Salat, Dressing"),
+    ).toBeNull();
+  });
 });
 
 describe("tryNormalizeHost", () => {

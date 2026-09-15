@@ -51,6 +51,7 @@ import type { IngredientLikelihoodPolicy } from "../learning/ingredientLikelihoo
 import {
   grillIngredientsInsufficient,
   preferGrillDipAdditions,
+  preferBurgerEkstraAdditions,
   resolveGrillIngredients,
 } from "../domain/grillCardFill.js";
 import {
@@ -226,6 +227,11 @@ function toPayload(
     ...(categoryName ? { categoryName } : {}),
     description: desc,
     variants: mapped.variants.map((v) => ({ name: v.name })),
+  });
+  additions = preferBurgerEkstraAdditions(additions, {
+    name: productName,
+    ...(categoryName ? { categoryName } : {}),
+    description: desc,
   });
   const safeName = assessment.repaired.name || product.name;
   const safeIngredients = sanitizeIngredientList(
@@ -761,6 +767,7 @@ export function buildDryRunWritePlan(input: {
           name: live.name,
           description: live.description ?? intended.description,
           ingredients: live.ingredients ?? intended.ingredients,
+          ...(liveCategoryName ? { categoryName: liveCategoryName } : {}),
         });
         const labelReasons = [...new Set(liveRecovered.reasons)];
 

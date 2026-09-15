@@ -12,6 +12,7 @@ import {
   cleanDishDisplayName,
   dishNameHasIngredientDump,
   isInvalidFoodComponent,
+  looksLikeToppingAsProductName,
   polishDescriptionText,
   sanitizeIngredientList,
   splitGluedFoodToken,
@@ -238,6 +239,9 @@ export function assessLabelQuality(
   if (looksLikeIngredientListName(repairedName || rawName)) {
     reasons.push("name_looks_like_ingredient_list");
   }
+  if (looksLikeToppingAsProductName(repairedName || rawName)) {
+    reasons.push("name_looks_like_topping");
+  }
   if (dishNameHasIngredientDump(repairedName)) {
     reasons.push("name_still_has_ingredient_dump");
   }
@@ -260,6 +264,7 @@ export function assessLabelQuality(
     (r) =>
       r === "garbage_product_name" ||
       r === "name_looks_like_ingredient_list" ||
+      r === "name_looks_like_topping" ||
       r === "name_equals_ingredient_dump" ||
       r === "name_still_has_ingredient_dump" ||
       r === "invalid_ingredient_tokens",

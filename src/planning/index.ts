@@ -34,6 +34,7 @@ export {
   recoverProductLabelsForReconcile,
   looksLikeCategoryHeaderName,
   recoverDishNameFromDescription,
+  recoverSalatpizzaDishName,
   type MenuReconcileReport,
   type ProductReconcileDiff,
   type LiveProductSnapshot,

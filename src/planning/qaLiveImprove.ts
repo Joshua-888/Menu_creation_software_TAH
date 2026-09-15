@@ -21,6 +21,7 @@ import {
   polishDescriptionText,
   cleanDishDisplayName,
   isForbiddenTilbehorName,
+  looksLikeToppingAsProductName,
 } from "../domain/menuCardQuality.js";
 import {
   grillTilbehorLooksWrong,
@@ -28,6 +29,7 @@ import {
   isGrillCategory,
   isBurgerProductName,
   preferGrillDipAdditions,
+  preferBurgerEkstraAdditions,
   productWantsGrillDips,
   grillIngredientsInsufficient,
   resolveGrillIngredients,
@@ -164,6 +166,7 @@ export function fieldQualityScore(
       const n = String(value ?? "").trim();
       if (!n) return 0;
       if (looksLikeCategoryHeaderName(n)) return 0;
+      if (looksLikeToppingAsProductName(n)) return 0;
       if (REVIEW_STUB_RE.test(n)) return 0;
       if (dishNameHasIngredientDump(n)) return 1;
       return Math.min(10, 4 + Math.min(6, Math.floor(n.length / 8)));
@@ -297,14 +300,28 @@ export function buildQaTargetPayload(input: {
     name: live.name,
     description: live.description ?? "",
     ingredients: live.ingredients ?? [],
+    ...(catName ? { categoryName: catName } : {}),
   });
 
   let name = live.name.trim();
-  if (looksLikeCategoryHeaderName(name) || !name) {
+  if (
+    looksLikeCategoryHeaderName(name) ||
+    looksLikeToppingAsProductName(name) ||
+    !name
+  ) {
+    const recovered = liveRecovered.name.trim();
+    const recoveredOk =
+      recovered &&
+      !looksLikeCategoryHeaderName(recovered) &&
+      !looksLikeToppingAsProductName(recovered);
     name =
-      liveRecovered.name ||
+      (recoveredOk ? recovered : "") ||
       formatProductName(source.name) ||
       name;
+    // Last resort: keep header rather than write a topping as the title
+    if (looksLikeToppingAsProductName(name) && recoveredOk) {
+      name = recovered;
+    }
   } else {
     name = formatProductName(name);
   }
@@ -452,6 +469,13 @@ export function buildQaTargetPayload(input: {
     policy: input.probabilityPolicy ?? null,
   }).after;
   additions = polishAdditions(additions, name, catName);
+  // After dip/forbidden strip, refill plain-burger ekstra (never leave empty)
+  additions = preferBurgerEkstraAdditions(additions, {
+    name,
+    categoryName: catName,
+    description,
+  });
+  additions = polishAdditions(additions, name, catName);
 
   const liveVars = polishVariants(
     (live.variants ?? []).map((v) => ({
@@ -500,10 +524,28 @@ export function buildQaTargetPayload(input: {
     ingredients,
   });
 
+  let outName = assessment.repaired.name || name;
+  if (looksLikeToppingAsProductName(outName)) {
+    const src = formatProductName(source.name);
+    if (
+      src &&
+      !looksLikeToppingAsProductName(src) &&
+      !looksLikeCategoryHeaderName(src)
+    ) {
+      outName = src;
+    } else if (
+      looksLikeCategoryHeaderName(live.name.trim()) &&
+      !looksLikeToppingAsProductName(live.name)
+    ) {
+      // Prefer keeping a section header over writing a topping as the title
+      outName = live.name.trim();
+    }
+  }
+
   return {
     sourceId: source.sourceId,
     menuNumber: live.menuNumber || source.menuNumber,
-    name: assessment.repaired.name || name,
+    name: outName,
     description: assessment.repaired.description || description,
     basePriceOre,
     categoryIds,
@@ -543,6 +585,26 @@ export function filterNeverWorseDeltas(input: {
     const beforeScore = fieldQualityScore(delta.field, delta.before, ctx);
     const afterScore = fieldQualityScore(delta.field, delta.after, ctx);
     const defective = isLiveFieldDefective(delta.field, delta.before, ctx);
+    // Hard prior: never write a topping/sauce as the product name (Salatpizza→Tomat).
+    if (delta.field === "name") {
+      const afterName = String(delta.after ?? "").trim();
+      const beforeName = String(delta.before ?? "").trim();
+      if (looksLikeToppingAsProductName(afterName)) {
+        blocked.push({ ...delta, blockReason: "BLOCKED_WORSE_THAN_LIVE" });
+        continue;
+      }
+      if (
+        (looksLikeToppingAsProductName(beforeName) ||
+          looksLikeCategoryHeaderName(beforeName) ||
+          !beforeName) &&
+        afterName &&
+        !looksLikeToppingAsProductName(afterName) &&
+        !looksLikeCategoryHeaderName(afterName)
+      ) {
+        kept.push(delta);
+        continue;
+      }
+    }
     // Hard prior: always allow clearing Tilbehør / dips off drinks.
     if (delta.field === "additions") {
       const productName = input.intended.name || input.live.name;
@@ -595,6 +657,23 @@ export function filterNeverWorseDeltas(input: {
         beforeDipHeavy.length > 0 &&
         afterDipHeavy.length < beforeDipHeavy.length &&
         !/\b(pommes|frites|nuggets?)\b/i.test(productName)
+      ) {
+        kept.push(delta);
+        continue;
+      }
+      // Hard prior: refill plain-burger ekstra after dip/forbidden strip left [].
+      if (
+        isBurgerProductName(productName) &&
+        !productWantsGrillDips({
+          name: productName,
+          categoryName: input.liveCategoryName ?? "",
+        }) &&
+        (beforeList.length === 0 ||
+          beforeDipHeavy.length > 0 ||
+          beforeForbidden.length > 0) &&
+        afterList.length >= 3 &&
+        afterDipHeavy.length === 0 &&
+        afterForbidden.length === 0
       ) {
         kept.push(delta);
         continue;

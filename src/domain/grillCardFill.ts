@@ -98,6 +98,22 @@ export const GRILL_DIP_ADDITIONS: Array<{ name: string; priceOre: number }> = [
   { name: "Ketchup", priceOre: 1000 },
 ];
 
+/**
+ * Paid ekstra on plain burgers/sandwiches (not dips, not pommes).
+ * Used when QA/Create strips forbidden/dip Tilbehør and would otherwise leave [].
+ */
+export const BURGER_EKSTRA_ADDITIONS: Array<{ name: string; priceOre: number }> =
+  [
+    { name: "Bacon", priceOre: 2000 },
+    { name: "Ost", priceOre: 1000 },
+    { name: "Salat", priceOre: 1000 },
+    { name: "Tomat", priceOre: 1000 },
+    { name: "Løg", priceOre: 1000 },
+    { name: "Oksekød", priceOre: 2000 },
+    { name: "Agurk", priceOre: 1000 },
+    { name: "Jalapeños", priceOre: 1000 },
+  ];
+
 /** Shared burger build — always include meat + greens + sauces. */
 const BURGER_BASE = [
   "Oksekød",
@@ -352,4 +368,28 @@ export function preferGrillDipAdditions(
   const hasDips = additions.some((a) => isDipAddition(a.name));
   if (hasDips) return additions;
   return GRILL_DIP_ADDITIONS.map((a) => ({ ...a }));
+}
+
+/**
+ * After dip/forbidden strip, plain burgers must still get paid ekstra toppings.
+ * Never invent dips or pommes here — only sandwich_grill-style ekstra.
+ */
+export function preferBurgerEkstraAdditions(
+  additions: Array<{ name: string; priceOre: number }>,
+  input: {
+    name: string;
+    categoryName?: string;
+    description?: string;
+  },
+): Array<{ name: string; priceOre: number }> {
+  if (productWantsGrillDips(input)) return additions;
+  const burgerLike =
+    isBurgerProductName(input.name) ||
+    (/\bgrill\b/i.test(input.categoryName ?? "") &&
+      /burger|sandwich|cafeteria/i.test(
+        `${input.name} ${input.description ?? ""}`,
+      ));
+  if (!burgerLike) return additions;
+  if (additions.length > 0) return additions;
+  return BURGER_EKSTRA_ADDITIONS.map((a) => ({ ...a }));
 }

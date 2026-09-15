@@ -200,6 +200,82 @@ describe("qaLiveImprove grill", () => {
         /mayo|remoulade|ketchup/i.test(a.name),
       ),
     ).toBe(false);
+    // After strip, refill paid ekstra toppings — never leave Tilbehør empty.
+    expect(target.additions.length).toBeGreaterThanOrEqual(3);
+    expect(target.additions.some((a) => /bacon|ost|salat|tomat/i.test(a.name))).toBe(
+      true,
+    );
+  });
+
+  it("never renames Salatpizza rows to Tomat", () => {
+    const target = buildQaTargetPayload({
+      live: {
+        databaseId: "27",
+        menuNumber: "27",
+        name: "Tomat",
+        description: "Ost, Kebab, Salat, Dressing",
+        basePriceOre: 9500,
+        categoryIds: ["salat"],
+        ingredients: ["Tomat", "Ost", "Kebab", "Salat", "Dressing"],
+        variants: [{ name: "Alm.", priceOre: 0 }],
+        additions: [],
+      },
+      sourcePayload: {
+        sourceId: "s27",
+        menuNumber: "27",
+        name: "Salatpizza kebab",
+        description: "Tomat, Ost, Kebab, Salat, Dressing",
+        basePriceOre: 9500,
+        categoryIds: ["salat"],
+        variants: [{ name: "Alm.", surchargeOre: 0 }],
+        ingredients: ["Tomat", "Ost", "Kebab", "Salat", "Dressing"],
+        additions: [],
+        intendedHidden: false,
+      },
+      liveCategoryName: "Salatpizza",
+      destinationCategories: [{ databaseId: "salat", name: "Salatpizza" }],
+    });
+    expect(target.name.toLowerCase()).not.toBe("tomat");
+    expect(target.name.toLowerCase()).toMatch(/salatpizza\s+kebab/);
+  });
+
+  it("never-worse blocks writing Tomat as a product name", () => {
+    const { kept, blocked } = filterNeverWorseDeltas({
+      live: {
+        databaseId: "27",
+        menuNumber: "27",
+        name: "Salatpizza",
+        description: "",
+        basePriceOre: 9500,
+        categoryIds: ["salat"],
+        ingredients: ["Tomat", "Ost", "Kebab"],
+        variants: [],
+        additions: [],
+      },
+      intended: {
+        sourceId: "s27",
+        menuNumber: "27",
+        name: "Tomat",
+        description: "",
+        basePriceOre: 9500,
+        categoryIds: ["salat"],
+        variants: [],
+        ingredients: ["Tomat", "Ost", "Kebab"],
+        additions: [],
+        intendedHidden: false,
+      },
+      liveCategoryName: "Salatpizza",
+      deltas: [
+        {
+          field: "name",
+          before: "Salatpizza",
+          after: "Tomat",
+          reasons: ["NAME_HEADER_LIKE"],
+        },
+      ],
+    });
+    expect(kept).toHaveLength(0);
+    expect(blocked).toHaveLength(1);
   });
 
   it("never-worse allows stripping Menu variants", () => {
