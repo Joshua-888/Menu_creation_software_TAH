@@ -24,6 +24,8 @@ import {
   type ProductPolicyTrace,
   type ProductReconcileDiff,
 } from "../planning/index.js";
+import { canonicalMenuFromLiveDestination } from "../planning/qaLiveImprove.js";
+import type { DryRunDestinationSnapshot } from "../planning/dryRun.js";
 import {
   loadAdditionLikelihood,
   loadPeerSnapshots,
@@ -192,7 +194,13 @@ export async function runMigrationJob(
   const job = store.getJob(jobId);
   if (!job) throw new Error(`Job not found: ${jobId}`);
 
-  if (job.sourceType === "source_url" && !store.listJobFiles(jobId).length) {
+  const isQaJob = job.workflow === "QA_RECONCILE";
+
+  if (
+    !isQaJob &&
+    job.sourceType === "source_url" &&
+    !store.listJobFiles(jobId).length
+  ) {
     store.updateJobStatus(jobId, "SOURCE_URL_PENDING", {
       errorMessage:
         "Source URL saved. HTML menu-site extraction is not certified in this milestone — upload a PDF to run end-to-end.",
@@ -206,7 +214,7 @@ export async function runMigrationJob(
       f.mimeType === "application/pdf" ||
       f.originalName.toLowerCase().endsWith(".pdf"),
   );
-  if (!pdf) {
+  if (!isQaJob && !pdf) {
     if (job.sourceUrl) {
       store.updateJobStatus(jobId, "SOURCE_URL_PENDING", {
         errorMessage:
@@ -227,6 +235,13 @@ export async function runMigrationJob(
     .run(outDir, runStub.id);
 
   const metrics: JobMetrics = {};
+  let sourceLabel = "live_destination";
+  let adapterVersion = "qa-live-improve";
+  let preloadedDestination: {
+    source: "live";
+    destination: DryRunDestinationSnapshot;
+    error?: string;
+  } | null = null;
 
   try {
     store.updateJobStatus(jobId, "EXTRACTING");
@@ -234,29 +249,77 @@ export async function runMigrationJob(
       .prepare(`UPDATE job_runs SET status = ? WHERE id = ?`)
       .run("EXTRACTING", runStub.id);
 
-    const adapter = new PdfSourceAdapter({ restaurantName: job.merchantName });
-    const extraction = await adapter.extractDetailed({
-      kind: "pdf",
-      filePath: pdf.storedPath,
-    });
+    let recovered: ReturnType<typeof applyPizzaToppingRecovery>;
 
-    writeJson(outDir, "source-menu.json", extraction.sourceMenu);
-    writeJson(outDir, "extraction-accounting.json", {
-      accounting: extraction.accounting,
-      pageCount: extraction.pageCount,
-      uniqueProducts: extraction.uniqueProducts,
-      duplicateOccurrences: extraction.duplicateOccurrences,
-    });
-    metrics.pageCount = extraction.pageCount;
-    metrics.uniqueProducts = extraction.uniqueProducts;
+    if (isQaJob) {
+      const destLoad = await loadDestinationSnapshotForDryRun({
+        destinationHost: job.destinationHost,
+        deep: true,
+      });
+      if (destLoad.source !== "live") {
+        const detail = destLoad.error ?? "gate blocked or empty";
+        const chromiumHint =
+          /Executable doesn't exist|playwright install/i.test(detail)
+            ? " Playwright Chromium is missing on the server — redeploy so portal-start can install it."
+            : "";
+        throw new Error(
+          `QA_RECONCILE requires a live destination snapshot. Set TAH_ADMIN_EMAIL and TAH_ADMIN_PASSWORD on the portal service, ensure the host is allowlisted (veronipizza.dk is default), and that Playwright can log into admin.${chromiumHint} ${detail}`,
+        );
+      }
+      preloadedDestination = {
+        source: "live",
+        destination: destLoad.destination,
+        ...(destLoad.error ? { error: destLoad.error } : {}),
+      };
+      writeJson(outDir, "source-menu.json", {
+        kind: "live_destination",
+        host: destLoad.destination.host,
+        categoryCount: destLoad.destination.categories.length,
+        productCount: destLoad.destination.products.length,
+      });
+      metrics.uniqueProducts = destLoad.destination.products.length;
+      const liveMenu = canonicalMenuFromLiveDestination({
+        restaurantName: job.merchantName,
+        destination: destLoad.destination,
+      });
+      recovered = applyPizzaToppingRecovery(liveMenu);
+      sourceLabel = "live_destination";
+      adapterVersion = "qa-live-improve";
+    } else {
+      const adapter = new PdfSourceAdapter({ restaurantName: job.merchantName });
+      const extraction = await adapter.extractDetailed({
+        kind: "pdf",
+        filePath: pdf!.storedPath,
+      });
 
-    store.updateJobStatus(jobId, "DOMAIN");
-    store.db
-      .prepare(`UPDATE job_runs SET status = ? WHERE id = ?`)
-      .run("DOMAIN", runStub.id);
+      writeJson(outDir, "source-menu.json", extraction.sourceMenu);
+      writeJson(outDir, "extraction-accounting.json", {
+        accounting: extraction.accounting,
+        pageCount: extraction.pageCount,
+        uniqueProducts: extraction.uniqueProducts,
+        duplicateOccurrences: extraction.duplicateOccurrences,
+      });
+      metrics.pageCount = extraction.pageCount;
+      metrics.uniqueProducts = extraction.uniqueProducts;
+      sourceLabel = pdf!.originalName;
+      adapterVersion = adapter.extractorVersion;
 
-    const domain = runDomainEngine(extraction.sourceMenu);
-    const recovered = applyPizzaToppingRecovery(domain.menu);
+      store.updateJobStatus(jobId, "DOMAIN");
+      store.db
+        .prepare(`UPDATE job_runs SET status = ? WHERE id = ?`)
+        .run("DOMAIN", runStub.id);
+
+      const domain = runDomainEngine(extraction.sourceMenu);
+      recovered = applyPizzaToppingRecovery(domain.menu);
+    }
+
+    if (isQaJob) {
+      store.updateJobStatus(jobId, "DOMAIN");
+      store.db
+        .prepare(`UPDATE job_runs SET status = ? WHERE id = ?`)
+        .run("DOMAIN", runStub.id);
+    }
+
     writeJson(outDir, "canonical-menu.json", recovered.menu);
     writeJson(outDir, "validation-report.json", recovered.validation);
     if (recovered.recovered.length) {
@@ -377,10 +440,12 @@ export async function runMigrationJob(
     const liveGate = evaluatePortalLiveWriteGate({
       destinationHost: job.destinationHost,
     });
-    const destLoad = await loadDestinationSnapshotForDryRun({
-      destinationHost: job.destinationHost,
-      deep: isQa,
-    });
+    const destLoad =
+      preloadedDestination ??
+      (await loadDestinationSnapshotForDryRun({
+        destinationHost: job.destinationHost,
+        deep: isQa,
+      }));
     // Always require a real live catalog whenever credentials/allowlist enable it
     // (and always for QA). Never plan against an empty fake destination.
     if (destLoad.source !== "live") {
@@ -422,10 +487,10 @@ export async function runMigrationJob(
       runId: runStub.id,
       restaurant: job.restaurantKey,
       host: job.destinationHost,
-      source: pdf.originalName,
+      source: sourceLabel,
       schemaVersion: CANONICAL_MENU_SCHEMA_VERSION,
       domainRuleVersion: DOMAIN_RULE_ENGINE_VERSION,
-      adapterVersion: adapter.extractorVersion,
+      adapterVersion,
       contractFingerprint: fingerprint.fingerprint,
       canonical: recovered.menu,
       categoryMappings,
@@ -595,7 +660,7 @@ export async function runMigrationJob(
       liveWriteBlockers: liveGate.blockers,
       liveWritesFlag: liveGate.enabled,
       adminContractVersion: ADMIN_CONTRACT_VERSION,
-      sourceFile: pdf.originalName,
+      sourceFile: sourceLabel,
     });
     const dryCounts = summarizeDryRun(plan);
     metrics.dryRunCreates = dryCounts.CREATE ?? 0;
@@ -617,7 +682,7 @@ export async function runMigrationJob(
       runId: runStub.id,
       finishedAt: new Date().toISOString(),
       decisionDbPath,
-      source: pdf.originalName,
+      source: sourceLabel,
     });
 
     decisionStore.close();
@@ -634,10 +699,10 @@ export async function runMigrationJob(
           runId: `live-${runStub.id}`,
           restaurant: job.restaurantKey,
           destinationHost: job.destinationHost,
-          source: pdf.originalName,
+          source: sourceLabel,
           schemaVersion: CANONICAL_MENU_SCHEMA_VERSION,
           domainRuleVersion: DOMAIN_RULE_ENGINE_VERSION,
-          adapterVersion: adapter.extractorVersion,
+          adapterVersion,
           contractFingerprint: fingerprint.fingerprint,
           canonical: recovered.menu,
           runsDbPath: portalLiveRunsDbPath(portalDataDir()),

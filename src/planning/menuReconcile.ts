@@ -17,7 +17,8 @@ export type ReconcileField =
   | "ingredients"
   | "additions"
   | "variants"
-  | "basePrice";
+  | "basePrice"
+  | "categoryIds";
 
 export type ReconcileReasonCode =
   | "NAME_HEADER_LIKE"
@@ -27,7 +28,9 @@ export type ReconcileReasonCode =
   | "INGREDIENTS_DRIFT"
   | "ADDITIONS_DRIFT"
   | "VARIANTS_DRIFT"
-  | "BASE_PRICE_DRIFT";
+  | "BASE_PRICE_DRIFT"
+  | "CATEGORY_KIND_MISMATCH"
+  | "BLOCKED_WORSE_THAN_LIVE";
 
 export type ReconcileFieldDelta = {
   field: ReconcileField;
@@ -43,6 +46,8 @@ export type ProductReconcileDiff = {
   liveName: string;
   intendedName: string;
   deltas: ReconcileFieldDelta[];
+  /** Deltas refused because they would worsen live content. */
+  blockedWorseThanLive?: ReconcileFieldDelta[];
   /** Caps required to apply all deltas via certified Opdater path. */
   requiredCapabilities: string[];
   missingCapabilities: string[];
@@ -67,6 +72,7 @@ export type LiveProductSnapshot = {
   name: string;
   description?: string;
   basePriceOre?: number;
+  categoryIds?: string[];
   variants?: Array<{ name: string; priceOre: number }>;
   ingredients?: string[];
   additions?: Array<{ name: string; priceOre: number }>;
@@ -214,8 +220,13 @@ export function capabilitiesForReconcileFields(
   for (const f of fields) {
     if (f === "description") caps.add("updateProductDescription");
     if (f === "name" || f === "basePrice") caps.add("updateScalarProductField");
-    // ingredients / additions / variants also go through Opdater form
-    if (f === "ingredients" || f === "additions" || f === "variants") {
+    // ingredients / additions / variants / categories also go through Opdater form
+    if (
+      f === "ingredients" ||
+      f === "additions" ||
+      f === "variants" ||
+      f === "categoryIds"
+    ) {
       caps.add("updateExistingProductForm");
     }
   }
@@ -341,6 +352,17 @@ export function diffProductReconcile(input: {
     });
   }
 
+  const liveCats = [...(input.live.categoryIds ?? [])].map(String).sort();
+  const intendedCats = [...input.intended.categoryIds].map(String).sort();
+  if (liveCats.join(",") !== intendedCats.join(",")) {
+    deltas.push({
+      field: "categoryIds",
+      before: input.live.categoryIds ?? [],
+      after: input.intended.categoryIds,
+      reasons: ["CATEGORY_KIND_MISMATCH"],
+    });
+  }
+
   const fields = deltas.map((d) => d.field);
   const requiredCapabilities = capabilitiesForReconcileFields(fields);
   const missingCapabilities = missingReconcileCapabilities(
@@ -411,7 +433,10 @@ export function formatMenuReconcileMarkdown(
   ];
   const withDiffs = report.products.filter((p) => p.deltas.length > 0);
   if (!withDiffs.length) {
-    lines.push(`_No diffs — live menu matches intended payload._`, ``);
+    lines.push(
+      `_No safe improvements — live menu is already good (or only worse-than-live diffs were blocked)._`,
+      ``,
+    );
     return lines.join("\n");
   }
   for (const p of withDiffs) {
@@ -428,11 +453,18 @@ export function formatMenuReconcileMarkdown(
         `- **${d.field}** (${d.reasons.join(", ")}): \`${JSON.stringify(d.before)}\` → \`${JSON.stringify(d.after)}\``,
       );
     }
+    if (p.blockedWorseThanLive?.length) {
+      for (const d of p.blockedWorseThanLive) {
+        lines.push(
+          `- ~~${d.field}~~ blocked (BLOCKED_WORSE_THAN_LIVE): kept live \`${JSON.stringify(d.before)}\``,
+        );
+      }
+    }
     lines.push(``);
   }
   lines.push(
     `## Apply`,
-    `With admin credentials configured and the host allowlisted, QA live execute applies Opdater UPDATEs automatically (no separate reconcile confirm).`,
+    `QA improves the live menu only (no PDF-as-truth). With admin credentials and an allowlisted host, Opdater UPDATEs apply automatically.`,
     `Kill switch: \`PORTAL_LIVE_WRITES=0\`.`,
     ``,
   );

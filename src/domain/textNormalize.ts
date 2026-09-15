@@ -68,6 +68,8 @@ function allOcrFixes(): OcrIngredientFix[] {
 export function formatIngredientDisplay(raw: string): string {
   let s = raw.trim().replace(/\s+/g, " ");
   if (!s) return "";
+  s = s.replace(/^[-–—•]\s*/, "");
+  s = s.replace(/\bogæg\b/gi, "og æg").replace(/\bogost\b/gi, "og ost");
   s = stripTrailingPriceNoise(s);
   // Drop dangling conjunctions left by OCR splits
   s = s.replace(/\s+og$/i, "").trim();

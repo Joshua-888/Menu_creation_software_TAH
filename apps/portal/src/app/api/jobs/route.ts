@@ -37,6 +37,7 @@ export async function POST(req: Request) {
   const workflow =
     workflowRaw === "QA_RECONCILE" ? "QA_RECONCILE" : "CREATE_MENU";
   const file = form.get("file");
+  const isQa = workflow === "QA_RECONCILE";
 
   if (!merchantName || !destinationHost) {
     return NextResponse.json(
@@ -54,7 +55,20 @@ export async function POST(req: Request) {
 
   const hasFile = file instanceof File && file.size > 0;
   const hasUrl = Boolean(sourceUrlRaw);
-  if (!hasFile && !hasUrl) {
+
+  // QA improves the live menu only — reject PDF/URL so operators cannot
+  // accidentally treat a source document as truth again.
+  if (isQa && (hasFile || hasUrl)) {
+    return NextResponse.json(
+      {
+        error:
+          "Quality check does not accept a source PDF or URL. It improves the live destination menu only.",
+      },
+      { status: 400 },
+    );
+  }
+
+  if (!isQa && !hasFile && !hasUrl) {
     return NextResponse.json(
       { error: "Provide a menu PDF and/or a source URL" },
       { status: 400 },
@@ -80,7 +94,8 @@ export async function POST(req: Request) {
   }
 
   let sourceType: JobSourceType = "pdf_upload";
-  if (hasFile && hasUrl) sourceType = "pdf_and_url";
+  if (isQa) sourceType = "live_destination";
+  else if (hasFile && hasUrl) sourceType = "pdf_and_url";
   else if (hasUrl && !hasFile) sourceType = "source_url";
 
   const store = getPortalStore();
@@ -88,13 +103,13 @@ export async function POST(req: Request) {
     merchantName,
     destinationHost,
     sourceType,
-    sourceUrl: hasUrl ? sourceUrlRaw : null,
+    sourceUrl: !isQa && hasUrl ? sourceUrlRaw : null,
     createdByEmployeeId: emp.id,
-    status: hasFile ? "QUEUED" : "SOURCE_URL_PENDING",
+    status: isQa || hasFile ? "QUEUED" : "SOURCE_URL_PENDING",
     workflow,
   });
 
-  if (hasFile && file instanceof File) {
+  if (!isQa && hasFile && file instanceof File) {
     const mime = file.type || guessMime(file.name);
     const dir = join(uploadsDir(), job.id);
     mkdirSync(dir, { recursive: true });
@@ -111,7 +126,7 @@ export async function POST(req: Request) {
     });
   }
 
-  if (hasFile) {
+  if (isQa || hasFile) {
     const { scheduleMigrationJob } = await import("@engine/portal/worker.js");
     scheduleMigrationJob(job.id);
   } else {

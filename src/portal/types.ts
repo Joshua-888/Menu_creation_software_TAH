@@ -19,7 +19,11 @@ export type Session = {
   createdAt: string;
 };
 
-export type JobSourceType = "pdf_upload" | "source_url" | "pdf_and_url";
+export type JobSourceType =
+  | "pdf_upload"
+  | "source_url"
+  | "pdf_and_url"
+  | "live_destination";
 
 /** What the operator is trying to do with this job. */
 export type JobWorkflow = "CREATE_MENU" | "QA_RECONCILE";

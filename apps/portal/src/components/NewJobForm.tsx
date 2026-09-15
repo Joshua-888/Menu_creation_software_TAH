@@ -53,40 +53,45 @@ export function NewJobForm({
           required
         />
       </div>
-      <div className="field">
-        <label htmlFor="file">
-          {isQa ? "Source menu PDF (for intended state)" : "Menu PDF"}
-        </label>
-        <input
-          id="file"
-          name="file"
-          type="file"
-          accept=".pdf,application/pdf"
-        />
-        <span className="muted">
-          {isQa
-            ? "Quality check diffs this PDF (after policies) against the live menu. Max 25MB."
-            : "End-to-end create runs require a PDF (max 25MB). Optional source URL can be stored alongside it."}
-        </span>
-      </div>
-      <div className="field">
-        <label htmlFor="sourceUrl">
-          {isQa
-            ? "Live / peer menu URL (optional context)"
-            : "Existing menu / ordering site URL (optional)"}
-        </label>
-        <input
-          id="sourceUrl"
-          name="sourceUrl"
-          type="url"
-          placeholder="https://..."
-        />
-        <span className="muted">
-          {isQa
-            ? "Peer/probability policies still come from observed peer menus in the learning pipeline."
-            : "URL is stored now; HTML extraction remains queued until certified. PDF upload runs end-to-end."}
-        </span>
-      </div>
+      {isQa ? (
+        <p className="muted">
+          Quality check reads the live admin menu and improves it in place
+          (grammar, missing beskrivelse/ingredients, wrong categories, REVIEW
+          stubs). It does not upload a PDF and will not overwrite good live
+          content with a worse source document.
+        </p>
+      ) : (
+        <>
+          <div className="field">
+            <label htmlFor="file">Menu PDF</label>
+            <input
+              id="file"
+              name="file"
+              type="file"
+              accept=".pdf,application/pdf"
+            />
+            <span className="muted">
+              End-to-end create runs require a PDF (max 25MB). Optional source
+              URL can be stored alongside it.
+            </span>
+          </div>
+          <div className="field">
+            <label htmlFor="sourceUrl">
+              Existing menu / ordering site URL (optional)
+            </label>
+            <input
+              id="sourceUrl"
+              name="sourceUrl"
+              type="url"
+              placeholder="https://..."
+            />
+            <span className="muted">
+              URL is stored now; HTML extraction remains queued until certified.
+              PDF upload runs end-to-end.
+            </span>
+          </div>
+        </>
+      )}
       {error ? <p className="error">{error}</p> : null}
       <button className="btn" type="submit" disabled={busy}>
         {busy

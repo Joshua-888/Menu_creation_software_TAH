@@ -56,6 +56,12 @@ import {
   type ProductReconcileDiff,
   type ReconcileField,
 } from "./menuReconcile.js";
+import {
+  buildQaTargetPayload,
+  filterNeverWorseDeltas,
+  liveSnapshotCategoryName,
+  qaTargetHasWriteBlockingIssues,
+} from "./qaLiveImprove.js";
 
 export type DryRunDestinationSnapshot = {
   host: string;
@@ -82,6 +88,7 @@ export const PORTAL_OPDATER_RECONCILE_FIELDS: ReconcileField[] = [
   "variants",
   "additions",
   "basePrice",
+  "categoryIds",
 ];
 
 function toLiveSnapshot(
@@ -91,6 +98,7 @@ function toLiveSnapshot(
     databaseId: p.databaseId,
     menuNumber: p.menuNumber,
     name: p.name,
+    categoryIds: p.categoryIds,
     ...(typeof p.description === "string" ? { description: p.description } : {}),
     ...(typeof p.basePriceOre === "number" ? { basePriceOre: p.basePriceOre } : {}),
     ...(p.variants ? { variants: p.variants } : {}),
@@ -618,7 +626,7 @@ export function buildDryRunWritePlan(input: {
             learned?.ingredients ??
             product.ingredients.map((i) => i.display),
         });
-        let intended = toPayload(
+        const sourcePayload = toPayload(
           product,
           categoryIds,
           learned
@@ -636,46 +644,42 @@ export function buildDryRunWritePlan(input: {
           input.probabilityPolicy,
           category.name,
         );
-        const recovered = recoverProductLabelsForReconcile({
-          name: intended.name,
-          description: intended.description,
-          ingredients: intended.ingredients,
+        const liveCategoryName =
+          liveSnapshotCategoryName(live, input.destination.categories) ||
+          category.name;
+        // Live-first quality merge: never overwrite good live with worse source/PDF.
+        let intended = buildQaTargetPayload({
+          live,
+          sourcePayload,
+          liveCategoryName,
+          destinationCategories: input.destination.categories,
         });
-        // Prefer recovering from live description when live name is header-like
         const liveRecovered = recoverProductLabelsForReconcile({
           name: live.name,
           description: live.description ?? intended.description,
           ingredients: live.ingredients ?? intended.ingredients,
         });
-        if (
-          liveRecovered.reasons.includes("NAME_HEADER_LIKE") &&
-          liveRecovered.name !== live.name
-        ) {
-          intended = {
-            ...intended,
-            name: liveRecovered.name,
-            description: liveRecovered.description || intended.description,
-          };
-        } else if (recovered.name !== intended.name || recovered.description !== intended.description) {
-          intended = {
-            ...intended,
-            name: recovered.name,
-            description: recovered.description,
-          };
-        }
-        const labelReasons = [
-          ...new Set([
-            ...liveRecovered.reasons,
-            ...recovered.reasons,
-          ]),
-        ];
+        const labelReasons = [...new Set(liveRecovered.reasons)];
 
-        const diff = diffProductReconcile({
+        const rawDiff = diffProductReconcile({
           live,
           intended,
           capabilities: input.capabilities,
           labelReasons,
         });
+        const { kept, blocked } = filterNeverWorseDeltas({
+          live,
+          intended,
+          deltas: rawDiff.deltas,
+          liveCategoryName,
+        });
+        const diff: ProductReconcileDiff = {
+          ...rawDiff,
+          deltas: kept,
+          blockedWorseThanLive: blocked,
+          canUpdate:
+            kept.length > 0 && rawDiff.missingCapabilities.length === 0,
+        };
         input.reconcileDiffs?.push(diff);
 
         const safeDeltas = diff.deltas.filter((d) =>
@@ -686,6 +690,12 @@ export function buildDryRunWritePlan(input: {
         );
 
         if (diff.deltas.length === 0) {
+          const worseNote =
+            blocked.length > 0
+              ? `; blocked worse-than-live: ${blocked
+                  .map((d) => d.field)
+                  .join(",")}`
+              : "";
           operations.push(
             planSkipProduct({
               operationId,
@@ -693,7 +703,25 @@ export function buildDryRunWritePlan(input: {
                 ...identity,
                 destinationDatabaseId: match.product.databaseId,
               },
-              reason: "QA reconcile: live matches intended",
+              reason: `QA reconcile: live already good / no safe improvements${worseNote}`,
+            }),
+          );
+          continue;
+        }
+
+        const blockReason = qaTargetHasWriteBlockingIssues(
+          intended,
+          liveCategoryName,
+        );
+        if (blockReason) {
+          operations.push(
+            planReviewProduct({
+              operationId,
+              identity: {
+                ...identity,
+                destinationDatabaseId: match.product.databaseId,
+              },
+              reason: `QA reconcile write gate: ${blockReason}`,
             }),
           );
           continue;
@@ -750,11 +778,12 @@ export function buildDryRunWritePlan(input: {
             },
             payload: intended,
             reason:
-              unsafeDeltas.length > 0
-                ? `QA reconcile Opdater (full card); deferred: ${unsafeDeltas
-                    .map((d) => d.field)
-                    .join(",")}`
-                : "QA reconcile Opdater (full product card)",
+              unsafeDeltas.length > 0 || blocked.length > 0
+                ? `QA live-first Opdater; deferred: ${[
+                    ...unsafeDeltas.map((d) => d.field),
+                    ...blocked.map((d) => `${d.field}:worse`),
+                  ].join(",")}`
+                : "QA live-first Opdater (improve live, never worse)",
             requiredCapabilities: requiredCaps,
             missingCapabilities: [],
           }),

@@ -12,6 +12,7 @@ import {
   fillProductCreateForm,
   setActiveCheckbox,
   setAdditionRows,
+  setCategoryCheckboxes,
   setIngredientRows,
   setVariantRows,
 } from "../tah/write/formFill.js";
@@ -353,6 +354,9 @@ export function createTahPlaywrightDestinationPort(
             priceKr: oreToKrString(a.priceOre),
           })),
         );
+        if (input.payload.categoryIds.length > 0) {
+          await setCategoryCheckboxes(page, input.payload.categoryIds);
+        }
         await setActiveCheckbox(page, input.payload.intendedHidden === true);
 
         const observed = await clickOpdaterAndObserveUpdate({

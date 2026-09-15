@@ -203,7 +203,7 @@ describe("dryRun FOUND reconcile vs create", () => {
     );
   });
 
-  it("QA path emits UPDATE for missing variants and additions", () => {
+  it("QA path UPDATEs defects but skips when live is already good", () => {
     const reconcileDiffs: ReturnType<typeof diffProductReconcile>[] = [];
     const plan = buildDryRunWritePlan({
       runId: "t3",
@@ -231,9 +231,9 @@ describe("dryRun FOUND reconcile vs create", () => {
           {
             ...destination.products[0]!,
             name: "Margarita",
-            description: "Tomat, ost",
-            variants: [{ name: "Alm.", priceOre: 7700 }],
-            ingredients: ["Tomat", "Ost"],
+            description: "",
+            variants: [{ name: "REVIEW", priceOre: 7700 }],
+            ingredients: [],
             additions: [],
           },
         ],
@@ -244,12 +244,58 @@ describe("dryRun FOUND reconcile vs create", () => {
     });
     const productOps = plan.operations.filter((o) => o.entityType === "product");
     expect(productOps.some((o) => o.action === "UPDATE")).toBe(true);
-    expect(
-      productOps.map((o) => o.reason ?? "").join(" | "),
-    ).not.toMatch(/portalOpdaterAdditionsVariantsPrice|deferred/);
     const fields = new Set(
       reconcileDiffs.flatMap((d) => d.deltas.map((x) => x.field)),
     );
-    expect(fields.has("variants") || fields.has("additions")).toBe(true);
+    expect(
+      fields.has("variants") ||
+        fields.has("ingredients") ||
+        fields.has("description"),
+    ).toBe(true);
+
+    // Live already good → no overwrite from thinner source
+    const skipDiffs: ReturnType<typeof diffProductReconcile>[] = [];
+    const skipPlan = buildDryRunWritePlan({
+      runId: "t3b",
+      restaurant: "veronipizza.dk",
+      host: "veronipizza.dk",
+      source: "test.pdf",
+      schemaVersion: "1",
+      domainRuleVersion: "1",
+      adapterVersion: "test",
+      contractFingerprint: "fp",
+      canonical: tinyMenu(),
+      categoryMappings: [
+        {
+          sourceCategoryId: "cat-pizza",
+          sourceCategoryName: "Pizza",
+          outcome: "EXACT_MATCH",
+          destinationCategoryId: "10",
+          destinationCategoryName: "Pizza",
+          reason: "test",
+        },
+      ],
+      destination: {
+        ...destination,
+        products: [
+          {
+            ...destination.products[0]!,
+            name: "Margarita",
+            description: "Tomat, ost, frisk basilikum",
+            variants: [{ name: "Alm.", priceOre: 7700 }],
+            ingredients: ["Tomat", "Ost", "Basilikum"],
+            additions: [{ name: "Ekstra ost", priceOre: 1500 }],
+          },
+        ],
+      },
+      capabilities: M2B_ADAPTER_CAPABILITIES,
+      emitReconcileUpdates: true,
+      reconcileDiffs: skipDiffs,
+    });
+    const skipOps = skipPlan.operations.filter(
+      (o) => o.entityType === "product",
+    );
+    expect(skipOps.some((o) => o.action === "UPDATE")).toBe(false);
+    expect(skipOps.some((o) => o.action === "SKIP")).toBe(true);
   });
 });

@@ -38,3 +38,11 @@ export {
   type ProductReconcileDiff,
   type LiveProductSnapshot,
 } from "./menuReconcile.js";
+export {
+  buildQaTargetPayload,
+  filterNeverWorseDeltas,
+  canonicalMenuFromLiveDestination,
+  classifyMenuPlacementKind,
+  fieldQualityScore,
+  polishIngredientList,
+} from "./qaLiveImprove.js";

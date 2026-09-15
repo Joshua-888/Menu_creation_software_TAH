@@ -290,3 +290,27 @@ export async function setIngredientRows(
       .fill(ingredients[i]!);
   }
 }
+
+/** Set categories[] checkboxes to exactly the given destination category ids. */
+export async function setCategoryCheckboxes(
+  page: Page,
+  categoryIds: string[],
+): Promise<void> {
+  const wanted = new Set(categoryIds.map(String));
+  const boxes = page.locator("input[type='checkbox'][name='categories[]']");
+  const count = await boxes.count();
+  for (let i = 0; i < count; i++) {
+    const box = boxes.nth(i);
+    const id = await box.getAttribute("id");
+    const value = await box.getAttribute("value");
+    const match =
+      (value != null && wanted.has(value)) ||
+      (id != null &&
+        [...wanted].some((cid) => id === `category-${cid}`));
+    if (match) {
+      if (!(await box.isChecked())) await box.check();
+    } else if (await box.isChecked()) {
+      await box.uncheck();
+    }
+  }
+}
