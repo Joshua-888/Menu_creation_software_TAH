@@ -211,7 +211,9 @@ export function recoverProductLabelsForReconcile(input: {
       recoverSalatpizzaDishName({
         name,
         description,
-        ingredients: input.ingredients,
+        ...(input.ingredients != null
+          ? { ingredients: input.ingredients }
+          : {}),
         ...(input.categoryName ? { categoryName: input.categoryName } : {}),
       }) || recoverDishNameFromDescription(description);
     if (recovered && !looksLikeToppingAsProductName(recovered)) {
