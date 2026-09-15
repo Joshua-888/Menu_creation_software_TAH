@@ -517,6 +517,17 @@ export function additionListHasDefects(
   ) {
     return true;
   }
+  // Fries / pommes / grill menus with a pizza-topping dump and no dips
+  if (
+    (/\b(pommes|frites|nuggets?)\b/i.test(blob) ||
+      /\bgrill\b/i.test(categoryName ?? "")) &&
+    additions.length >= 6 &&
+    !additions.some((a) =>
+      /\b(mayo|mayonnaise|remoulade|ketchup)\b/i.test(a.name),
+    )
+  ) {
+    return true;
+  }
   if (additions.length === 0) return false;
   for (const a of additions) {
     if (isInvalidFoodComponent(a.name, productName)) return true;

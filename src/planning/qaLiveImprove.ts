@@ -22,6 +22,14 @@ import {
   sanitizeIngredientList,
 } from "../domain/menuCardQuality.js";
 import {
+  grillTilbehorLooksWrong,
+  inferGrillDescription,
+  inferGrillIngredients,
+  isGrillCategory,
+  preferGrillDipAdditions,
+  productWantsGrillDips,
+} from "../domain/grillCardFill.js";
+import {
   looksLikeCategoryHeaderName,
   recoverProductLabelsForReconcile,
   stripPriceLeakFromDescription,
@@ -39,7 +47,6 @@ import {
   DOMAIN_RULE_ENGINE_VERSION,
 } from "../domain/versions.js";
 import type { DryRunDestinationSnapshot } from "./dryRun.js";
-
 export type MenuPlacementKind =
   | "dip"
   | "pizza"
@@ -188,6 +195,19 @@ export function fieldQualityScore(
       if (drinkLike) {
         return named.length === 0 ? 8 : 0;
       }
+      const grillCtx = {
+        name: ctx?.productName ?? "",
+        categoryName: ctx?.categoryName ?? "",
+      };
+      // Fries / pommes / grill menus: pizza-dump Tilbehør scores 0; dips score high.
+      if (productWantsGrillDips(grillCtx)) {
+        if (grillTilbehorLooksWrong(named, grillCtx)) return 0;
+        const dipHits = named.filter((a) =>
+          /\b(mayo|mayonnaise|remoulade|ketchup)\b/i.test(a.name),
+        ).length;
+        if (dipHits >= 2 && named.length <= 6) return 9;
+        if (named.length === 0) return 1;
+      }
       if (
         additionListHasDefects(named, ctx?.productName, ctx?.categoryName)
       ) {
@@ -281,12 +301,32 @@ export function buildQaTargetPayload(input: {
       ingredients = polishIngredientList(proposal.ingredients, name);
     }
   }
+  // Grill / fries: derive card ingredients from the product name when empty.
+  if (ingredients.length === 0) {
+    const inferred = inferGrillIngredients({
+      name,
+      categoryName: catName,
+      description: live.description ?? source.description,
+    });
+    if (inferred.length) {
+      ingredients = polishIngredientList(inferred, name);
+    }
+  }
 
   let description = (live.description ?? "").trim();
   description = stripPriceLeakFromDescription(
     stripTrailingPriceNoise(description),
   );
   description = polishDescriptionText(description, name);
+  const grillDesc = inferGrillDescription({
+    name,
+    categoryName: catName,
+    description: live.description ?? "",
+    ingredients,
+  });
+  if (grillDesc) {
+    description = grillDesc;
+  }
   const sourceDesc = polishDescriptionText(
     stripPriceLeakFromDescription(
       stripTrailingPriceNoise(source.description || ""),
@@ -339,7 +379,15 @@ export function buildQaTargetPayload(input: {
     if (!addByKey.has(k)) addByKey.set(k, a);
   }
   // Re-sanitize union (clears drinks; reprices flat lists)
-  const additions = polishAdditions([...addByKey.values()], name, catName);
+  let additions = polishAdditions([...addByKey.values()], name, catName);
+  // Grill fries / pommes / Menu-burgers: replace empty or pizza-dump Tilbehør with dips
+  additions = preferGrillDipAdditions(additions, {
+    name,
+    categoryName: catName,
+    description,
+    variants: (live.variants ?? []).map((v) => ({ name: v.name })),
+  });
+  additions = polishAdditions(additions, name, catName);
 
   const liveVars = polishVariants(
     (live.variants ?? []).map((v) => ({
@@ -424,9 +472,10 @@ export function filterNeverWorseDeltas(input: {
     const defective = isLiveFieldDefective(delta.field, delta.before, ctx);
     // Hard prior: always allow clearing Tilbehør / dips off drinks.
     if (delta.field === "additions") {
+      const productName = input.intended.name || input.live.name;
       const drinkLike =
         classifyMenuPlacementKind({
-          name: input.intended.name || input.live.name,
+          name: productName,
           ...(input.liveCategoryName
             ? { categoryName: input.liveCategoryName }
             : {}),
@@ -437,6 +486,25 @@ export function filterNeverWorseDeltas(input: {
           )
         : [];
       if (drinkLike && afterList.length === 0) {
+        kept.push(delta);
+        continue;
+      }
+      // Hard prior: always allow fixing fries/grill Tilbehør to restaurant dips.
+      const grillCtx = {
+        name: productName,
+        categoryName: input.liveCategoryName ?? "",
+      };
+      const beforeList = Array.isArray(delta.before)
+        ? (delta.before as Array<{ name: string }>).filter(
+            (a) => typeof a.name === "string" && a.name.trim().length > 0,
+          )
+        : [];
+      if (
+        productWantsGrillDips(grillCtx) &&
+        (grillTilbehorLooksWrong(beforeList, grillCtx) ||
+          beforeList.length === 0) &&
+        afterList.length > 0
+      ) {
         kept.push(delta);
         continue;
       }
@@ -593,14 +661,17 @@ export function qaTargetHasWriteBlockingIssues(
     ...(liveCategoryName ? { categoryName: liveCategoryName } : {}),
     description: payload.description,
   });
+  // Pizza-like categories need listed toppings. Grill may be name-only on
+  // the source menu — do not block Opdater for Tilbehør / description fills.
   if (
     kind !== "drink" &&
     payload.ingredients.length === 0 &&
-    !DIP_PRODUCT_RE.test(payload.name)
+    !DIP_PRODUCT_RE.test(payload.name) &&
+    !isGrillCategory(liveCategoryName)
   ) {
     if (
-      /pizza|burger|pasta|salad|salat/i.test(liveCategoryName ?? "") ||
-      /pizza|burger|pasta/i.test(payload.name)
+      /pizza|pasta|salad|salat/i.test(liveCategoryName ?? "") ||
+      /pizza|pasta/i.test(payload.name)
     ) {
       return "EMPTY_INGREDIENTS_FOR_FOOD";
     }
