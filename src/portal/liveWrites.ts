@@ -1,25 +1,25 @@
 /**
  * Portal live-write gate — dry-run remains default.
  * Live path requires PORTAL_LIVE_WRITES=1 + allowlisted destination host.
+ *
+ * Allowlist: PORTAL_LIVE_WRITE_HOSTS=host1.dk,host2.dk (comma-separated).
  */
 
 import { M2B_ADAPTER_CAPABILITIES } from "../tah/contracts/evidence.js";
-import { VERONI_CANARY_TARGET } from "../tah/write/types.js";
+import {
+  DEFAULT_LIVE_WRITE_HOSTS,
+  isHostAllowlistedForLiveWrites,
+  normalizeDestinationHost,
+  parseLiveWriteHostAllowlist,
+} from "../tah/write/hostAllowlist.js";
 
-/** Hosts allowed for gated live admin writes (M6.7). */
-export const PORTAL_LIVE_WRITE_HOST_ALLOWLIST = [
-  VERONI_CANARY_TARGET.host,
-] as const;
+export {
+  normalizeDestinationHost,
+  parseLiveWriteHostAllowlist,
+} from "../tah/write/hostAllowlist.js";
 
-export function normalizeDestinationHost(hostOrUrl: string): string {
-  const raw = hostOrUrl.trim().toLowerCase();
-  try {
-    if (raw.includes("://")) return new URL(raw).hostname.replace(/^www\./, "");
-  } catch {
-    /* fall through */
-  }
-  return raw.replace(/^www\./, "").replace(/:\d+$/, "");
-}
+/** @deprecated use parseLiveWriteHostAllowlist */
+export const PORTAL_LIVE_WRITE_HOST_ALLOWLIST = DEFAULT_LIVE_WRITE_HOSTS;
 
 export function isPortalLiveWritesEnabled(
   env: NodeJS.ProcessEnv = process.env,
@@ -29,9 +29,9 @@ export function isPortalLiveWritesEnabled(
 
 export function isDestinationHostAllowlistedForLiveWrites(
   destinationHost: string,
+  env: NodeJS.ProcessEnv = process.env,
 ): boolean {
-  const host = normalizeDestinationHost(destinationHost);
-  return (PORTAL_LIVE_WRITE_HOST_ALLOWLIST as readonly string[]).includes(host);
+  return isHostAllowlistedForLiveWrites(destinationHost, env);
 }
 
 export function evaluatePortalLiveWriteGate(input: {
@@ -43,11 +43,14 @@ export function evaluatePortalLiveWriteGate(input: {
   createCategoryCertified: boolean;
   canLiveExecute: boolean;
   blockers: string[];
+  allowlist: string[];
 } {
   const env = input.env ?? process.env;
+  const allowlist = parseLiveWriteHostAllowlist(env);
   const enabled = isPortalLiveWritesEnabled(env);
   const allowlisted = isDestinationHostAllowlistedForLiveWrites(
     input.destinationHost,
+    env,
   );
   const createCategoryCertified =
     M2B_ADAPTER_CAPABILITIES.write.createCategory === "CERTIFIED";
@@ -55,7 +58,7 @@ export function evaluatePortalLiveWriteGate(input: {
   if (!enabled) blockers.push("PORTAL_LIVE_WRITES not set to 1");
   if (!allowlisted) {
     blockers.push(
-      `destination host not allowlisted (need ${PORTAL_LIVE_WRITE_HOST_ALLOWLIST.join(",")})`,
+      `destination host not allowlisted (need one of: ${allowlist.join(",")}; set PORTAL_LIVE_WRITE_HOSTS)`,
     );
   }
   if (!createCategoryCertified) blockers.push("createCategory not certified");
@@ -65,5 +68,6 @@ export function evaluatePortalLiveWriteGate(input: {
     createCategoryCertified,
     canLiveExecute: blockers.length === 0,
     blockers,
+    allowlist,
   };
 }

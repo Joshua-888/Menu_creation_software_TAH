@@ -61,6 +61,17 @@ export type DestinationPort = {
   }>;
   /** Optional: list categories for `__resolve__:Name` tokens after create. */
   listCategories?(): Promise<Array<{ databaseId: string; name: string }>>;
+  /**
+   * Optional certified Opdater path (name / description / ingredients).
+   * Never uses full updateProduct API.
+   */
+  updateProductViaOpdater?(input: {
+    databaseId: string;
+    payload: PlannedProductPayload;
+  }): Promise<{
+    outcome: "UPDATED" | "FAILED";
+    error?: string;
+  }>;
 };
 
 export type ExecutorGate = {
@@ -423,6 +434,25 @@ export async function executeMigrationPlan(input: {
       continue;
     }
 
+    if (op.action === "UPDATE" && op.expectedPayload) {
+      await processUpdateOp({
+        plan,
+        op,
+        store,
+        destination,
+        onVerified: () => {
+          verified += 1;
+        },
+        onFailed: () => {
+          failed += 1;
+        },
+        onBlocked: () => {
+          blocked += 1;
+        },
+      });
+      continue;
+    }
+
     if (op.action !== "CREATE" || !op.expectedPayload) {
       blocked += 1;
       continue;
@@ -464,6 +494,112 @@ export async function executeMigrationPlan(input: {
     failed,
     duplicatesCreated,
   };
+}
+
+async function processUpdateOp(input: {
+  plan: MigrationWritePlan;
+  op: WritePlanOperation;
+  store: RunStore;
+  destination: DestinationPort;
+  onVerified: () => void;
+  onFailed: () => void;
+  onBlocked: () => void;
+}): Promise<void> {
+  const { plan, op, store, destination } = input;
+  let rec = store.getOperation(plan.runId, op.operationId)!;
+  if (rec.state === "VERIFIED") {
+    input.onVerified();
+    return;
+  }
+  const expected = op.expectedPayload;
+  if (!expected) {
+    store.upsertOperation({
+      ...rec,
+      state: "BLOCKED",
+      lastErrorMessage: "UPDATE missing expectedPayload",
+      updatedAt: now(),
+    });
+    input.onBlocked();
+    return;
+  }
+  if (!destination.updateProductViaOpdater) {
+    store.upsertOperation({
+      ...rec,
+      state: "BLOCKED",
+      lastErrorMessage: "destination port does not support updateProductViaOpdater",
+      updatedAt: now(),
+    });
+    input.onBlocked();
+    return;
+  }
+  const databaseId =
+    op.identity.destinationDatabaseId ?? rec.destinationId ?? null;
+  if (!databaseId) {
+    store.upsertOperation({
+      ...rec,
+      state: "BLOCKED",
+      lastErrorMessage: "UPDATE missing destinationDatabaseId",
+      updatedAt: now(),
+    });
+    input.onBlocked();
+    return;
+  }
+
+  const result = await destination.updateProductViaOpdater({
+    databaseId,
+    payload: expected,
+  });
+  rec = {
+    ...rec,
+    attemptCount: rec.attemptCount + 1,
+    destinationId: databaseId,
+    updatedAt: now(),
+  };
+  if (result.outcome === "FAILED") {
+    store.upsertOperation({
+      ...rec,
+      state: "WRITE_FAILED",
+      lastErrorCategory: "ADMIN_WRITE_ERROR",
+      lastErrorMessage: result.error ?? "Opdater update failed",
+      updatedAt: now(),
+    });
+    input.onFailed();
+    return;
+  }
+
+  store.upsertOperation({
+    ...rec,
+    state: "WRITTEN",
+    updatedAt: now(),
+  });
+
+  const actual = await destination.readProduct(databaseId);
+  const diffs: string[] = [];
+  if (actual.name.trim() !== expected.name.trim()) diffs.push("name");
+  if (actual.description.trim() !== expected.description.trim()) {
+    diffs.push("description");
+  }
+  const actualIngs = actual.ingredients.map((i) => i.name.trim().toLowerCase()).sort();
+  const expectedIngs = expected.ingredients.map((i) => i.trim().toLowerCase()).sort();
+  if (JSON.stringify(actualIngs) !== JSON.stringify(expectedIngs)) {
+    diffs.push("ingredients");
+  }
+  if (diffs.length) {
+    store.upsertOperation({
+      ...rec,
+      state: "VERIFY_FAILED",
+      lastErrorMessage: `read-back mismatch: ${diffs.join(",")}`,
+      updatedAt: now(),
+    });
+    input.onFailed();
+    return;
+  }
+  store.upsertOperation({
+    ...rec,
+    state: "VERIFIED",
+    updatedAt: now(),
+  });
+  input.onVerified();
 }
 
 async function processCategoryCreateOp(input: {

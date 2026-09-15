@@ -7,6 +7,7 @@ import {
   planCreateProduct,
   planReviewProduct,
   planSkipProduct,
+  planUpdateProduct,
   type MigrationWritePlan,
   type PlannedProductPayload,
   type WritePlanOperation,
@@ -22,6 +23,39 @@ import {
   type CategoryMappingResult,
 } from "./categoryMapping.js";
 import { assertDecisionsResolvedForWrite } from "../decisions/transforms.js";
+import {
+  assessLabelQuality,
+  labelQualityBlocksWrite,
+} from "../domain/textNormalize.js";
+import { lookupLearnedLabelCorrection } from "../decisions/labelQuality.js";
+import type { DecisionStore } from "../decisions/store.js";
+import {
+  defaultStructurePattern,
+  loadActiveStructurePattern,
+} from "../learning/structurePolicy.js";
+import type { StructurePatternSummary } from "../learning/peerMenuStructure.js";
+import {
+  filterAdditionsWithTrace,
+  type ProbabilityPolicyMap,
+} from "../learning/categoryLikelihood.js";
+import { mapProductChoicesToWriteFields } from "./structureMapping.js";
+import {
+  applyProbabilityFilterToMenu,
+  fanOutRestaurantAdditions,
+  type ProductPolicyTrace,
+} from "./structureMapping.js";
+import { menuNumbersWithKeepTilbehorOverride } from "../learning/tilbehorOverride.js";
+import { proposePizzaToppingsFromDescription } from "../learning/pizzaToppings.js";
+import { applyCategoryVariantFanOut } from "../learning/categorySizeVariantPolicy.js";
+import {
+  capabilitiesForReconcileFields,
+  diffProductReconcile,
+  missingReconcileCapabilities,
+  recoverProductLabelsForReconcile,
+  type LiveProductSnapshot,
+  type ProductReconcileDiff,
+  type ReconcileField,
+} from "./menuReconcile.js";
 
 export type DryRunDestinationSnapshot = {
   host: string;
@@ -32,8 +66,35 @@ export type DryRunDestinationSnapshot = {
     name: string;
     categoryIds: string[];
     listStatus?: string;
+    description?: string;
+    basePriceOre?: number;
+    variants?: Array<{ name: string; priceOre: number }>;
+    ingredients?: string[];
+    additions?: Array<{ name: string; priceOre: number }>;
   }>;
 };
+
+/** Fields the portal Opdater path can apply this hour. */
+export const PORTAL_OPDATER_RECONCILE_FIELDS: ReconcileField[] = [
+  "name",
+  "description",
+  "ingredients",
+];
+
+function toLiveSnapshot(
+  p: DryRunDestinationSnapshot["products"][number],
+): LiveProductSnapshot {
+  return {
+    databaseId: p.databaseId,
+    menuNumber: p.menuNumber,
+    name: p.name,
+    ...(typeof p.description === "string" ? { description: p.description } : {}),
+    ...(typeof p.basePriceOre === "number" ? { basePriceOre: p.basePriceOre } : {}),
+    ...(p.variants ? { variants: p.variants } : {}),
+    ...(p.ingredients ? { ingredients: p.ingredients } : {}),
+    ...(p.additions ? { additions: p.additions } : {}),
+  };
+}
 
 function requiredCapsForCreate(product: CanonicalProduct): string[] {
   const caps = new Set<string>([
@@ -67,30 +128,73 @@ function missingCaps(
 function toPayload(
   product: CanonicalProduct,
   categoryIds: string[],
+  overrides?: {
+    name?: string;
+    description?: string;
+    ingredients?: string[];
+  },
+  structurePattern?: StructurePatternSummary | null,
+  probabilityPolicy?: ProbabilityPolicyMap | null,
+  categoryName?: string,
 ): PlannedProductPayload {
+  const desc = overrides?.description ?? product.description ?? "";
+  let ingredientList =
+    overrides?.ingredients ?? product.ingredients.map((i) => i.display);
+  if (!ingredientList.some((i) => i.trim().length > 0)) {
+    const proposal = proposePizzaToppingsFromDescription({
+      name: overrides?.name ?? product.name,
+      ...(categoryName ? { categoryName } : {}),
+      description: desc,
+      existingIngredients: ingredientList,
+    });
+    if (proposal) {
+      ingredientList = proposal.ingredients;
+    }
+  }
+  const assessment = assessLabelQuality({
+    name: overrides?.name ?? product.name,
+    description: desc,
+    ingredients: ingredientList,
+  });
+  const pattern = structurePattern ?? defaultStructurePattern();
+  const mapped = mapProductChoicesToWriteFields(product, pattern);
+  let additions = mapped.additions.length
+    ? mapped.additions
+    : product.addOns.map((a) => ({
+        name: a.name,
+        priceOre: a.price ?? 0,
+      }));
+  if (probabilityPolicy) {
+    additions = filterAdditionsWithTrace({
+      name: overrides?.name ?? product.name,
+      ...(categoryName ? { categoryNames: [categoryName] } : {}),
+      ...(desc ? { description: desc } : {}),
+      additions,
+      policy: probabilityPolicy,
+    }).after;
+  }
   return {
     sourceId: product.sourceId,
     menuNumber:
       product.assignedMenuNumber ?? product.sourceMenuNumber ?? "",
-    name: product.name,
-    description: product.description ?? "",
+    name: assessment.repaired.name || product.name,
+    description:
+      assessment.repaired.description || desc,
     basePriceOre: product.basePrice ?? 0,
     categoryIds,
-    variants: product.variants.map((v) => ({
-      name: v.name,
-      surchargeOre: v.surcharge,
-    })),
-    ingredients: product.ingredients.map((i) => i.display),
-    additions: product.addOns.map((a) => ({
-      name: a.name,
-      priceOre: a.price ?? 0,
-    })),
+    variants: mapped.variants,
+    ingredients: assessment.repaired.ingredients.length
+      ? assessment.repaired.ingredients
+      : ingredientList,
+    additions,
     intendedHidden: true,
   };
 }
 
 /**
  * Build a DRY_RUN WritePlan. Never mutates destination.
+ * When probabilityPolicy (or collector) is provided, category-likelihood filtering
+ * runs after Tilbehør fan-out so plans match peer-standardized dip/meat rules.
  */
 export function buildDryRunWritePlan(input: {
   runId: string;
@@ -112,10 +216,120 @@ export function buildDryRunWritePlan(input: {
     string,
     { destinationCategoryId: string; destinationCategoryName: string }
   >;
+  /** Optional decision store for learned label corrections. */
+  decisionStore?: DecisionStore | null;
+  /** Peer-learned structure pattern; falls back to store ACTIVE policy or defaults. */
+  structurePattern?: StructurePatternSummary | null;
+  /** Category-likelihood policy; dips/meat filtered in plan when set. */
+  probabilityPolicy?: ProbabilityPolicyMap | null;
+  /** Optional sink filled with per-product policy traces for owner reports. */
+  policyTraces?: ProductPolicyTrace[];
+  /**
+   * When true (QA_RECONCILE), FOUND products emit UPDATE via certified Opdater
+   * caps for name/description/ingredients instead of blanket BLOCK.
+   */
+  emitReconcileUpdates?: boolean;
+  /** Optional sink for reconcile diffs (QA report). */
+  reconcileDiffs?: ProductReconcileDiff[];
 }): MigrationWritePlan {
   if (input.decisionCases) {
     assertDecisionsResolvedForWrite({ cases: input.decisionCases });
   }
+
+  const structurePattern =
+    input.structurePattern ??
+    (input.decisionStore
+      ? loadActiveStructurePattern(input.decisionStore)
+      : null) ??
+    defaultStructurePattern();
+
+  let canonical = input.canonical;
+
+  // SEMANTIC_RULE: category structural variants (Alm/Fam, Deep, Glutenfri, …)
+  // before Tilbehør fan-out / probability, so write mapping sees full size axes.
+  {
+    const fan = applyCategoryVariantFanOut({
+      menu: canonical,
+      policy:
+        structurePattern.categoryVariantFanOut ??
+        defaultStructurePattern().categoryVariantFanOut,
+    });
+    canonical = fan.menu;
+    if (input.policyTraces) {
+      for (const t of fan.traces) {
+        if (!t.applied) continue;
+        for (const u of t.productsUpdated) {
+          input.policyTraces.push({
+            menuNumber: u.menuNumber,
+            sourceId: u.sourceId,
+            name: "",
+            categoryName: t.categoryName,
+            kind: "other",
+            reasonCodes: ["CATEGORY_STRUCTURAL_VARIANT_FANOUT"],
+            additionsBefore: [],
+            additionsAfter: [],
+            removed: [],
+            fanOutTilbehor: false,
+            structureNotes: [
+              `category structural variants → [${t.kindsApplied.join(", ")}] ` +
+                `(${u.beforeVariants.join("|") || "∅"} → ${u.afterVariants.join("|")})`,
+            ],
+          });
+        }
+      }
+    }
+  }
+
+  let fanOutMenus: string[] = [];
+  let keepTilbehorMenus: Set<string> = new Set();
+  if (input.decisionStore) {
+    keepTilbehorMenus = menuNumbersWithKeepTilbehorOverride(
+      input.decisionStore.facts,
+      input.restaurant,
+    );
+    const fan = fanOutRestaurantAdditions({
+      menu: canonical,
+      registry: input.decisionStore.facts,
+      restaurantKey: input.restaurant,
+    });
+    canonical = fan.menu;
+    fanOutMenus = fan.fanOutMenus;
+  }
+
+  if (input.probabilityPolicy) {
+    const filtered = applyProbabilityFilterToMenu({
+      menu: canonical,
+      policy: input.probabilityPolicy,
+      fanOutMenus,
+      keepTilbehorMenus,
+    });
+    canonical = filtered.menu;
+    if (input.policyTraces) {
+      input.policyTraces.push(...filtered.traces);
+    }
+  } else if (input.policyTraces && fanOutMenus.length) {
+    for (const cat of canonical.categories) {
+      for (const p of cat.products) {
+        const menuNumber = p.sourceMenuNumber ?? p.assignedMenuNumber ?? null;
+        if (menuNumber && fanOutMenus.includes(menuNumber)) {
+          input.policyTraces.push({
+            menuNumber,
+            sourceId: p.sourceId,
+            name: p.name,
+            categoryName: cat.name,
+            kind: "other",
+            reasonCodes: ["FANOUT_TILBEHOR"],
+            additionsBefore: (p.addOns ?? []).map((a) => a.name),
+            additionsAfter: (p.addOns ?? []).map((a) => a.name),
+            removed: [],
+            fanOutTilbehor: true,
+            structureNotes: [],
+          });
+        }
+      }
+    }
+  }
+
   const catBySource = new Map(
     input.categoryMappings.map((m) => [m.sourceCategoryId, m]),
   );
@@ -127,12 +341,12 @@ export function buildDryRunWritePlan(input: {
     databaseId: p.databaseId,
     menuNumber: p.menuNumber,
     name: p.name,
-    description: "",
-    basePriceOre: 0,
+    description: p.description ?? "",
+    basePriceOre: p.basePriceOre ?? 0,
     categoryIds: p.categoryIds,
-    variants: [],
-    ingredients: [],
-    additions: [],
+    variants: p.variants ?? [],
+    ingredients: (p.ingredients ?? []).map((name) => ({ name })),
+    additions: p.additions ?? [],
     listStatus: p.listStatus ?? "",
   }));
 
@@ -146,7 +360,7 @@ export function buildDryRunWritePlan(input: {
     return `__resolve__:${categoryName.trim()}`;
   }
 
-  for (const category of input.canonical.categories) {
+  for (const category of canonical.categories) {
     const mapping = catBySource.get(category.sourceId);
     for (const product of category.products) {
       opSeq += 1;
@@ -316,9 +530,14 @@ export function buildDryRunWritePlan(input: {
           ? effectiveMapping.destinationCategoryId
           : undefined;
       const match = matchDestinationByEvidence(destCatalog, {
-        ...(menuForMatch ? { menuNumber: menuForMatch } : {}),
-        name: product.name,
-        ...(resolvedCatHint ? { categoryHint: resolvedCatHint } : {}),
+        // Prefer menu-number identity when available so CREATE BLOCKs (and QA
+        // UPDATEs) existing live rows even when the live name is header-like garbage.
+        ...(menuForMatch
+          ? { menuNumber: menuForMatch }
+          : { name: product.name }),
+        ...(resolvedCatHint && !menuForMatch
+          ? { categoryHint: resolvedCatHint }
+          : {}),
       });
 
       if (match.outcome === "AMBIGUOUS") {
@@ -336,16 +555,191 @@ export function buildDryRunWritePlan(input: {
       const missing = missingCaps(required, input.capabilities);
 
       if (match.outcome === "FOUND") {
+        if (!input.emitReconcileUpdates) {
+          operations.push(
+            planBlockProduct({
+              operationId,
+              identity: {
+                ...identity,
+                destinationDatabaseId: match.product.databaseId,
+              },
+              reason:
+                "destination product exists; create path does not update live products",
+              missingCapabilities: ["updateProduct"],
+            }),
+          );
+          continue;
+        }
+
+        const live = toLiveSnapshot({
+          databaseId: match.product.databaseId,
+          menuNumber: match.product.menuNumber,
+          name: match.product.name,
+          categoryIds: match.product.categoryIds,
+          description: match.product.description,
+          basePriceOre: match.product.basePriceOre,
+          variants: match.product.variants,
+          ingredients: match.product.ingredients.map((i) => i.name),
+          additions: match.product.additions,
+        });
+
+        const menuForLabel =
+          product.assignedMenuNumber ?? product.sourceMenuNumber ?? "";
+        const learned =
+          input.decisionStore != null
+            ? lookupLearnedLabelCorrection(input.decisionStore, {
+                restaurantKey: input.restaurant,
+                menuNumber: menuForLabel,
+                name: product.name,
+                ingredients: product.ingredients.map((i) => i.display),
+              })
+            : null;
+        const labelAssessment = assessLabelQuality({
+          name: learned?.name ?? product.name,
+          description: learned?.description ?? product.description ?? "",
+          ingredients:
+            learned?.ingredients ??
+            product.ingredients.map((i) => i.display),
+        });
+        let intended = toPayload(
+          product,
+          categoryIds,
+          learned
+            ? {
+                name: learned.name,
+                description: learned.description ?? "",
+                ingredients: learned.ingredients,
+              }
+            : {
+                name: labelAssessment.repaired.name,
+                description: labelAssessment.repaired.description,
+                ingredients: labelAssessment.repaired.ingredients,
+              },
+          structurePattern,
+          input.probabilityPolicy,
+          category.name,
+        );
+        const recovered = recoverProductLabelsForReconcile({
+          name: intended.name,
+          description: intended.description,
+          ingredients: intended.ingredients,
+        });
+        // Prefer recovering from live description when live name is header-like
+        const liveRecovered = recoverProductLabelsForReconcile({
+          name: live.name,
+          description: live.description ?? intended.description,
+          ingredients: live.ingredients ?? intended.ingredients,
+        });
+        if (
+          liveRecovered.reasons.includes("NAME_HEADER_LIKE") &&
+          liveRecovered.name !== live.name
+        ) {
+          intended = {
+            ...intended,
+            name: liveRecovered.name,
+            description: liveRecovered.description || intended.description,
+          };
+        } else if (recovered.name !== intended.name || recovered.description !== intended.description) {
+          intended = {
+            ...intended,
+            name: recovered.name,
+            description: recovered.description,
+          };
+        }
+        const labelReasons = [
+          ...new Set([
+            ...liveRecovered.reasons,
+            ...recovered.reasons,
+          ]),
+        ];
+
+        const diff = diffProductReconcile({
+          live,
+          intended,
+          capabilities: input.capabilities,
+          labelReasons,
+        });
+        input.reconcileDiffs?.push(diff);
+
+        const safeDeltas = diff.deltas.filter((d) =>
+          PORTAL_OPDATER_RECONCILE_FIELDS.includes(d.field),
+        );
+        const unsafeDeltas = diff.deltas.filter(
+          (d) => !PORTAL_OPDATER_RECONCILE_FIELDS.includes(d.field),
+        );
+
+        if (diff.deltas.length === 0) {
+          operations.push(
+            planSkipProduct({
+              operationId,
+              identity: {
+                ...identity,
+                destinationDatabaseId: match.product.databaseId,
+              },
+              reason: "QA reconcile: live matches intended",
+            }),
+          );
+          continue;
+        }
+
+        if (safeDeltas.length === 0) {
+          operations.push(
+            planBlockProduct({
+              operationId,
+              identity: {
+                ...identity,
+                destinationDatabaseId: match.product.databaseId,
+              },
+              reason: `QA reconcile: diffs only on non-portal Opdater fields (${unsafeDeltas
+                .map((d) => d.field)
+                .join(",")})`,
+              missingCapabilities: [
+                "portalOpdaterAdditionsVariantsPrice",
+                ...diff.missingCapabilities,
+              ],
+            }),
+          );
+          continue;
+        }
+
+        const requiredCaps = capabilitiesForReconcileFields(
+          safeDeltas.map((d) => d.field),
+        );
+        const missingUpd = missingReconcileCapabilities(
+          requiredCaps,
+          input.capabilities,
+        );
+        if (missingUpd.length) {
+          operations.push(
+            planBlockProduct({
+              operationId,
+              identity: {
+                ...identity,
+                destinationDatabaseId: match.product.databaseId,
+              },
+              reason: `QA reconcile: missing certified caps ${missingUpd.join(",")}`,
+              missingCapabilities: missingUpd,
+            }),
+          );
+          continue;
+        }
+
         operations.push(
-          planBlockProduct({
+          planUpdateProduct({
             operationId,
             identity: {
               ...identity,
               destinationDatabaseId: match.product.databaseId,
             },
+            payload: intended,
             reason:
-              "destination product exists; updateProduct capability UNCERTIFIED",
-            missingCapabilities: ["updateProduct"],
+              unsafeDeltas.length > 0
+                ? `QA reconcile Opdater (safe fields); deferred: ${unsafeDeltas
+                    .map((d) => d.field)
+                    .join(",")}`
+                : "QA reconcile Opdater (name/description/ingredients)",
+            requiredCapabilities: requiredCaps,
+            missingCapabilities: [],
           }),
         );
         continue;
@@ -374,10 +768,57 @@ export function buildDryRunWritePlan(input: {
         continue;
       }
 
+      const menuForLabel =
+        product.assignedMenuNumber ?? product.sourceMenuNumber ?? "";
+      const learned =
+        input.decisionStore != null
+          ? lookupLearnedLabelCorrection(input.decisionStore, {
+              restaurantKey: input.restaurant,
+              menuNumber: menuForLabel,
+              name: product.name,
+              ingredients: product.ingredients.map((i) => i.display),
+            })
+          : null;
+      const labelAssessment = assessLabelQuality({
+        name: learned?.name ?? product.name,
+        description:
+          learned?.description ?? product.description ?? "",
+        ingredients:
+          learned?.ingredients ??
+          product.ingredients.map((i) => i.display),
+      });
+      if (!learned && labelQualityBlocksWrite(labelAssessment)) {
+        operations.push(
+          planReviewProduct({
+            operationId,
+            identity,
+            reason: `LABEL_QUALITY_${labelAssessment.severity}: ${labelAssessment.reasons.join(",")}; correct name/ingredients before create`,
+          }),
+        );
+        continue;
+      }
+
       operations.push(
         planCreateProduct({
           operationId,
-          payload: toPayload(product, categoryIds),
+          payload: toPayload(
+            product,
+            categoryIds,
+            learned
+              ? {
+                  name: learned.name,
+                  description: learned.description ?? "",
+                  ingredients: learned.ingredients,
+                }
+              : {
+                  name: labelAssessment.repaired.name,
+                  description: labelAssessment.repaired.description,
+                  ingredients: labelAssessment.repaired.ingredients,
+                },
+            structurePattern,
+            input.probabilityPolicy,
+            category.name,
+          ),
           requiredCapabilities: required,
           missingCapabilities: [],
         }),

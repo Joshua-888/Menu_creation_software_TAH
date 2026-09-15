@@ -102,5 +102,7 @@ Extraction never writes to TakeAwayHero. Browser automation never makes menu-bus
 
 - **Loop A (source patterns):** correction → fixture → failing test → fix → regression green → merge.
 - **Loop B (admin UI):** drift → block writes → repair mode → new adapter version → canary certify → activate.
+- **Loop C (decisions):** see `docs/DECISION_LEARNING.md` (M6).
+- **Loop D (peer structure + probability):** M71–M76 Veroni peer-ops track — observe peers → distill SEMANTIC_RULE + category-likelihood policy → dry-run with Policy Application Report → gated apply. **M77** closes feedback: Tilbehør strip review → HumanDecision + EXACT_PRODUCT BUSINESS_FACT overrides. **M78–M79** recover pizza toppings from description into DERIVED ingredients (excluding dips) and clear domain `MISSING_SOURCE_SUPPORTED_INGREDIENTS`; stratified peer sampling. **Separate from blocked formal M3.** Owner audit: `npm run m76:policy-report`. See `docs/LEARNING_SYSTEM.md`.
 
-Never mix the two. Never promote a single restaurant correction to a global rule without the fixture/test path.
+Never mix the loops. Never promote a single restaurant correction to a global rule without the fixture/test path. Never copy peer prices/option lists as Veroni BUSINESS_FACT.

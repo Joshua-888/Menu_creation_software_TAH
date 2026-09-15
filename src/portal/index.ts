@@ -9,15 +9,46 @@ export {
   SESSION_COOKIE,
   readBootstrapFromEnv,
 } from "./auth.js";
-export { PortalStore, getPortalStore, resetPortalStoreForTests } from "./store.js";
+export { PortalStore, getPortalStore, resetPortalStoreForTests, tryNormalizeHost } from "./store.js";
 export { submitReviewAnswer } from "./review.js";
 export { readJobArtifact, reconcileJobStatusFromArtifacts } from "./artifacts.js";
+export {
+  buildMerchantDashboard,
+  statusLabel,
+  statusTone,
+  workflowLabel,
+} from "./merchantDashboard.js";
+export type { MerchantDashboardRow } from "./merchantDashboard.js";
+export {
+  openPortalDecisionStore,
+  listOperatorFacingPolicies,
+  createGlobalOperatorPolicy,
+  OPERATOR_GUIDANCE_DECISION_TYPE,
+} from "./operatorPolicies.js";
+export type { OperatorPolicyView } from "./operatorPolicies.js";
+export {
+  buildPolicyCatalog,
+  BUILT_IN_SEMANTIC_RULES,
+  deprecateStorePolicy,
+  activateStorePolicy,
+  updateOperatorGuidancePolicy,
+} from "./policyCatalog.js";
+export type {
+  BuiltInSemanticRule,
+  ArtifactPolicyView,
+  PolicyCatalog,
+} from "./policyCatalog.js";
 export {
   evaluatePortalLiveWriteGate,
   isPortalLiveWritesEnabled,
   isDestinationHostAllowlistedForLiveWrites,
   PORTAL_LIVE_WRITE_HOST_ALLOWLIST,
 } from "./liveWrites.js";
+export {
+  isReconcileWriteConfirmed,
+  assertReconcileWriteConfirmed,
+  reconcileWriteConfirmPath,
+} from "./reconcileWriteGate.js";
 export {
   portalDataDir,
   portalDbPath,

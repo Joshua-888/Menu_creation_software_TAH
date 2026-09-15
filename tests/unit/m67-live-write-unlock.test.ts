@@ -50,6 +50,18 @@ describe("portal live write gate", () => {
     expect(gated.canLiveExecute).toBe(true);
     expect(gated.blockers).toEqual([]);
   });
+
+  it("opens for env-allowlisted merchant hosts", () => {
+    const gated = evaluatePortalLiveWriteGate({
+      destinationHost: "https://new-merchant.dk",
+      env: {
+        PORTAL_LIVE_WRITES: "1",
+        PORTAL_LIVE_WRITE_HOSTS: "new-merchant.dk,second-merchant.dk",
+      },
+    });
+    expect(gated.allowlisted).toBe(true);
+    expect(gated.canLiveExecute).toBe(true);
+  });
 });
 
 describe("executor DestinationPort createCategory", () => {

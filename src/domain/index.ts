@@ -11,5 +11,8 @@ export * from "./numbering.js";
 export * from "./variants.js";
 export * from "./pricing.js";
 export * from "./ingredients.js";
+export * from "./learnedTextFixes.js";
+export * from "./textNormalize.js";
 export * from "./validation.js";
+export * from "./issueLifecycle.js";
 export * from "./engine.js";

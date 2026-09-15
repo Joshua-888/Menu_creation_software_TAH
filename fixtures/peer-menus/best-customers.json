@@ -1,0 +1,135 @@
+[
+  {
+    "host": "peer-a.example",
+    "restaurantKey": "peer-a.example",
+    "observedAt": "2026-09-11T00:00:00.000Z",
+    "source": "fixture",
+    "products": [
+      {
+        "menuNumber": "1",
+        "name": "Pizza Margherita",
+        "variants": [
+          { "name": "Alm.", "priceOre": 0 },
+          { "name": "Familie", "priceOre": 9000 }
+        ],
+        "additions": [
+          { "name": "Remoulade", "priceOre": 1000 },
+          { "name": "Ketchup", "priceOre": 1000 },
+          { "name": "Salatmayonnaise", "priceOre": 1000 }
+        ]
+      },
+      {
+        "menuNumber": "2",
+        "name": "Pizza Pepperoni",
+        "variants": [
+          { "name": "Alm.", "priceOre": 0 },
+          { "name": "Familie", "priceOre": 9000 }
+        ],
+        "additions": [
+          { "name": "Remoulade", "priceOre": 1000 },
+          { "name": "Ketchup", "priceOre": 1000 },
+          { "name": "Salatmayonnaise", "priceOre": 1000 }
+        ]
+      },
+      {
+        "menuNumber": "3",
+        "name": "Pizza Vesuvio",
+        "variants": [
+          { "name": "Alm.", "priceOre": 0 },
+          { "name": "Familie", "priceOre": 9000 }
+        ],
+        "additions": [
+          { "name": "Remoulade", "priceOre": 1000 },
+          { "name": "Ketchup", "priceOre": 1000 },
+          { "name": "Salatmayonnaise", "priceOre": 1000 }
+        ]
+      },
+      {
+        "menuNumber": "40",
+        "name": "Pita",
+        "variants": [
+          { "name": "Kebab", "priceOre": 0 },
+          { "name": "Kylling", "priceOre": 0 },
+          { "name": "Falafel", "priceOre": 0 }
+        ],
+        "additions": [
+          { "name": "Remoulade", "priceOre": 1000 },
+          { "name": "Ketchup", "priceOre": 1000 },
+          { "name": "Salatmayonnaise", "priceOre": 1000 }
+        ]
+      },
+      {
+        "menuNumber": "41",
+        "name": "Durum",
+        "variants": [
+          { "name": "Kebab", "priceOre": 0 },
+          { "name": "Kylling", "priceOre": 0 },
+          { "name": "Skinke", "priceOre": 0 }
+        ],
+        "additions": [
+          { "name": "Remoulade", "priceOre": 1000 },
+          { "name": "Ketchup", "priceOre": 1000 },
+          { "name": "Salatmayonnaise", "priceOre": 1000 }
+        ]
+      }
+    ]
+  },
+  {
+    "host": "peer-b.example",
+    "restaurantKey": "peer-b.example",
+    "observedAt": "2026-09-11T00:00:00.000Z",
+    "source": "fixture",
+    "products": [
+      {
+        "menuNumber": "10",
+        "name": "Burger",
+        "variants": [
+          { "name": "Alm.", "priceOre": 0 },
+          { "name": "Menu", "priceOre": 3000 }
+        ],
+        "additions": [
+          { "name": "Ketchup", "priceOre": 500 },
+          { "name": "Remoulade", "priceOre": 500 },
+          { "name": "Kylling", "priceOre": 0 },
+          { "name": "Oksekød", "priceOre": 0 }
+        ]
+      },
+      {
+        "menuNumber": "11",
+        "name": "Wrap",
+        "variants": [
+          { "name": "Alm.", "priceOre": 0 },
+          { "name": "Menu", "priceOre": 3000 }
+        ],
+        "additions": [
+          { "name": "Ketchup", "priceOre": 500 },
+          { "name": "Remoulade", "priceOre": 500 },
+          { "name": "Kylling", "priceOre": 0 },
+          { "name": "Falafel", "priceOre": 0 }
+        ]
+      },
+      {
+        "menuNumber": "12",
+        "name": "Salatbox",
+        "variants": [{ "name": "Alm.", "priceOre": 0 }],
+        "additions": [
+          { "name": "Ketchup", "priceOre": 500 },
+          { "name": "Remoulade", "priceOre": 500 }
+        ]
+      },
+      {
+        "menuNumber": "50",
+        "name": "Kebab tallerken",
+        "variants": [
+          { "name": "Kebab", "priceOre": 0 },
+          { "name": "Kylling", "priceOre": 0 },
+          { "name": "Mix", "priceOre": 0 }
+        ],
+        "additions": [
+          { "name": "Ketchup", "priceOre": 500 },
+          { "name": "Remoulade", "priceOre": 500 }
+        ]
+      }
+    ]
+  }
+]

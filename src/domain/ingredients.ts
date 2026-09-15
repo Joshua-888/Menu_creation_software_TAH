@@ -1,6 +1,7 @@
 import type { ValueOrigin } from "./provenance.js";
 import type { CanonicalIngredient } from "./schema/canonical.js";
 import type { SourceIngredient } from "./schema/source.js";
+import { formatIngredientDisplay } from "./textNormalize.js";
 
 function comparisonKey(display: string): string {
   return display.trim().toLowerCase().replace(/\s+/g, " ");
@@ -16,7 +17,8 @@ export function categoryExpectsListedIngredients(categoryName: string): boolean 
 /**
  * Merge category/common ingredients with product-specific ingredients.
  * Preserves logical/source order. Deduplicates case- and whitespace-insensitively.
- * Keeps the first display string and its provenance.
+ * Keeps the first display string and its provenance, then applies display hygiene
+ * (capitalize first letter, strip OCR price bleed).
  * Product choices must never be passed into this function.
  */
 export function composeIngredients(
@@ -27,7 +29,8 @@ export function composeIngredients(
   const seen = new Set<string>();
 
   for (const ingredient of [...common, ...productSpecific]) {
-    const key = comparisonKey(ingredient.display);
+    const formatted = formatIngredientDisplay(ingredient.display);
+    const key = comparisonKey(formatted);
     if (key.length === 0) {
       continue;
     }
@@ -36,7 +39,7 @@ export function composeIngredients(
     }
     seen.add(key);
     const item: CanonicalIngredient = {
-      display: ingredient.display,
+      display: formatted,
       origin: ingredient.origin as ValueOrigin,
     };
     if (ingredient.evidence !== undefined) {

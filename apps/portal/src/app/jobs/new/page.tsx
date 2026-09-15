@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getCurrentEmployee } from "../../../lib/session";
 import { AppShell } from "../../../components/AppShell";
 import { NewJobForm } from "../../../components/NewJobForm";
+import { PageHeader } from "../../../components/PageHeader";
 
 export default async function NewJobPage() {
   const emp = await getCurrentEmployee();
@@ -9,11 +10,13 @@ export default async function NewJobPage() {
 
   return (
     <AppShell employeeName={emp.name}>
-      <h1 className="page-title">New migration</h1>
-      <p className="page-sub">
-        Merchant destination host plus menu PDF and/or source URL.
-      </p>
-      <NewJobForm />
+      <PageHeader
+        title="Create menu"
+        subtitle="Migration workflow — extract from PDF, apply policies, dry-run (and gated live creates when enabled)."
+        backHref="/jobs"
+        backLabel="Dashboard"
+      />
+      <NewJobForm workflow="CREATE_MENU" />
     </AppShell>
   );
 }

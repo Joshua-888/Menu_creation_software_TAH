@@ -3,10 +3,15 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-export function NewJobForm() {
+export function NewJobForm({
+  workflow = "CREATE_MENU",
+}: {
+  workflow?: "CREATE_MENU" | "QA_RECONCILE";
+}) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const isQa = workflow === "QA_RECONCILE";
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -14,6 +19,7 @@ export function NewJobForm() {
     setBusy(true);
     const form = e.currentTarget;
     const fd = new FormData(form);
+    fd.set("workflow", workflow);
     try {
       const res = await fetch("/api/jobs", { method: "POST", body: fd });
       const data = (await res.json()) as { error?: string; id?: string };
@@ -31,6 +37,7 @@ export function NewJobForm() {
 
   return (
     <form className="form-grid" onSubmit={onSubmit}>
+      <input type="hidden" name="workflow" value={workflow} />
       <div className="field">
         <label htmlFor="merchantName">Merchant name</label>
         <input id="merchantName" name="merchantName" required />
@@ -47,7 +54,9 @@ export function NewJobForm() {
         />
       </div>
       <div className="field">
-        <label htmlFor="file">Menu PDF</label>
+        <label htmlFor="file">
+          {isQa ? "Source menu PDF (for intended state)" : "Menu PDF"}
+        </label>
         <input
           id="file"
           name="file"
@@ -55,13 +64,16 @@ export function NewJobForm() {
           accept=".pdf,application/pdf"
         />
         <span className="muted">
-          End-to-end runs require a PDF (max 25MB). Optional source URL can be
-          stored alongside it.
+          {isQa
+            ? "Quality check diffs this PDF (after policies) against the live menu. Max 25MB."
+            : "End-to-end create runs require a PDF (max 25MB). Optional source URL can be stored alongside it."}
         </span>
       </div>
       <div className="field">
         <label htmlFor="sourceUrl">
-          Existing menu / ordering site URL (optional)
+          {isQa
+            ? "Live / peer menu URL (optional context)"
+            : "Existing menu / ordering site URL (optional)"}
         </label>
         <input
           id="sourceUrl"
@@ -70,13 +82,18 @@ export function NewJobForm() {
           placeholder="https://..."
         />
         <span className="muted">
-          URL is stored now; HTML extraction remains queued until certified.
-          PDF upload runs end-to-end.
+          {isQa
+            ? "Peer/probability policies still come from observed peer menus in the learning pipeline."
+            : "URL is stored now; HTML extraction remains queued until certified. PDF upload runs end-to-end."}
         </span>
       </div>
       {error ? <p className="error">{error}</p> : null}
       <button className="btn" type="submit" disabled={busy}>
-        {busy ? "Starting…" : "Create & run"}
+        {busy
+          ? "Starting…"
+          : isQa
+            ? "Start quality check"
+            : "Create & run"}
       </button>
     </form>
   );

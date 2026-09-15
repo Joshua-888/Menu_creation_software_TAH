@@ -22,7 +22,7 @@ import {
   isTahCanaryCategoryName,
 } from "../../write/categoryCreateObserve.js";
 import {
-  assertPageIsVeroniAdmin,
+  assertPageIsAllowlistedAdmin,
 } from "../../write/formFill.js";
 import {
   extractCategoryRows,
@@ -184,10 +184,35 @@ export class TahAdminAdapterV1 implements TahAdminAdapter {
 
   async listProducts(): Promise<DestinationProductListItem[]> {
     const { page, baseUrl } = this.options;
-    await page.goto(new URL(V1_ROUTES.menuList, baseUrl).toString(), {
-      waitUntil: "domcontentloaded",
-    });
-    return page.evaluate(extractProductListRows);
+    const all: DestinationProductListItem[] = [];
+    const seen = new Set<string>();
+    for (let pageNum = 1; pageNum <= 20; pageNum++) {
+      const url =
+        pageNum === 1
+          ? new URL(V1_ROUTES.menuList, baseUrl).toString()
+          : new URL(
+              `${V1_ROUTES.menuList}?page=${pageNum}`,
+              baseUrl,
+            ).toString();
+      await page.goto(url, { waitUntil: "domcontentloaded" });
+      const rows = await page.evaluate(extractProductListRows);
+      let newOnPage = 0;
+      for (const row of rows) {
+        const key = row.databaseId || `${row.menuNumber}:${row.name}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        all.push(row);
+        newOnPage += 1;
+      }
+      if (rows.length === 0 || newOnPage === 0) break;
+      // Stop when no "Next" pagination control remains
+      const hasNext = await page.evaluate(`(() => {
+        const links = [...document.querySelectorAll("a")];
+        return links.some((a) => /next|næste|»/i.test((a.textContent || "").trim()));
+      })()`);
+      if (!hasNext) break;
+    }
+    return all;
   }
 
   async findProduct(query: {
@@ -320,7 +345,10 @@ export class TahAdminAdapterV1 implements TahAdminAdapter {
     await page.goto(new URL("/admin/categories/create", baseUrl).toString(), {
       waitUntil: "domcontentloaded",
     });
-    await assertPageIsVeroniAdmin(page);
+    await assertPageIsAllowlistedAdmin(
+      page,
+      this.options.expectedHost ?? new URL(baseUrl).hostname,
+    );
 
     const observed = await clickSkabAndObserveCategoryCreate({
       page,

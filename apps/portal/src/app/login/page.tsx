@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentEmployee } from "../../lib/session";
+import { BrandLogo } from "../../components/BrandLogo";
 
 export default async function LoginPage() {
   const emp = await getCurrentEmployee();
@@ -8,21 +9,21 @@ export default async function LoginPage() {
 
   return (
     <main className="hero-login">
-      <div className="login-panel">
-        <p className="muted" style={{ marginTop: 0, marginBottom: "0.5rem" }}>
-          Employee access only
-        </p>
-        <h1 className="login-brand">
-          TakeAway<em>Hero</em>
-        </h1>
-        <p className="login-sub">
-          Internal menu operator portal — start merchant migrations from a
-          browser, with dry-run artifacts and a focused review queue.
-        </p>
-        <LoginForm />
-        <p className="muted" style={{ marginTop: "1.5rem", marginBottom: 0 }}>
-          Need an account? Ask an admin to seed your credentials.
-        </p>
+      <div className="login-stage">
+        <div className="login-brand-block">
+          <BrandLogo href={null} size="hero" priority />
+          <p className="login-tagline">Menu operator portal</p>
+        </div>
+        <div className="login-panel">
+          <h1 className="login-heading">Sign in</h1>
+          <p className="login-sub">
+            Employee access for merchant migrations, dry-runs, and review.
+          </p>
+          <LoginForm />
+          <p className="login-footnote">
+            Need an account? Ask an admin to seed your credentials.
+          </p>
+        </div>
       </div>
     </main>
   );
@@ -52,7 +53,7 @@ function LoginForm() {
         />
       </div>
       <p id="login-error" className="error" hidden />
-      <button className="btn" type="submit" style={{ width: "100%" }}>
+      <button className="btn btn-hero" type="submit">
         Sign in
       </button>
       <script
@@ -89,10 +90,8 @@ function LoginForm() {
       <noscript>
         <p className="muted">JavaScript is required to sign in.</p>
       </noscript>
-      <p style={{ marginTop: "1rem" }}>
-        <Link className="muted" href="/jobs">
-          Continue if already signed in
-        </Link>
+      <p className="login-alt">
+        <Link href="/jobs">Continue if already signed in</Link>
       </p>
     </form>
   );

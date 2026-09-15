@@ -1,7 +1,18 @@
+/**
+ * Hard host lock for admin writes.
+ * Veroni canary scripts keep assertVeroniTargetLock.
+ * Multi-merchant portal/live path uses assertAllowlistedAdminHost.
+ */
+
 import { VERONI_CANARY_TARGET, type TargetLockResult } from "./types.js";
+import {
+  isHostAllowlistedForLiveWrites,
+  normalizeDestinationHost,
+  parseLiveWriteHostAllowlist,
+} from "./hostAllowlist.js";
 
 /**
- * Hard host lock. Never redirects / never falls back to another restaurant.
+ * Hard host lock for Veroni canary scripts only.
  */
 export function assertVeroniTargetLock(input: {
   hostname: string;
@@ -26,9 +37,6 @@ export function assertVeroniTargetLock(input: {
           host: u.host,
         };
       }
-      if (u.pathname.includes("/admin") === false && !u.pathname.includes("/login")) {
-        // allow login + admin only for mutation paths; callers decide
-      }
     } catch {
       return { ok: false, reason: "invalid_url", host };
     }
@@ -49,6 +57,49 @@ export function assertVeroniTargetLock(input: {
     host: VERONI_CANARY_TARGET.host,
     restaurantName: VERONI_CANARY_TARGET.restaurantName,
   };
+}
+
+/**
+ * Allowlisted-host lock for production multi-merchant writes.
+ */
+export function assertAllowlistedAdminHost(input: {
+  pageUrl: string;
+  expectedHost: string;
+  env?: NodeJS.ProcessEnv;
+}): TargetLockResult {
+  const expected = normalizeDestinationHost(input.expectedHost);
+  let actual: string;
+  try {
+    actual = normalizeDestinationHost(new URL(input.pageUrl).host);
+  } catch {
+    return { ok: false, reason: "invalid_url" };
+  }
+  if (actual !== expected) {
+    return {
+      ok: false,
+      reason: `wrong_host:expected=${expected}:actual=${actual}`,
+      host: actual,
+    };
+  }
+  if (!isHostAllowlistedForLiveWrites(actual, input.env)) {
+    const list = parseLiveWriteHostAllowlist(input.env).join(",");
+    return {
+      ok: false,
+      reason: `host_not_allowlisted:${actual}:allowlist=${list}`,
+      host: actual,
+    };
+  }
+  if (
+    !input.pageUrl.includes("/admin/") &&
+    !input.pageUrl.includes("/login")
+  ) {
+    return {
+      ok: false,
+      reason: `not_admin_route:${input.pageUrl}`,
+      host: actual,
+    };
+  }
+  return { ok: true, host: actual, restaurantName: expected };
 }
 
 export function blockWriteUnlessTargetLocked(

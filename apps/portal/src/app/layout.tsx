@@ -17,6 +17,10 @@ const figtree = Figtree({
 export const metadata: Metadata = {
   title: "TakeAwayHero · Menu Operator Portal",
   description: "Internal TakeAwayHero employee portal for merchant menu migrations",
+  icons: {
+    icon: "/tah-logo.png",
+    apple: "/tah-logo.png",
+  },
 };
 
 export default function RootLayout({

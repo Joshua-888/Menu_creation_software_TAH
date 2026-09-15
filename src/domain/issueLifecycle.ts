@@ -64,12 +64,19 @@ function revalidateProduct(
   for (const iss of product.issues) {
     if (iss.code === "MISSING_SOURCE_SUPPORTED_INGREDIENTS") {
       if (product.ingredients.length > 0) {
+        const fromDerived = product.ingredients.every(
+          (i) => i.origin === "DERIVED",
+        );
         resolutions.push({
           entityId: product.sourceId,
           menuNumber: product.sourceMenuNumber ?? null,
           code: iss.code,
-          lifecycle: "RESOLVED_BY_EXTRACTION",
-          reason: "ingredients present on product after pipeline",
+          lifecycle: fromDerived
+            ? "RESOLVED_BY_POLICY"
+            : "RESOLVED_BY_EXTRACTION",
+          reason: fromDerived
+            ? "toppings recovered from description (DERIVED); dips excluded"
+            : "ingredients present on product after pipeline",
         });
         continue;
       }

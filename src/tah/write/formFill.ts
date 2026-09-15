@@ -1,6 +1,11 @@
 import type { Page } from "playwright";
-import { assertVeroniTargetLock } from "./targetLock.js";
+import {
+  assertAllowlistedAdminHost,
+  assertVeroniTargetLock,
+  blockWriteUnlessTargetLocked,
+} from "./targetLock.js";
 import { VERONI_CANARY_TARGET } from "./types.js";
+import { normalizeDestinationHost } from "./hostAllowlist.js";
 
 export type FillInactiveProductInput = {
   menuNumber: string;
@@ -15,10 +20,31 @@ export type FillInactiveProductInput = {
   additions?: Array<{ name: string; priceKr: string }>;
 };
 
+/**
+ * Assert admin page is on an allowlisted host (multi-merchant).
+ * Pass expectedHost from the job; defaults to hostname of the page URL.
+ */
+export async function assertPageIsAllowlistedAdmin(
+  page: Page,
+  expectedHost?: string,
+): Promise<void> {
+  const host =
+    expectedHost ??
+    normalizeDestinationHost(new URL(page.url()).host);
+  const lock = assertAllowlistedAdminHost({
+    pageUrl: page.url(),
+    expectedHost: host,
+  });
+  blockWriteUnlessTargetLocked(lock);
+  if (!page.url().includes("/admin/")) {
+    throw new Error(`ADMIN_WRITE_BLOCKED: not on admin route: ${page.url()}`);
+  }
+}
+
+/** @deprecated use assertPageIsAllowlistedAdmin — Veroni canary only */
 export async function assertPageIsVeroniAdmin(page: Page): Promise<void> {
-  const host = new URL(page.url()).host;
   const lock = assertVeroniTargetLock({
-    hostname: host,
+    hostname: new URL(page.url()).host,
     restaurantName: VERONI_CANARY_TARGET.restaurantName,
     url: page.url(),
   });
@@ -36,8 +62,9 @@ export async function assertPageIsVeroniAdmin(page: Page): Promise<void> {
 export async function fillInactiveProductCreateForm(
   page: Page,
   input: FillInactiveProductInput,
+  opts?: { expectedHost?: string },
 ): Promise<void> {
-  await assertPageIsVeroniAdmin(page);
+  await assertPageIsAllowlistedAdmin(page, opts?.expectedHost);
   await page.locator("#menu_number").fill(input.menuNumber);
   await page.locator("#name").fill(input.name);
   await page.locator("#description").fill(input.description);

@@ -9,6 +9,7 @@ import {
   publicEmployee,
   SESSION_COOKIE,
   sessionSecret,
+  tryNormalizeHost,
   uploadsDir,
   type JobSourceType,
 } from "@engine/portal/index.js";
@@ -32,11 +33,21 @@ export async function POST(req: Request) {
   const merchantName = String(form.get("merchantName") ?? "").trim();
   const destinationHost = String(form.get("destinationHost") ?? "").trim();
   const sourceUrlRaw = String(form.get("sourceUrl") ?? "").trim();
+  const workflowRaw = String(form.get("workflow") ?? "CREATE_MENU").trim();
+  const workflow =
+    workflowRaw === "QA_RECONCILE" ? "QA_RECONCILE" : "CREATE_MENU";
   const file = form.get("file");
 
   if (!merchantName || !destinationHost) {
     return NextResponse.json(
       { error: "Merchant name and destination host are required" },
+      { status: 400 },
+    );
+  }
+
+  if (!tryNormalizeHost(destinationHost)) {
+    return NextResponse.json(
+      { error: "Invalid destination host" },
       { status: 400 },
     );
   }
@@ -80,6 +91,7 @@ export async function POST(req: Request) {
     sourceUrl: hasUrl ? sourceUrlRaw : null,
     createdByEmployeeId: emp.id,
     status: hasFile ? "QUEUED" : "SOURCE_URL_PENDING",
+    workflow,
   });
 
   if (hasFile && file instanceof File) {

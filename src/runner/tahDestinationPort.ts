@@ -5,19 +5,21 @@ import type { Page } from "playwright";
 import { TahAdminAdapterV1 } from "../tah/adapters/v1/adapter.js";
 import { V1_ROUTES } from "../tah/adapters/v1/selectors.js";
 import { clickSkabAndObserveCreate } from "../tah/write/createRequestObserve.js";
+import { clickOpdaterAndObserveUpdate } from "../tah/write/updateRequestObserve.js";
 import {
   assertActiveUnchecked,
   fillInactiveProductCreateForm,
 } from "../tah/write/formFill.js";
 import { dismissKnownCookieBanner } from "../tah/write/submitInteractability.js";
 import {
-  matchDestinationByEvidence,
   resolveDestinationIdentity,
   type DestinationMatchResult,
   type DestinationPort,
   type DestinationProduct,
 } from "./executor.js";
 import type { PlannedProductPayload, ProductIdentityKey } from "./writePlan.js";
+import { gateWriteLabels } from "../decisions/labelQuality.js";
+import type { DecisionStore } from "../decisions/store.js";
 
 function oreToKrString(ore: number): string {
   return String(Math.round(ore / 100));
@@ -30,6 +32,9 @@ export type TahDestinationPortOptions = {
   /** In-memory catalog seed (refreshed after writes when possible). */
   catalog?: DestinationProduct[];
   sourceIdMap?: Map<string, string>;
+  /** Restaurant key for learned label precedents (e.g. veronipizza.dk). */
+  restaurantKey?: string;
+  decisionStore?: DecisionStore | null;
 };
 
 export function createTahPlaywrightDestinationPort(
@@ -150,18 +155,18 @@ export function createTahPlaywrightDestinationPort(
           };
         }
 
-        // Identity check against current catalog
-        const evidenceMatch = matchDestinationByEvidence(catalog, {
-          menuNumber: payload.menuNumber,
-          name: payload.name,
-        });
-        if (evidenceMatch.outcome === "AMBIGUOUS") {
-          return { outcome: "AMBIGUOUS" as const };
-        }
-        if (evidenceMatch.outcome === "FOUND") {
+        // Fast path: already on destination list by menu number
+        const listedBefore = await adapter.listProducts();
+        const existingRow = listedBefore.find(
+          (p) =>
+            p.databaseId &&
+            (p.menuNumber || "").trim() === payload.menuNumber.trim(),
+        );
+        if (existingRow?.databaseId) {
+          sourceIdMap.set(payload.sourceId, existingRow.databaseId);
           return {
             outcome: "CREATED" as const,
-            databaseId: evidenceMatch.product.databaseId,
+            databaseId: existingRow.databaseId,
           };
         }
 
@@ -170,22 +175,55 @@ export function createTahPlaywrightDestinationPort(
           waitUntil: "domcontentloaded",
         });
         await dismissKnownCookieBanner(page);
-        await fillInactiveProductCreateForm(page, {
+
+        const gated = gateWriteLabels({
+          store: options.decisionStore ?? null,
+          restaurantKey: options.restaurantKey ?? options.expectedHost,
           menuNumber: payload.menuNumber,
           name: payload.name,
           description: payload.description,
-          basePriceKr: oreToKrString(payload.basePriceOre),
-          categoryDatabaseId: categoryId,
-          variants: payload.variants.map((v) => ({
-            name: v.name,
-            priceKr: oreToKrString(v.surchargeOre),
-          })),
           ingredients: payload.ingredients,
-          additions: payload.additions.map((a) => ({
-            name: a.name,
-            priceKr: oreToKrString(a.priceOre),
-          })),
         });
+        if (!gated.ok) {
+          return {
+            outcome: "FAILED" as const,
+            error:
+              gated.failure ??
+              "LABEL_QUALITY_REVIEW: correct name/ingredients before create",
+          };
+        }
+
+        const safeName = gated.name.trim().slice(0, 80);
+        const safeDesc = gated.description.trim().slice(0, 240);
+        const safeIngredients = gated.ingredients
+          .map((i) => i.trim())
+          .filter(Boolean)
+          .slice(0, 12);
+        const safeVariants =
+          payload.variants.length > 0
+            ? payload.variants.slice(0, 8)
+            : [{ name: "Alm.", surchargeOre: 0 }];
+
+        await fillInactiveProductCreateForm(
+          page,
+          {
+            menuNumber: payload.menuNumber,
+            name: safeName,
+            description: safeDesc,
+            basePriceKr: oreToKrString(payload.basePriceOre),
+            categoryDatabaseId: categoryId,
+            variants: safeVariants.map((v) => ({
+              name: v.name.slice(0, 40),
+              priceKr: oreToKrString(v.surchargeOre),
+            })),
+            ingredients: safeIngredients,
+            additions: payload.additions.slice(0, 8).map((a) => ({
+              name: a.name.slice(0, 40),
+              priceKr: oreToKrString(a.priceOre),
+            })),
+          },
+          { expectedHost: options.expectedHost },
+        );
         await assertActiveUnchecked(page);
 
         const observed = await clickSkabAndObserveCreate({
@@ -198,28 +236,112 @@ export function createTahPlaywrightDestinationPort(
             error: `${observed.code}${observed.detail ? `: ${observed.detail}` : ""}`,
           };
         }
+        // 302 redirect is success; only hard-fail on 4xx/5xx final statuses.
         if (observed.response.status >= 400) {
+          // Still try list read-back — some servers return 500 after writing.
+          await page.waitForTimeout(800);
+          const listedAfterErr = await adapter.listProducts();
+          const rowAfterErr = listedAfterErr.find(
+            (p) =>
+              p.databaseId &&
+              (p.menuNumber || "").trim() === payload.menuNumber.trim(),
+          );
+          if (rowAfterErr?.databaseId) {
+            sourceIdMap.set(payload.sourceId, rowAfterErr.databaseId);
+            return {
+              outcome: "CREATED" as const,
+              databaseId: rowAfterErr.databaseId,
+            };
+          }
           return {
             outcome: "FAILED" as const,
             error: `CREATE_RESPONSE_ERROR status=${observed.response.status}`,
           };
         }
 
-        await page.waitForTimeout(1000);
-        await refreshCatalogFromList();
-        const found = catalog.find(
-          (p) =>
-            p.name.trim().toLowerCase() === payload.name.trim().toLowerCase() &&
-            p.menuNumber.trim() === payload.menuNumber.trim(),
-        );
-        if (!found) {
+        await page.waitForTimeout(1200);
+        // Lightweight read-back: list rows only (avoid full edit-form crawl).
+        let foundId: string | null = null;
+        for (let attempt = 0; attempt < 3 && !foundId; attempt++) {
+          const listed = await adapter.listProducts();
+          const row = listed.find(
+            (p) =>
+              p.databaseId &&
+              (p.menuNumber || "").trim() === payload.menuNumber.trim(),
+          );
+          if (row?.databaseId) foundId = row.databaseId;
+          else await page.waitForTimeout(800);
+        }
+        if (!foundId) {
           return {
             outcome: "FAILED" as const,
             error: "createHiddenProduct read-back missing product",
           };
         }
-        sourceIdMap.set(payload.sourceId, found.databaseId);
-        return { outcome: "CREATED" as const, databaseId: found.databaseId };
+        sourceIdMap.set(payload.sourceId, foundId);
+        catalog = []; // invalidate cache
+        return { outcome: "CREATED" as const, databaseId: foundId };
+      } catch (err) {
+        return {
+          outcome: "FAILED" as const,
+          error: err instanceof Error ? err.message : String(err),
+        };
+      }
+    },
+
+    async updateProductViaOpdater(input: {
+      databaseId: string;
+      payload: PlannedProductPayload;
+    }) {
+      try {
+        const { page, baseUrl } = options;
+        const gated = gateWriteLabels({
+          store: options.decisionStore ?? null,
+          restaurantKey: options.restaurantKey ?? options.expectedHost,
+          menuNumber: input.payload.menuNumber,
+          name: input.payload.name,
+          description: input.payload.description,
+          ingredients: input.payload.ingredients,
+        });
+        if (!gated.ok) {
+          return {
+            outcome: "FAILED" as const,
+            error:
+              gated.failure ??
+              "LABEL_QUALITY_REVIEW: correct name/ingredients before update",
+          };
+        }
+        await page.goto(
+          new URL(`/admin/menu/${input.databaseId}/edit`, baseUrl).toString(),
+          { waitUntil: "domcontentloaded" },
+        );
+        await dismissKnownCookieBanner(page);
+        const form = page.locator("form:has(#menu_number)");
+        await form.locator("#name").fill(gated.name.slice(0, 120));
+        await form
+          .locator("#description")
+          .fill(gated.description.slice(0, 2000));
+        await replaceIngredientRows(page, gated.ingredients.slice(0, 40));
+
+        const observed = await clickOpdaterAndObserveUpdate({
+          page,
+          databaseId: input.databaseId,
+          timeoutMs: 25_000,
+        });
+        if (!observed.ok) {
+          return {
+            outcome: "FAILED" as const,
+            error: `${observed.code}${observed.detail ? `: ${observed.detail}` : ""}`,
+          };
+        }
+        if (observed.response.status >= 400) {
+          return {
+            outcome: "FAILED" as const,
+            error: `Opdater HTTP ${observed.response.status}`,
+          };
+        }
+        catalog = [];
+        return { outcome: "UPDATED" as const };
       } catch (err) {
         return {
           outcome: "FAILED" as const,
@@ -228,4 +350,32 @@ export function createTahPlaywrightDestinationPort(
       }
     },
   };
+}
+
+async function replaceIngredientRows(
+  page: Page,
+  ingredients: string[],
+): Promise<void> {
+  const form = page.locator("form:has(#menu_number)");
+  const rows = form.locator("#ingredient-list tr.ingredient-form");
+  const count = await rows.count();
+  for (let i = 0; i < Math.max(count, ingredients.length); i++) {
+    if (i >= ingredients.length) {
+      const nameInput = rows.nth(i).locator("input.ingredient-name");
+      if (await nameInput.count()) await nameInput.fill("");
+      continue;
+    }
+    if (i >= count) {
+      const addBtn = form.locator(
+        'button:has-text("Tilføj"), a:has-text("Tilføj ingredient"), button:has-text("Add")',
+      ).first();
+      if (await addBtn.count()) await addBtn.click();
+      await page.waitForTimeout(200);
+    }
+    await form
+      .locator("#ingredient-list tr.ingredient-form")
+      .nth(i)
+      .locator("input.ingredient-name")
+      .fill(ingredients[i]!);
+  }
 }

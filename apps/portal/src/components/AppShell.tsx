@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { PortalNav } from "./PortalNav";
 
 export function AppShell({
   employeeName,
@@ -9,23 +9,8 @@ export function AppShell({
 }) {
   return (
     <div className="shell">
-      <header className="topbar">
-        <Link href="/jobs" className="brand-mark">
-          TakeAway<span>Hero</span>
-        </Link>
-        <nav className="nav-links">
-          <Link href="/jobs">Jobs</Link>
-          <Link href="/jobs/new">New</Link>
-          <Link href="/review">Review</Link>
-          <span className="muted">{employeeName}</span>
-          <form action="/api/auth/logout" method="post">
-            <button className="btn btn-secondary" type="submit">
-              Sign out
-            </button>
-          </form>
-        </nav>
-      </header>
-      {children}
+      <PortalNav employeeName={employeeName} />
+      <main className="shell-main">{children}</main>
     </div>
   );
 }

@@ -17,12 +17,11 @@ export async function POST(req: Request) {
   const body = (await req.json()) as {
     questionId?: string;
     selectedOptionId?: string;
-    resolution?: string;
     scopePreference?: "single" | "batch_similar" | "restaurant" | "global";
     comment?: string;
   };
 
-  if (!body.questionId || !body.selectedOptionId || !body.resolution) {
+  if (!body.questionId || !body.selectedOptionId) {
     return NextResponse.json({ error: "Missing fields" }, { status: 400 });
   }
 
@@ -31,7 +30,6 @@ export async function POST(req: Request) {
       questionId: body.questionId,
       employeeId: emp.id,
       selectedOptionId: body.selectedOptionId,
-      resolution: body.resolution,
       scopePreference: body.scopePreference ?? "single",
       comment: body.comment ?? null,
     });

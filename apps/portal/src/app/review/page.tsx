@@ -3,6 +3,7 @@ import { getPortalStore } from "@engine/portal/index.js";
 import { getCurrentEmployee } from "../../lib/session";
 import { AppShell } from "../../components/AppShell";
 import { ReviewQueueClient } from "../../components/ReviewQueueClient";
+import { PageHeader } from "../../components/PageHeader";
 
 export default async function ReviewPage({
   searchParams,
@@ -18,10 +19,12 @@ export default async function ReviewPage({
 
   return (
     <AppShell employeeName={emp.name}>
-      <h1 className="page-title">Review queue</h1>
-      <p className="page-sub">
-        Only unresolved questions. One answer can batch-resolve similar items.
-      </p>
+      <PageHeader
+        title="Review queue"
+        subtitle="Unresolved questions only. One answer can batch-resolve similar items."
+        backHref={job ? `/jobs/${job}` : "/jobs"}
+        backLabel={job ? "Back to job" : "Dashboard"}
+      />
       <div className="panel">
         <ReviewQueueClient questions={questions} />
       </div>

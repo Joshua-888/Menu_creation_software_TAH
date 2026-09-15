@@ -23,6 +23,7 @@ import type {
   JobRun,
   JobSourceType,
   JobStatus,
+  JobWorkflow,
   MigrationJob,
   ReviewAnswer,
   ReviewQuestion,
@@ -55,6 +56,7 @@ CREATE TABLE IF NOT EXISTS jobs (
   destination_host TEXT NOT NULL,
   source_type TEXT NOT NULL,
   source_url TEXT,
+  workflow TEXT NOT NULL DEFAULT 'CREATE_MENU',
   status TEXT NOT NULL,
   created_by_employee_id TEXT NOT NULL,
   error_message TEXT,
@@ -122,20 +124,31 @@ function nowIso(): string {
   return new Date().toISOString();
 }
 
-function restaurantKeyFromName(name: string): string {
-  return name
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "")
-    .slice(0, 64) || `merchant-${randomUUID().slice(0, 8)}`;
+import { normalizeDestinationHost } from "../tah/write/hostAllowlist.js";
+
+function restaurantKeyFromDestinationHost(destinationHost: string): string {
+  return normalizeDestinationHost(destinationHost);
+}
+
+export function tryNormalizeHost(input: string): string | null {
+  try {
+    let u = input.trim();
+    if (!u) return null;
+    if (!/^https?:\/\//i.test(u)) u = `https://${u}`;
+    const url = new URL(u);
+    if (!url.hostname) return null;
+    return `${url.protocol}//${url.host}`;
+  } catch {
+    return null;
+  }
 }
 
 function normalizeHost(input: string): string {
-  let u = input.trim();
-  if (!/^https?:\/\//i.test(u)) u = `https://${u}`;
-  const url = new URL(u);
-  return `${url.protocol}//${url.host}`;
+  const host = tryNormalizeHost(input);
+  if (!host) {
+    throw new Error("Invalid destination host");
+  }
+  return host;
 }
 
 export class PortalStore {
@@ -146,6 +159,19 @@ export class PortalStore {
     this.db = new DatabaseSync(dbPath);
     this.db.exec("PRAGMA foreign_keys = ON");
     this.db.exec(SCHEMA);
+    this.migrateSchema();
+  }
+
+  /** Additive migrations for existing portal DBs. */
+  private migrateSchema(): void {
+    const cols = this.db
+      .prepare(`PRAGMA table_info(jobs)`)
+      .all() as Array<{ name: string }>;
+    if (!cols.some((c) => c.name === "workflow")) {
+      this.db.exec(
+        `ALTER TABLE jobs ADD COLUMN workflow TEXT NOT NULL DEFAULT 'CREATE_MENU'`,
+      );
+    }
   }
 
   close(): void {
@@ -299,7 +325,12 @@ export class PortalStore {
       this.deleteSession(token);
       return null;
     }
-    return this.getEmployeeById(row.employee_id);
+    const emp = this.getEmployeeById(row.employee_id);
+    if (!emp || !emp.active) {
+      this.deleteSession(token);
+      return null;
+    }
+    return emp;
   }
 
   createJob(input: {
@@ -309,14 +340,16 @@ export class PortalStore {
     sourceUrl: string | null;
     createdByEmployeeId: string;
     status?: JobStatus;
+    workflow?: JobWorkflow;
   }): MigrationJob {
     const now = nowIso();
     const job: MigrationJob = {
       id: `job_${randomUUID()}`,
       merchantName: input.merchantName.trim(),
-      restaurantKey: restaurantKeyFromName(input.merchantName),
+      restaurantKey: restaurantKeyFromDestinationHost(input.destinationHost),
       destinationHost: normalizeHost(input.destinationHost),
       sourceType: input.sourceType,
+      workflow: input.workflow ?? "CREATE_MENU",
       sourceUrl: input.sourceUrl?.trim() || null,
       status: input.status ?? "QUEUED",
       createdByEmployeeId: input.createdByEmployeeId,
@@ -329,9 +362,9 @@ export class PortalStore {
       .prepare(
         `INSERT INTO jobs (
           id, merchant_name, restaurant_key, destination_host, source_type,
-          source_url, status, created_by_employee_id, error_message,
+          source_url, workflow, status, created_by_employee_id, error_message,
           remaining_questions, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, 0, ?, ?)`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, 0, ?, ?)`,
       )
       .run(
         job.id,
@@ -340,6 +373,7 @@ export class PortalStore {
         job.destinationHost,
         job.sourceType,
         job.sourceUrl,
+        job.workflow,
         job.status,
         job.createdByEmployeeId,
         job.createdAt,
@@ -373,7 +407,7 @@ export class PortalStore {
     const row = this.db
       .prepare(
         `SELECT id, merchant_name, restaurant_key, destination_host, source_type,
-                source_url, status, created_by_employee_id, error_message,
+                source_url, workflow, status, created_by_employee_id, error_message,
                 remaining_questions, created_at, updated_at
          FROM jobs WHERE id = ?`,
       )
@@ -382,11 +416,34 @@ export class PortalStore {
     return this.mapJob(row);
   }
 
+  /** Delete job and related portal rows (files/questions/answers/runs). */
+  deleteJob(jobId: string): boolean {
+    const existing = this.getJob(jobId);
+    if (!existing) return false;
+    this.db.exec("BEGIN");
+    try {
+      this.db
+        .prepare(`DELETE FROM review_answers WHERE job_id = ?`)
+        .run(jobId);
+      this.db
+        .prepare(`DELETE FROM review_questions WHERE job_id = ?`)
+        .run(jobId);
+      this.db.prepare(`DELETE FROM job_files WHERE job_id = ?`).run(jobId);
+      this.db.prepare(`DELETE FROM job_runs WHERE job_id = ?`).run(jobId);
+      this.db.prepare(`DELETE FROM jobs WHERE id = ?`).run(jobId);
+      this.db.exec("COMMIT");
+      return true;
+    } catch (err) {
+      this.db.exec("ROLLBACK");
+      throw err;
+    }
+  }
+
   listJobs(): MigrationJob[] {
     const rows = this.db
       .prepare(
         `SELECT id, merchant_name, restaurant_key, destination_host, source_type,
-                source_url, status, created_by_employee_id, error_message,
+                source_url, workflow, status, created_by_employee_id, error_message,
                 remaining_questions, created_at, updated_at
          FROM jobs ORDER BY created_at DESC`,
       )
@@ -395,12 +452,16 @@ export class PortalStore {
   }
 
   private mapJob(row: Record<string, unknown>): MigrationJob {
+    const workflowRaw = String(row.workflow ?? "CREATE_MENU");
+    const workflow: JobWorkflow =
+      workflowRaw === "QA_RECONCILE" ? "QA_RECONCILE" : "CREATE_MENU";
     return {
       id: String(row.id),
       merchantName: String(row.merchant_name),
       restaurantKey: String(row.restaurant_key),
       destinationHost: String(row.destination_host),
       sourceType: row.source_type as JobSourceType,
+      workflow,
       sourceUrl: (row.source_url as string | null) ?? null,
       status: row.status as JobStatus,
       createdByEmployeeId: String(row.created_by_employee_id),
@@ -605,7 +666,8 @@ export class PortalStore {
     questionId: string;
     employeeId: string;
     selectedOptionId: string;
-    resolution: string;
+    /** Ignored — resolution is always taken from the matched option. */
+    resolution?: string;
     scopePreference: ReviewAnswer["scopePreference"];
     comment?: string | null;
   }): { answer: ReviewAnswer; resolvedIds: string[] } {
@@ -613,13 +675,31 @@ export class PortalStore {
     if (!q || q.status !== "open") {
       throw new Error("Question not found or already answered");
     }
+    let options: Array<{ id: string; label?: string; resolution: string }>;
+    try {
+      options = JSON.parse(q.optionsJson) as Array<{
+        id: string;
+        label?: string;
+        resolution: string;
+      }>;
+    } catch {
+      throw new Error("Question options are corrupt");
+    }
+    if (!Array.isArray(options)) {
+      throw new Error("Question options are corrupt");
+    }
+    const selected = options.find((o) => o.id === input.selectedOptionId);
+    if (!selected || typeof selected.resolution !== "string") {
+      throw new Error("Invalid selected option");
+    }
+    const resolution = selected.resolution;
     const answer: ReviewAnswer = {
       id: `ra_${randomUUID()}`,
       questionId: q.id,
       jobId: q.jobId,
       employeeId: input.employeeId,
       selectedOptionId: input.selectedOptionId,
-      resolution: input.resolution,
+      resolution,
       scopePreference: input.scopePreference,
       comment: input.comment ?? null,
       createdAt: nowIso(),
@@ -670,11 +750,10 @@ export class PortalStore {
     }
 
     const remaining = this.listOpenQuestions(q.jobId).length;
-    this.updateJobStatus(
-      q.jobId,
-      remaining ? "AWAITING_REVIEW" : "READY_DRY_RUN",
-      { remainingQuestions: remaining },
-    );
+    const nextStatus = remaining ? "AWAITING_REVIEW" : "READY_DRY_RUN";
+    this.updateJobStatus(q.jobId, nextStatus, {
+      remainingQuestions: remaining,
+    });
     return { answer, resolvedIds };
   }
 }

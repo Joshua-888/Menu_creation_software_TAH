@@ -12,6 +12,7 @@ import type {
 } from "./facts.js";
 import { normalizeAdditionName } from "./facts.js";
 import type { FactRegistry } from "./factStore.js";
+import { isCategoryIngredientFactId } from "../learning/categoryIngredientAdditions.js";
 
 export type PriceLookupContext = {
   restaurantKey: string;
@@ -232,7 +233,14 @@ export function resolveAdditionsForProduct(input: {
       }
       return false;
     })
-    .sort((a, b) => scopeRank(b.scope) - scopeRank(a.scope));
+    .sort((a, b) => {
+      const scopeDiff = scopeRank(b.scope) - scopeRank(a.scope);
+      if (scopeDiff !== 0) return scopeDiff;
+      // Within same scope: category-ingredient union > peer category facts
+      const aIng = isCategoryIngredientFactId(a.factId) ? 1 : 0;
+      const bIng = isCategoryIngredientFactId(b.factId) ? 1 : 0;
+      return bIng - aIng;
+    });
 
   const conflicts: FactConflict[] = [];
 
@@ -281,7 +289,34 @@ export function resolveAdditionsForProduct(input: {
     };
   }
 
-  const best = sets[0];
+  const exact = sets.find(
+    (s) => s.scope === "EXACT_PRODUCT" || s.scope === "EXACT_CASE",
+  );
+  if (exact) {
+    return {
+      additions: exact.additions,
+      origin: "EXACT_PRODUCT_FACT",
+      conflicts,
+    };
+  }
+
+  const category = sets.find((s) => s.scope === "RESTAURANT_CATEGORY");
+  const restaurant = sets.find((s) => s.scope === "RESTAURANT");
+  if (category && restaurant) {
+    const byKey = new Map(
+      category.additions.map((a) => [a.nameKey, a] as const),
+    );
+    for (const a of restaurant.additions) {
+      if (!byKey.has(a.nameKey)) byKey.set(a.nameKey, a);
+    }
+    return {
+      additions: [...byKey.values()],
+      origin: "RESTAURANT_CATEGORY_OR_RESTAURANT_FACT",
+      conflicts,
+    };
+  }
+
+  const best = category ?? restaurant ?? sets[0];
   if (!best) {
     return { additions: [], origin: "AI_OR_HUMAN_REVIEW", conflicts };
   }

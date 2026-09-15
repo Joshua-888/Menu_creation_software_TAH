@@ -3,19 +3,26 @@
  * AI/UI never mutates CanonicalMenu directly.
  */
 
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { DecisionPolicyRegistry } from "../decisions/engine.js";
 import { DecisionStore } from "../decisions/store.js";
 import type { HumanReviewAnswer, ScopePreference } from "../decisions/types.js";
+import {
+  applyTilbehorOverrideFromAnswer,
+  resolvePortalDecisionDbPath,
+  TILBEHOR_OVERRIDE_DECISION_TYPE,
+} from "../learning/tilbehorOverride.js";
 import { getPortalStore, type PortalStore } from "./store.js";
+import { repoRoot } from "./paths.js";
 import type { ReviewAnswer } from "./types.js";
 
 export type SubmitReviewInput = {
   questionId: string;
   employeeId: string;
   selectedOptionId: string;
-  resolution: string;
+  /** Optional; ignored — store derives resolution from the option id. */
+  resolution?: string;
   scopePreference: ReviewAnswer["scopePreference"];
   comment?: string | null;
 };
@@ -36,22 +43,32 @@ function mapScope(s: ReviewAnswer["scopePreference"]): ScopePreference {
 export function submitReviewAnswer(
   input: SubmitReviewInput,
   store: PortalStore = getPortalStore(),
-): { answer: ReviewAnswer; resolvedIds: string[]; remaining: number } {
+): {
+  answer: ReviewAnswer;
+  resolvedIds: string[];
+  remaining: number;
+  scheduledPostReviewLive?: boolean;
+  tilbehorFactId?: string | null;
+} {
   const question = store.getQuestion(input.questionId);
   if (!question) throw new Error("Question not found");
 
   const result = store.answerQuestion(input);
+  let tilbehorFactId: string | null = null;
 
-  // If a DecisionStore case exists, record HumanDecision (M6 path).
-  if (question.decisionCaseId && process.env.PORTAL_DECISION_DB_PATH) {
+  // Record HumanDecision (+ Tilbehør BUSINESS_FACT override when applicable).
+  if (question.decisionCaseId) {
+    const root = repoRoot();
+    const dbPath = resolvePortalDecisionDbPath(root);
+    mkdirSync(join(root, "runs", "decisions"), { recursive: true });
     try {
-      const decisionStore = new DecisionStore(process.env.PORTAL_DECISION_DB_PATH);
+      const decisionStore = new DecisionStore(dbPath);
       const registry = new DecisionPolicyRegistry(decisionStore);
       const decisionCase = decisionStore.getCase(question.decisionCaseId);
       if (decisionCase) {
         const answer: HumanReviewAnswer = {
           decisionCaseId: question.decisionCaseId,
-          resolution: input.resolution,
+          resolution: result.answer.resolution,
           selectedOptionId: input.selectedOptionId,
           scopePreference: mapScope(input.scopePreference),
           operatorId: input.employeeId,
@@ -59,7 +76,16 @@ export function submitReviewAnswer(
         if (input.comment) {
           answer.comment = input.comment;
         }
-        registry.recordHumanDecision(decisionCase, answer);
+        const recorded = registry.recordHumanDecision(decisionCase, answer);
+        if (decisionCase.decisionType === TILBEHOR_OVERRIDE_DECISION_TYPE) {
+          const fact = applyTilbehorOverrideFromAnswer({
+            store: decisionStore,
+            decisionCase,
+            answer,
+            humanDecision: recorded.human,
+          });
+          tilbehorFactId = fact?.factId ?? null;
+        }
       }
       decisionStore.close();
     } catch (err) {
@@ -85,6 +111,7 @@ export function submitReviewAnswer(
     list.push({
       ...result.answer,
       resolvedIds: result.resolvedIds,
+      ...(tilbehorFactId ? { tilbehorFactId } : {}),
     });
     writeFileSync(path, JSON.stringify(list, null, 2), "utf8");
 
@@ -102,6 +129,7 @@ export function submitReviewAnswer(
             prompt: q.prompt,
             productRef: q.productRef,
             batchKey: q.batchKey,
+            decisionCaseId: q.decisionCaseId,
           })),
         },
         null,
@@ -111,9 +139,24 @@ export function submitReviewAnswer(
     );
   }
 
+  const remaining = store.listOpenQuestions(question.jobId).length;
+  let scheduledPostReviewLive = false;
+  if (remaining === 0) {
+    scheduledPostReviewLive = true;
+    void import("./worker.js")
+      .then((m) => m.schedulePostReviewLiveIfReady(question.jobId))
+      .catch((err) => {
+        console.warn(
+          "[portal-review] post-review live schedule failed:",
+          err instanceof Error ? err.message : err,
+        );
+      });
+  }
   return {
     answer: result.answer,
     resolvedIds: result.resolvedIds,
-    remaining: store.listOpenQuestions(question.jobId).length,
+    remaining,
+    scheduledPostReviewLive,
+    ...(tilbehorFactId ? { tilbehorFactId } : {}),
   };
 }

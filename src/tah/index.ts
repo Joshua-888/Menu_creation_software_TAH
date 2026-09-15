@@ -86,7 +86,17 @@ export {
   type TargetLockResult,
 } from "./write/types.js";
 
-export { assertVeroniTargetLock, blockWriteUnlessTargetLocked } from "./write/targetLock.js";
+export {
+  assertAllowlistedAdminHost,
+  assertVeroniTargetLock,
+  blockWriteUnlessTargetLocked,
+} from "./write/targetLock.js";
+export {
+  DEFAULT_LIVE_WRITE_HOSTS,
+  isHostAllowlistedForLiveWrites,
+  normalizeDestinationHost,
+  parseLiveWriteHostAllowlist,
+} from "./write/hostAllowlist.js";
 export {
   evaluateActiveDefaultGate,
   evaluateEmptyProductBaseline,
@@ -146,6 +156,7 @@ export {
 export {
   fillInactiveProductCreateForm,
   assertActiveUnchecked,
+  assertPageIsAllowlistedAdmin,
   assertPageIsVeroniAdmin,
 } from "./write/formFill.js";
 export {

@@ -1,0 +1,267 @@
+/**
+ * Display-text hygiene for menu labels and ingredients.
+ * Learned operator rules: capitalize first letter; strip OCR price bleed;
+ * never leave ingredient lists in the product name.
+ */
+
+import {
+  getLearnedOcrIngredientFixes,
+  type OcrIngredientFix,
+} from "./learnedTextFixes.js";
+
+const BASE_OCR_INGREDIENT_FIXES: OcrIngredientFix[] = [
+  [/\blog\b/gi, "løg"],
+  [/\bkodsovs\b/gi, "kødsovs"],
+  [/\bkoodstrimler\b/gi, "kødstrimler"],
+  [/\bkodstrimler\b/gi, "kødstrimler"],
+  [/\b0g\b/gi, "og"],
+  [/\bpolse\b/gi, "pølse"],
+  [/\brodløg\b/gi, "rødløg"],
+];
+
+export type LabelQualitySeverity = "PASS" | "REPAIR" | "REVIEW" | "BLOCK";
+
+export type LabelRepair = {
+  field: "name" | "description" | "ingredient";
+  from: string;
+  to: string;
+  reason: string;
+};
+
+export type LabelQualityAssessment = {
+  severity: LabelQualitySeverity;
+  reasons: string[];
+  repairs: LabelRepair[];
+  /** Values after deterministic auto-repair (may still need REVIEW). */
+  repaired: {
+    name: string;
+    description: string;
+    ingredients: string[];
+  };
+};
+
+export type LabelQualityInput = {
+  name: string;
+  description?: string;
+  ingredients?: readonly string[];
+};
+
+/** Strip trailing price fragments like "dressing 95" or "salat 180". */
+export function stripTrailingPriceNoise(text: string): string {
+  return text
+    .replace(/\s+\d{2,4}\s*,?\s*$/g, "")
+    .replace(/\s+\d{2,4}\s*(kr\.?)?\s*$/gi, "")
+    .trim();
+}
+
+/** Operator rule: first letter capital (Salat, not salat). */
+export function capitalizeFirstLetter(text: string): string {
+  const t = text.trim();
+  if (!t) return t;
+  return t.charAt(0).toLocaleUpperCase("da-DK") + t.slice(1);
+}
+
+function allOcrFixes(): OcrIngredientFix[] {
+  return [...BASE_OCR_INGREDIENT_FIXES, ...getLearnedOcrIngredientFixes()];
+}
+
+export function formatIngredientDisplay(raw: string): string {
+  let s = raw.trim().replace(/\s+/g, " ");
+  if (!s) return "";
+  s = stripTrailingPriceNoise(s);
+  // Drop dangling conjunctions left by OCR splits
+  s = s.replace(/\s+og$/i, "").trim();
+  for (const [re, to] of allOcrFixes()) {
+    s = s.replace(re, to);
+  }
+  s = s.replace(/\s+/g, " ").trim();
+  if (!s) return "";
+  return capitalizeFirstLetter(s);
+}
+
+/**
+ * True when a "name" looks like a toppings list rather than a dish title.
+ * Used to block writing OCR ingredient soup into the product name field.
+ */
+export function looksLikeIngredientListName(name: string): boolean {
+  const n = name.trim();
+  if (!n) return true;
+  if (n.length > 60 && /,/.test(n)) return true;
+  if (/^\d+\.\s/.test(n)) return true; // "25. rejer, ..."
+  if (/,.*,/.test(n) && /\b(tomat|ost|salat|dressing|skinke)\b/i.test(n)) {
+    return true;
+  }
+  if (/^(og|tomat,)/i.test(n)) return true;
+  return false;
+}
+
+/** OCR wrecks like "I15,", "II5,", lone "og". */
+export function looksLikeGarbageName(name: string): boolean {
+  const n = name.trim();
+  if (!n) return true;
+  if (/^og$/i.test(n)) return true;
+  if (/^[Il1]{1,3}\d+,?\s*$/i.test(n)) return true; // I15, II5,
+  if (/^[\W\d_]+$/.test(n)) return true;
+  if (n.length <= 2 && !/^[A-Za-zÆØÅæøå]+$/.test(n)) return true;
+  return false;
+}
+
+export function formatProductName(raw: string): string {
+  const s = raw.trim().replace(/\s+/g, " ");
+  if (!s) return s;
+  return capitalizeFirstLetter(s.replace(/,+\s*$/g, "").trim());
+}
+
+export function formatDescriptionFromIngredients(
+  ingredients: readonly string[],
+): string {
+  return ingredients
+    .map((i) => formatIngredientDisplay(i))
+    .filter(Boolean)
+    .join(", ");
+}
+
+function ingredientStillPriceHeavy(raw: string, formatted: string): boolean {
+  if (/\d{2,4}/.test(formatted)) return true;
+  // Strip removed a trailing price but left almost nothing useful
+  if (/\d{2,4}/.test(raw) && formatted.length < 2) return true;
+  return false;
+}
+
+/**
+ * Assess label quality: auto-repair safe hygiene; REVIEW/BLOCK when the
+ * product name is still OCR garbage or an ingredient dump.
+ */
+export function assessLabelQuality(
+  input: LabelQualityInput,
+): LabelQualityAssessment {
+  const reasons: string[] = [];
+  const repairs: LabelRepair[] = [];
+  const rawName = (input.name ?? "").trim();
+  const rawDesc = (input.description ?? "").trim();
+  const rawIngredients = [...(input.ingredients ?? [])];
+
+  const repairedIngredients: string[] = [];
+  for (const ing of rawIngredients) {
+    const to = formatIngredientDisplay(ing);
+    if (!to) {
+      repairs.push({
+        field: "ingredient",
+        from: ing,
+        to: "",
+        reason: "dropped_empty_or_price_only",
+      });
+      continue;
+    }
+    if (to !== ing.trim().replace(/\s+/g, " ")) {
+      repairs.push({
+        field: "ingredient",
+        from: ing,
+        to,
+        reason: "ingredient_hygiene",
+      });
+    }
+    if (ingredientStillPriceHeavy(ing, to)) {
+      reasons.push(`ingredient_still_numeric:${to}`);
+    }
+    repairedIngredients.push(to);
+  }
+
+  let repairedName = formatProductName(rawName);
+  if (repairedName !== rawName && rawName) {
+    repairs.push({
+      field: "name",
+      from: rawName,
+      to: repairedName,
+      reason: "name_hygiene",
+    });
+  }
+
+  let repairedDescription = rawDesc
+    ? formatProductName(stripTrailingPriceNoise(rawDesc))
+    : "";
+  if (
+    !repairedDescription &&
+    repairedIngredients.length > 0 &&
+    (looksLikeIngredientListName(rawName) || looksLikeGarbageName(rawName))
+  ) {
+    repairedDescription = formatDescriptionFromIngredients(repairedIngredients);
+    repairs.push({
+      field: "description",
+      from: rawDesc,
+      to: repairedDescription,
+      reason: "moved_ingredient_list_to_description",
+    });
+  } else if (repairedDescription !== rawDesc && rawDesc) {
+    repairs.push({
+      field: "description",
+      from: rawDesc,
+      to: repairedDescription,
+      reason: "description_hygiene",
+    });
+  }
+
+  if (!repairedName || looksLikeGarbageName(repairedName)) {
+    reasons.push("garbage_product_name");
+  }
+  if (looksLikeIngredientListName(repairedName || rawName)) {
+    reasons.push("name_looks_like_ingredient_list");
+  }
+  if (
+    repairedName &&
+    repairedIngredients.length >= 3 &&
+    repairedName.toLowerCase() ===
+      formatDescriptionFromIngredients(repairedIngredients).toLowerCase()
+  ) {
+    reasons.push("name_equals_ingredient_dump");
+  }
+
+  const blocking = reasons.some(
+    (r) =>
+      r === "garbage_product_name" ||
+      r === "name_looks_like_ingredient_list" ||
+      r === "name_equals_ingredient_dump",
+  );
+  const numericIssues = reasons.some((r) =>
+    r.startsWith("ingredient_still_numeric"),
+  );
+
+  let severity: LabelQualitySeverity;
+  if (!repairedName && blocking) {
+    severity = "BLOCK";
+  } else if (blocking) {
+    severity = "REVIEW";
+  } else if (numericIssues) {
+    severity = "REVIEW";
+  } else if (repairs.length > 0) {
+    severity = "REPAIR";
+  } else {
+    severity = "PASS";
+  }
+
+  return {
+    severity,
+    reasons,
+    repairs,
+    repaired: {
+      name: repairedName,
+      description: repairedDescription,
+      ingredients: repairedIngredients,
+    },
+  };
+}
+
+/** True when write must not proceed without human correction. */
+export function labelQualityBlocksWrite(
+  assessment: LabelQualityAssessment,
+): boolean {
+  return (
+    assessment.severity === "REVIEW" || assessment.severity === "BLOCK"
+  );
+}
+
+export function formatLabelQualityFailure(
+  assessment: LabelQualityAssessment,
+): string {
+  return `LABEL_QUALITY_${assessment.severity}: ${assessment.reasons.join(",") || "unspecified"}`;
+}

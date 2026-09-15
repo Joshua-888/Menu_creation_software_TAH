@@ -21,6 +21,9 @@ export type Session = {
 
 export type JobSourceType = "pdf_upload" | "source_url" | "pdf_and_url";
 
+/** What the operator is trying to do with this job. */
+export type JobWorkflow = "CREATE_MENU" | "QA_RECONCILE";
+
 export type JobStatus =
   | "DRAFT"
   | "QUEUED"
@@ -43,6 +46,8 @@ export type MigrationJob = {
   restaurantKey: string;
   destinationHost: string;
   sourceType: JobSourceType;
+  /** CREATE_MENU = migrate from PDF; QA_RECONCILE = quality-check existing live menu. */
+  workflow: JobWorkflow;
   sourceUrl: string | null;
   status: JobStatus;
   createdByEmployeeId: string;
@@ -109,4 +114,8 @@ export type JobMetrics = {
   dryRunCreates?: number;
   dryRunReviews?: number;
   dryRunSkips?: number;
+  dryRunUpdates?: number;
+  dryRunBlocks?: number;
+  reconcileDiffs?: number;
+  reconcileUpdatable?: number;
 };

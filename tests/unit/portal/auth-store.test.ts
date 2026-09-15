@@ -71,8 +71,11 @@ describe("portal store + review", () => {
       sourceUrl: null,
       createdByEmployeeId: emp.id,
     });
-    expect(job.restaurantKey).toContain("veroni");
+    expect(job.restaurantKey).toBe("veronipizza.dk");
+    expect(job.workflow).toBe("CREATE_MENU");
     expect(store.listJobs()).toHaveLength(1);
+    expect(store.deleteJob(job.id)).toBe(true);
+    expect(store.listJobs()).toHaveLength(0);
   });
 
   it("batch-resolves similar review questions", () => {
@@ -89,6 +92,7 @@ describe("portal store + review", () => {
       sourceUrl: null,
       createdByEmployeeId: emp.id,
     });
+    expect(job.restaurantKey).toBe("example.com");
     store.replaceOpenQuestions(job.id, [
       {
         decisionCaseId: null,
@@ -129,5 +133,84 @@ describe("portal store + review", () => {
     expect(result.resolvedIds).toHaveLength(2);
     expect(result.remaining).toBe(0);
     expect(store.getJob(job.id)?.status).toBe("READY_DRY_RUN");
+  });
+
+  it("rejects forged review resolutions and inactive sessions", () => {
+    const emp = store.createEmployee({
+      email: "sec@takeawayhero.test",
+      name: "Sec",
+      password: "s3cret-pass",
+      role: "operator",
+    });
+    const session = store.createSession(emp.id);
+    store.db
+      .prepare(`UPDATE employees SET active = 0 WHERE id = ?`)
+      .run(emp.id);
+    expect(store.getSessionEmployee(session.token)).toBeNull();
+
+    const emp2 = store.createEmployee({
+      email: "sec2@takeawayhero.test",
+      name: "Sec2",
+      password: "s3cret-pass",
+      role: "operator",
+    });
+    const job = store.createJob({
+      merchantName: "Test",
+      destinationHost: "https://example.com",
+      sourceType: "pdf_upload",
+      sourceUrl: null,
+      createdByEmployeeId: emp2.id,
+    });
+    store.replaceOpenQuestions(job.id, [
+      {
+        decisionCaseId: null,
+        questionType: "TEST",
+        title: "Q",
+        prompt: "Pick",
+        optionsJson: JSON.stringify([
+          { id: "a", label: "A", resolution: "RES_A" },
+          { id: "b", label: "B", resolution: "RES_B" },
+        ]),
+        productRef: null,
+        batchKey: null,
+      },
+    ]);
+    const q = store.listOpenQuestions(job.id)[0]!;
+    expect(() =>
+      store.answerQuestion({
+        questionId: q.id,
+        employeeId: emp2.id,
+        selectedOptionId: "nope",
+        resolution: "HACKED",
+        scopePreference: "single",
+      }),
+    ).toThrow(/Invalid selected option/);
+
+    const answered = store.answerQuestion({
+      questionId: q.id,
+      employeeId: emp2.id,
+      selectedOptionId: "b",
+      resolution: "HACKED_SHOULD_BE_IGNORED",
+      scopePreference: "single",
+    });
+    expect(answered.answer.resolution).toBe("RES_B");
+  });
+
+  it("rejects invalid destination hosts", () => {
+    const emp = store.createEmployee({
+      email: "host@takeawayhero.test",
+      name: "Host",
+      password: "s3cret-pass",
+      role: "operator",
+    });
+    expect(() =>
+      store.createJob({
+        merchantName: "X",
+        destinationHost: "::::",
+        sourceType: "pdf_upload",
+        sourceUrl: null,
+        createdByEmployeeId: emp.id,
+      }),
+    ).toThrow(/Invalid destination host/);
   });
 });

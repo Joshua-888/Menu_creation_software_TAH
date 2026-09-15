@@ -6,9 +6,13 @@ import {
   readJobArtifact,
   reconcileJobStatusFromArtifacts,
 } from "@engine/portal/index.js";
+import type { PolicyApplicationReport } from "@engine/learning/policyApplicationReport.js";
 import { getCurrentEmployee } from "../../../lib/session";
 import { AppShell } from "../../../components/AppShell";
 import { JobStatusPoller } from "../../../components/JobStatusPoller";
+import { PolicyApplicationPanel } from "../../../components/PolicyApplicationPanel";
+import { PageHeader } from "../../../components/PageHeader";
+import { DeleteJobButton } from "../../../components/DeleteJobButton";
 
 export default async function JobDetailPage({
   params,
@@ -26,9 +30,14 @@ export default async function JobDetailPage({
 
   const files = store.listJobFiles(id);
   const run = store.latestJobRun(id);
-  const metrics = run?.metricsJson
-    ? (JSON.parse(run.metricsJson) as Record<string, number>)
-    : null;
+  const metrics = (() => {
+    if (!run?.metricsJson) return null;
+    try {
+      return JSON.parse(run.metricsJson) as Record<string, number>;
+    } catch {
+      return null;
+    }
+  })();
   const drySummary = readJobArtifact(id, "dry-run-summary.json") as Record<
     string,
     unknown
@@ -37,6 +46,10 @@ export default async function JobDetailPage({
     string,
     unknown
   > | null;
+  const policyApplication = readJobArtifact(
+    id,
+    "policy-application.json",
+  ) as PolicyApplicationReport | null;
   const remaining = store.listOpenQuestions(id);
   const liveGate = evaluatePortalLiveWriteGate({
     destinationHost: job.destinationHost,
@@ -45,17 +58,81 @@ export default async function JobDetailPage({
   return (
     <AppShell employeeName={emp.name}>
       <JobStatusPoller status={job.status} />
-      <h1 className="page-title">{job.merchantName}</h1>
-      <p className="page-sub">
-        {job.destinationHost} · <span className="status-pill">{job.status}</span>
-      </p>
+      <PageHeader
+        title={job.merchantName}
+        subtitle={`${job.destinationHost} · ${
+          job.workflow === "QA_RECONCILE" ? "Quality check" : "Create menu"
+        } · ${job.status}`}
+        backHref="/jobs"
+        backLabel="Dashboard"
+        actions={<DeleteJobButton jobId={job.id} merchantName={job.merchantName} />}
+      />
+
+      {job.workflow === "QA_RECONCILE" ? (
+        <div className="panel">
+          <h2>Quality check</h2>
+          <p className="muted">
+            QA dry-run requires a live destination snapshot. It writes{" "}
+            <code>menu-reconcile.json</code> and plans Opdater UPDATEs for
+            name / description / ingredients only. Live apply needs{" "}
+            <code>PORTAL_LIVE_WRITES</code> plus{" "}
+            <code>RECONCILE_WRITE_CONFIRMED=1</code> and fingerprint match.
+          </p>
+          {drySummary &&
+          typeof drySummary === "object" &&
+          drySummary.reconcile &&
+          typeof drySummary.reconcile === "object" ? (
+            <div className="metrics" style={{ marginTop: "0.75rem" }}>
+              <div className="metric">
+                <strong>
+                  {String(
+                    (drySummary.reconcile as { withDiffs?: number }).withDiffs ??
+                      0,
+                  )}
+                </strong>
+                <span className="muted">Diffs</span>
+              </div>
+              <div className="metric">
+                <strong>
+                  {String(
+                    (drySummary.reconcile as { updatable?: number })
+                      .updatable ?? 0,
+                  )}
+                </strong>
+                <span className="muted">Updatable</span>
+              </div>
+              <div className="metric">
+                <strong>
+                  {String(
+                    (drySummary.reconcile as { blocked?: number }).blocked ?? 0,
+                  )}
+                </strong>
+                <span className="muted">Blocked</span>
+              </div>
+              <div className="metric">
+                <strong style={{ fontSize: "0.95rem" }}>
+                  {String(
+                    (drySummary.reconcile as { fingerprint?: string })
+                      .fingerprint ?? "—",
+                  )}
+                </strong>
+                <span className="muted">Fingerprint</span>
+              </div>
+            </div>
+          ) : (
+            <p className="muted">No reconcile artifact yet — wait for dry-run.</p>
+          )}
+        </div>
+      ) : null}
 
       {liveGate.canLiveExecute ? (
         <div className="panel">
           <h2>Live writes enabled</h2>
           <p className="muted">
-            PORTAL_LIVE_WRITES=1 and host allowlisted. After review clears, the
-            worker loads a real destination snapshot and runs the executor.
+            PORTAL_LIVE_WRITES=1 and host allowlisted. When the last review
+            question is cleared, the worker schedules gated live execute from
+            existing dry-run artifacts (hidden creates). If live is off, status
+            stays READY_DRY_RUN until you enable the flag and clear/re-answer.
           </p>
           {liveResult ? (
             <pre
@@ -103,7 +180,9 @@ export default async function JobDetailPage({
             <span className="muted">Products</span>
           </div>
           <div className="metric">
-            <strong>{metrics?.remainingQuestions ?? job.remainingQuestions}</strong>
+            <strong>
+              {metrics?.remainingQuestions ?? job.remainingQuestions}
+            </strong>
             <span className="muted">Open questions</span>
           </div>
           <div className="metric">
@@ -112,6 +191,32 @@ export default async function JobDetailPage({
           </div>
         </div>
       </div>
+
+      {policyApplication ? (
+        <PolicyApplicationPanel report={policyApplication} />
+      ) : (
+        <div className="panel">
+          <h2>Applied policies</h2>
+          <p className="muted">
+            No policy-application.json yet. Appears after dry-run when peer
+            structure / probability policies are available (
+            <code>npm run m76:pipeline</code>).
+          </p>
+          {drySummary &&
+          typeof drySummary.policyApplication === "object" &&
+          drySummary.policyApplication ? (
+            <pre
+              style={{
+                whiteSpace: "pre-wrap",
+                fontSize: "0.85rem",
+                margin: 0,
+              }}
+            >
+              {JSON.stringify(drySummary.policyApplication, null, 2)}
+            </pre>
+          ) : null}
+        </div>
+      )}
 
       <div className="panel">
         <h2>Sources</h2>
