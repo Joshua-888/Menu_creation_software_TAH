@@ -12,7 +12,7 @@ export default async function QaJobPage() {
     <AppShell employeeName={emp.name}>
       <PageHeader
         title="Quality check menu"
-        subtitle="QA / reconcile against the live menu. Produces a reconcile report and applies Opdater updates (name/description/ingredients) when admin credentials are configured."
+        subtitle="QA / reconcile against the live menu. Applies full product-card Opdater fixes (name, description, price, variants, ingredients, additions) when admin credentials are configured."
         backHref="/jobs"
         backLabel="Dashboard"
       />

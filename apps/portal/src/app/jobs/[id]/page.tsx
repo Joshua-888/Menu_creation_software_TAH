@@ -73,7 +73,8 @@ export default async function JobDetailPage({
           <h2>Quality check</h2>
           <p className="muted">
             QA diffs the intended menu (source + policies) against the live
-            destination. Opdater applies name / description / ingredients when
+            destination. Opdater rewrites the full product card — name,
+            description, price, variants, ingredients, and additions — when
             admin credentials are configured and the host is allowlisted.
           </p>
           {drySummary &&

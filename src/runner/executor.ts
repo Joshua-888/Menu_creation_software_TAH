@@ -62,7 +62,7 @@ export type DestinationPort = {
   /** Optional: list categories for `__resolve__:Name` tokens after create. */
   listCategories?(): Promise<Array<{ databaseId: string; name: string }>>;
   /**
-   * Optional certified Opdater path (name / description / ingredients).
+   * Optional certified Opdater path (full product card on edit form).
    * Never uses full updateProduct API.
    */
   updateProductViaOpdater?(input: {
@@ -579,11 +579,30 @@ async function processUpdateOp(input: {
   if (actual.description.trim() !== expected.description.trim()) {
     diffs.push("description");
   }
+  if (actual.basePriceOre !== expected.basePriceOre) diffs.push("basePrice");
   const actualIngs = actual.ingredients.map((i) => i.name.trim().toLowerCase()).sort();
   const expectedIngs = expected.ingredients.map((i) => i.trim().toLowerCase()).sort();
   if (JSON.stringify(actualIngs) !== JSON.stringify(expectedIngs)) {
     diffs.push("ingredients");
   }
+  const actualVars = actual.variants
+    .map((v) => `${v.name.trim().toLowerCase()}:${v.priceOre}`)
+    .sort()
+    .join("|");
+  const expectedVars = expected.variants
+    .map((v) => `${v.name.trim().toLowerCase()}:${v.surchargeOre}`)
+    .sort()
+    .join("|");
+  if (actualVars !== expectedVars) diffs.push("variants");
+  const actualAdds = actual.additions
+    .map((a) => `${a.name.trim().toLowerCase()}:${a.priceOre}`)
+    .sort()
+    .join("|");
+  const expectedAdds = expected.additions
+    .map((a) => `${a.name.trim().toLowerCase()}:${a.priceOre}`)
+    .sort()
+    .join("|");
+  if (actualAdds !== expectedAdds) diffs.push("additions");
   if (diffs.length) {
     store.upsertOperation({
       ...rec,

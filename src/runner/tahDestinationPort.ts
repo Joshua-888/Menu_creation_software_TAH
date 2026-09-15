@@ -9,6 +9,9 @@ import { clickOpdaterAndObserveUpdate } from "../tah/write/updateRequestObserve.
 import {
   assertActiveUnchecked,
   fillInactiveProductCreateForm,
+  setAdditionRows,
+  setIngredientRows,
+  setVariantRows,
 } from "../tah/write/formFill.js";
 import { dismissKnownCookieBanner } from "../tah/write/submitInteractability.js";
 import {
@@ -321,7 +324,31 @@ export function createTahPlaywrightDestinationPort(
         await form
           .locator("#description")
           .fill(gated.description.slice(0, 2000));
-        await replaceIngredientRows(page, gated.ingredients.slice(0, 40));
+        if (await form.locator("#price").count()) {
+          await form
+            .locator("#price")
+            .fill(oreToKrString(input.payload.basePriceOre));
+        }
+
+        const safeVariants =
+          input.payload.variants.length > 0
+            ? input.payload.variants.slice(0, 12)
+            : [{ name: "Alm.", surchargeOre: 0 }];
+        await setVariantRows(
+          page,
+          safeVariants.map((v) => ({
+            name: v.name.slice(0, 40),
+            priceKr: oreToKrString(v.surchargeOre),
+          })),
+        );
+        await setIngredientRows(page, gated.ingredients.slice(0, 40));
+        await setAdditionRows(
+          page,
+          input.payload.additions.slice(0, 24).map((a) => ({
+            name: a.name.slice(0, 40),
+            priceKr: oreToKrString(a.priceOre),
+          })),
+        );
 
         const observed = await clickOpdaterAndObserveUpdate({
           page,
@@ -350,32 +377,4 @@ export function createTahPlaywrightDestinationPort(
       }
     },
   };
-}
-
-async function replaceIngredientRows(
-  page: Page,
-  ingredients: string[],
-): Promise<void> {
-  const form = page.locator("form:has(#menu_number)");
-  const rows = form.locator("#ingredient-list tr.ingredient-form");
-  const count = await rows.count();
-  for (let i = 0; i < Math.max(count, ingredients.length); i++) {
-    if (i >= ingredients.length) {
-      const nameInput = rows.nth(i).locator("input.ingredient-name");
-      if (await nameInput.count()) await nameInput.fill("");
-      continue;
-    }
-    if (i >= count) {
-      const addBtn = form.locator(
-        'button:has-text("Tilføj"), a:has-text("Tilføj ingredient"), button:has-text("Add")',
-      ).first();
-      if (await addBtn.count()) await addBtn.click();
-      await page.waitForTimeout(200);
-    }
-    await form
-      .locator("#ingredient-list tr.ingredient-form")
-      .nth(i)
-      .locator("input.ingredient-name")
-      .fill(ingredients[i]!);
-  }
 }

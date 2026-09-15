@@ -202,4 +202,54 @@ describe("dryRun FOUND reconcile vs create", () => {
       true,
     );
   });
+
+  it("QA path emits UPDATE for missing variants and additions", () => {
+    const reconcileDiffs: ReturnType<typeof diffProductReconcile>[] = [];
+    const plan = buildDryRunWritePlan({
+      runId: "t3",
+      restaurant: "veronipizza.dk",
+      host: "veronipizza.dk",
+      source: "test.pdf",
+      schemaVersion: "1",
+      domainRuleVersion: "1",
+      adapterVersion: "test",
+      contractFingerprint: "fp",
+      canonical: tinyMenu(),
+      categoryMappings: [
+        {
+          sourceCategoryId: "cat-pizza",
+          sourceCategoryName: "Pizza",
+          outcome: "EXACT_MATCH",
+          destinationCategoryId: "10",
+          destinationCategoryName: "Pizza",
+          reason: "test",
+        },
+      ],
+      destination: {
+        ...destination,
+        products: [
+          {
+            ...destination.products[0]!,
+            name: "Margarita",
+            description: "Tomat, ost",
+            variants: [{ name: "Alm.", priceOre: 7700 }],
+            ingredients: ["Tomat", "Ost"],
+            additions: [],
+          },
+        ],
+      },
+      capabilities: M2B_ADAPTER_CAPABILITIES,
+      emitReconcileUpdates: true,
+      reconcileDiffs,
+    });
+    const productOps = plan.operations.filter((o) => o.entityType === "product");
+    expect(productOps.some((o) => o.action === "UPDATE")).toBe(true);
+    expect(
+      productOps.map((o) => o.reason ?? "").join(" | "),
+    ).not.toMatch(/portalOpdaterAdditionsVariantsPrice|deferred/);
+    const fields = new Set(
+      reconcileDiffs.flatMap((d) => d.deltas.map((x) => x.field)),
+    );
+    expect(fields.has("variants") || fields.has("additions")).toBe(true);
+  });
 });

@@ -123,7 +123,7 @@ export const M2B_ADAPTER_CAPABILITIES: AdapterCapabilities = {
     writeNonZeroVariants: "CERTIFIED",
     writeMultipleVariants: "CERTIFIED",
     assignExistingCategory: "CERTIFIED",
-    writeVariants: "UNCERTIFIED",
+    writeVariants: "CERTIFIED",
     writeIngredients: "CERTIFIED",
     writeAdditions: "CERTIFIED",
     setProductHidden: "UNCERTIFIED",

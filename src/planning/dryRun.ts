@@ -74,11 +74,14 @@ export type DryRunDestinationSnapshot = {
   }>;
 };
 
-/** Fields the portal Opdater path can apply this hour. */
+/** Fields the portal Opdater path applies on QA reconcile (full product card). */
 export const PORTAL_OPDATER_RECONCILE_FIELDS: ReconcileField[] = [
   "name",
   "description",
   "ingredients",
+  "variants",
+  "additions",
+  "basePrice",
 ];
 
 function toLiveSnapshot(
@@ -226,7 +229,8 @@ export function buildDryRunWritePlan(input: {
   policyTraces?: ProductPolicyTrace[];
   /**
    * When true (QA_RECONCILE), FOUND products emit UPDATE via certified Opdater
-   * caps for name/description/ingredients instead of blanket BLOCK.
+   * for the full product card (name/description/price/variants/ingredients/additions)
+   * instead of blanket BLOCK.
    */
   emitReconcileUpdates?: boolean;
   /** Optional sink for reconcile diffs (QA report). */
@@ -690,11 +694,11 @@ export function buildDryRunWritePlan(input: {
                 ...identity,
                 destinationDatabaseId: match.product.databaseId,
               },
-              reason: `QA reconcile: diffs only on non-portal Opdater fields (${unsafeDeltas
+              reason: `QA reconcile: diffs only on fields outside portal Opdater card (${unsafeDeltas
                 .map((d) => d.field)
                 .join(",")})`,
               missingCapabilities: [
-                "portalOpdaterAdditionsVariantsPrice",
+                "portalOpdaterFullCard",
                 ...diff.missingCapabilities,
               ],
             }),
@@ -734,10 +738,10 @@ export function buildDryRunWritePlan(input: {
             payload: intended,
             reason:
               unsafeDeltas.length > 0
-                ? `QA reconcile Opdater (safe fields); deferred: ${unsafeDeltas
+                ? `QA reconcile Opdater (full card); deferred: ${unsafeDeltas
                     .map((d) => d.field)
                     .join(",")}`
-                : "QA reconcile Opdater (name/description/ingredients)",
+                : "QA reconcile Opdater (full product card)",
             requiredCapabilities: requiredCaps,
             missingCapabilities: [],
           }),
