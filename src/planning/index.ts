@@ -13,6 +13,7 @@ export {
   summarizeDryRun,
   summarizeSourceDryRun,
   PORTAL_OPDATER_RECONCILE_FIELDS,
+  shouldCreateProductsHidden,
   type DryRunDestinationSnapshot,
 } from "./dryRun.js";
 export type { ProductPolicyTrace } from "./structureMapping.js";

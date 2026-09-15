@@ -130,8 +130,9 @@ export default async function JobDetailPage({
           <p className="muted">
             Admin credentials configured and host allowlisted. When the last
             review question is cleared, the worker schedules live execute from
-            existing dry-run artifacts (hidden creates). Kill switch:{" "}
-            <code>PORTAL_LIVE_WRITES=0</code>.
+            existing dry-run artifacts (storefront-visible by default). Kill
+            switch: <code>PORTAL_LIVE_WRITES=0</code>. Keep hidden with{" "}
+            <code>PORTAL_CREATE_HIDDEN=1</code>.
           </p>
           {liveResult ? (
             <pre

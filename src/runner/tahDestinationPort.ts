@@ -7,8 +7,10 @@ import { V1_ROUTES } from "../tah/adapters/v1/selectors.js";
 import { clickSkabAndObserveCreate } from "../tah/write/createRequestObserve.js";
 import { clickOpdaterAndObserveUpdate } from "../tah/write/updateRequestObserve.js";
 import {
+  assertActiveChecked,
   assertActiveUnchecked,
-  fillInactiveProductCreateForm,
+  fillProductCreateForm,
+  setActiveCheckbox,
   setAdditionRows,
   setIngredientRows,
   setVariantRows,
@@ -207,7 +209,7 @@ export function createTahPlaywrightDestinationPort(
             ? payload.variants.slice(0, 8)
             : [{ name: "Alm.", surchargeOre: 0 }];
 
-        await fillInactiveProductCreateForm(
+        await fillProductCreateForm(
           page,
           {
             menuNumber: payload.menuNumber,
@@ -224,10 +226,12 @@ export function createTahPlaywrightDestinationPort(
               name: a.name.slice(0, 40),
               priceKr: oreToKrString(a.priceOre),
             })),
+            intendedHidden: payload.intendedHidden,
           },
           { expectedHost: options.expectedHost },
         );
-        await assertActiveUnchecked(page);
+        if (payload.intendedHidden) await assertActiveUnchecked(page);
+        else await assertActiveChecked(page);
 
         const observed = await clickSkabAndObserveCreate({
           page,
@@ -349,6 +353,7 @@ export function createTahPlaywrightDestinationPort(
             priceKr: oreToKrString(a.priceOre),
           })),
         );
+        await setActiveCheckbox(page, input.payload.intendedHidden === true);
 
         const observed = await clickOpdaterAndObserveUpdate({
           page,

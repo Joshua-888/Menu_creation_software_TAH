@@ -18,6 +18,12 @@ export type FillInactiveProductInput = {
   ingredients: string[];
   /** Absolute addon price in kroner string, e.g. "17" for 1700 øre */
   additions?: Array<{ name: string; priceKr: string }>;
+  /**
+   * When true, leave Aktiv? unchecked (hidden from storefront).
+   * When false, check Aktiv? so the product is available on the storefront.
+   * Defaults to true for the legacy `fillInactiveProductCreateForm` helper.
+   */
+  intendedHidden?: boolean;
 };
 
 /**
@@ -56,10 +62,33 @@ export async function assertPageIsVeroniAdmin(page: Page): Promise<void> {
   }
 }
 
+/** Set Aktiv? checkbox to match intended storefront visibility. */
+export async function setActiveCheckbox(
+  page: Page,
+  intendedHidden: boolean,
+): Promise<void> {
+  const active = page.locator("form:has(#menu_number) #active");
+  if (!(await active.count())) {
+    throw new Error("ADMIN_WRITE_BLOCKED: #active missing");
+  }
+  if (intendedHidden) {
+    if (await active.isChecked()) await active.uncheck();
+    if (await active.isChecked()) {
+      throw new Error("ADMIN_WRITE_BLOCKED: failed to uncheck #active");
+    }
+  } else {
+    if (!(await active.isChecked())) await active.check();
+    if (!(await active.isChecked())) {
+      throw new Error("ADMIN_WRITE_BLOCKED: failed to check #active");
+    }
+  }
+}
+
 /**
- * Fill create form and force #active unchecked. Does not submit.
+ * Fill create form. Does not submit.
+ * Defaults to storefront-available (`Aktiv?` checked) unless intendedHidden.
  */
-export async function fillInactiveProductCreateForm(
+export async function fillProductCreateForm(
   page: Page,
   input: FillInactiveProductInput,
   opts?: { expectedHost?: string },
@@ -116,16 +145,22 @@ export async function fillInactiveProductCreateForm(
     }
   }
 
-  const active = page.locator("#active");
-  if (!(await active.count())) {
-    throw new Error("ADMIN_WRITE_BLOCKED: #active missing");
-  }
-  if (await active.isChecked()) {
-    await active.uncheck();
-  }
-  if (await active.isChecked()) {
-    throw new Error("ADMIN_WRITE_BLOCKED: failed to uncheck #active");
-  }
+  await setActiveCheckbox(page, input.intendedHidden === true);
+}
+
+/**
+ * Legacy hidden create helper (Aktiv? unchecked). Prefer fillProductCreateForm.
+ */
+export async function fillInactiveProductCreateForm(
+  page: Page,
+  input: FillInactiveProductInput,
+  opts?: { expectedHost?: string },
+): Promise<void> {
+  await fillProductCreateForm(
+    page,
+    { ...input, intendedHidden: true },
+    opts,
+  );
 }
 
 export async function assertActiveUnchecked(page: Page): Promise<void> {
@@ -135,6 +170,16 @@ export async function assertActiveUnchecked(page: Page): Promise<void> {
   }
   if (await active.isChecked()) {
     throw new Error("ADMIN_WRITE_BLOCKED: #active is checked before submit");
+  }
+}
+
+export async function assertActiveChecked(page: Page): Promise<void> {
+  const active = page.locator("#active");
+  if (!(await active.count())) {
+    throw new Error("ADMIN_WRITE_BLOCKED: #active missing before submit");
+  }
+  if (!(await active.isChecked())) {
+    throw new Error("ADMIN_WRITE_BLOCKED: #active is unchecked before submit");
   }
 }
 

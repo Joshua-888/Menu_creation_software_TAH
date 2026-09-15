@@ -154,10 +154,16 @@ export {
   type FormCompletenessIssue,
 } from "./write/formCompleteness.js";
 export {
+  fillProductCreateForm,
   fillInactiveProductCreateForm,
+  setActiveCheckbox,
   assertActiveUnchecked,
+  assertActiveChecked,
   assertPageIsAllowlistedAdmin,
   assertPageIsVeroniAdmin,
+  setVariantRows,
+  setAdditionRows,
+  setIngredientRows,
 } from "./write/formFill.js";
 export {
   dismissKnownCookieBanner,

@@ -7,6 +7,7 @@ import {
 import { shouldSeedDefaultTilbehor } from "../../src/learning/structurePolicy.js";
 import { shouldApplyPeerProbabilityPolicy } from "../../src/learning/peerArtifacts.js";
 import { shouldLoadLiveDestinationForDryRun } from "../../src/portal/liveExecute.js";
+import { shouldCreateProductsHidden } from "../../src/planning/dryRun.js";
 import { isStructureWriteConfirmed } from "../../src/portal/structureWriteGate.js";
 import { evaluatePortalLiveWriteGate } from "../../src/portal/liveWrites.js";
 
@@ -119,6 +120,18 @@ describe("dry-run live destination gate", () => {
         PORTAL_LIVE_WRITE_HOSTS: "shop-a.dk",
       }),
     ).toBe(false);
+  });
+});
+
+describe("storefront publish default", () => {
+  it("publishes by default; PORTAL_CREATE_HIDDEN keeps Skjult", () => {
+    expect(shouldCreateProductsHidden({})).toBe(false);
+    expect(
+      shouldCreateProductsHidden({ PORTAL_CREATE_HIDDEN: "1" }),
+    ).toBe(true);
+    expect(
+      shouldCreateProductsHidden({ PORTAL_STOREFRONT_PUBLISH: "0" }),
+    ).toBe(true);
   });
 });
 

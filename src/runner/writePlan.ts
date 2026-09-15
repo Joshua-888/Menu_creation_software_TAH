@@ -40,7 +40,7 @@ export type PlannedProductPayload = {
   variants: Array<{ name: string; surchargeOre: number }>;
   ingredients: string[];
   additions: Array<{ name: string; priceOre: number }>;
-  /** Create path: intended HIDDEN (unchecked Aktiv?). */
+  /** Create/update path: intended HIDDEN when true; storefront-visible when false. */
   intendedHidden: boolean;
 };
 

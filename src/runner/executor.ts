@@ -164,7 +164,9 @@ export function compareProductExact(
       }
     }
   }
-  if (expected.intendedHidden && actual.listStatus !== "Skjult") {
+  if (expected.intendedHidden) {
+    if (actual.listStatus !== "Skjult") diffs.push("visibility");
+  } else if (actual.listStatus === "Skjult") {
     diffs.push("visibility");
   }
   return diffs;
@@ -603,6 +605,11 @@ async function processUpdateOp(input: {
     .sort()
     .join("|");
   if (actualAdds !== expectedAdds) diffs.push("additions");
+  if (expected.intendedHidden) {
+    if (actual.listStatus !== "Skjult") diffs.push("visibility");
+  } else if (actual.listStatus === "Skjult") {
+    diffs.push("visibility");
+  }
   if (diffs.length) {
     store.upsertOperation({
       ...rec,

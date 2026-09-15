@@ -190,8 +190,21 @@ function toPayload(
       ? assessment.repaired.ingredients
       : ingredientList,
     additions,
-    intendedHidden: true,
+    // Default: appear on storefront. Kill switch: PORTAL_CREATE_HIDDEN=1
+    intendedHidden: shouldCreateProductsHidden(),
   };
+}
+
+/** Products are storefront-visible by default; set PORTAL_CREATE_HIDDEN=1 to keep Skjult. */
+export function shouldCreateProductsHidden(
+  env: NodeJS.ProcessEnv = process.env,
+): boolean {
+  return (
+    env.PORTAL_CREATE_HIDDEN === "1" ||
+    env.PORTAL_CREATE_HIDDEN === "true" ||
+    env.PORTAL_STOREFRONT_PUBLISH === "0" ||
+    env.PORTAL_STOREFRONT_PUBLISH === "false"
+  );
 }
 
 /**

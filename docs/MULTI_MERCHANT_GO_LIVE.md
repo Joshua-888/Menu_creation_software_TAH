@@ -10,7 +10,7 @@ Use this before running **live production tests** on newly acquired merchants.
 - Job `restaurantKey` is the **destination hostname** (not merchant display name).
 - New merchants **do not** get Veroni Tilbehør mayo/ketchup defaults.
 - Peer probability policies apply to **Veroni only** by default (`PORTAL_APPLY_PEER_PROBABILITY_HOSTS` / `PORTAL_APPLY_PEER_PROBABILITY=1` to opt in).
-- Products are created **hidden** (`intendedHidden: true`). Formal visibility activate (`setProductHidden` / available) remains **UNCERTIFIED** — publish/activate manually in admin after review.
+- Products are created **storefront-visible** by default (`Aktiv?` checked / `intendedHidden: false`). Kill switch: `PORTAL_CREATE_HIDDEN=1`.
 - Peer structure fingerprint confirm is **optional** unless `STRUCTURE_WRITE_REQUIRED=1`.
 - Clearing the last review question schedules live execute when the live gate is open.
 
@@ -51,10 +51,10 @@ TAH_ADMIN_BASE_URL=https://merchant1.dk
 3. Create a portal job with the merchant PDF; destination host = that shop (`restaurantKey` becomes that hostname).
 4. Run worker through ARTIFACTS / REVIEW:
    - Check `destination-snapshot-meta.json` → `source: "live"`.
-   - Confirm dry-run creates are **hidden**.
+   - Confirm dry-run creates are **storefront-visible** unless `PORTAL_CREATE_HIDDEN=1`.
    - Answer review questions; do not invent Tilbehør prices from peers.
 5. When the last question clears and live gate is open, post-review live execute runs automatically from canonical artifacts.
-6. Prefer a **small slice** first; verify products exist as **Skjult**, then manually activate after merchant sign-off.
+6. Prefer a **small slice** first; verify products appear on the storefront after live write.
 7. Repeat for merchant 2 with its own job (never reuse Veroni decision facts).
 
 ## Verify before go-live
@@ -66,4 +66,5 @@ npm run check:ship
 ## Rollback
 
 - Set `PORTAL_LIVE_WRITES=0` to stop all portal live writes immediately.
-- Leave products hidden; delete or edit in admin if a create was wrong.
+- Set `PORTAL_CREATE_HIDDEN=1` if you need creates to stay Skjult again.
+- Delete or edit in admin if a create was wrong.

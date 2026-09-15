@@ -97,7 +97,7 @@ export const BUILT_IN_SEMANTIC_RULES: BuiltInSemanticRule[] = [
     adjustableVia: "Env flags + confirm JSON files (not decision policies)",
     details: [
       "Creates stay hidden until separately activated",
-      "Existing products: QA reconcile Opdater rewrites the full product card (name, description, price, variants, ingredients, additions). Visibility activate remains manual.",
+      "Existing products: QA reconcile Opdater rewrites the full product card and sets Aktiv? so items are storefront-visible by default (PORTAL_CREATE_HIDDEN=1 to keep Skjult).",
     ],
   },
 ];

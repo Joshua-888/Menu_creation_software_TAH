@@ -48,7 +48,7 @@ export default async function JobsPage() {
           <strong>Create menu</strong>
           <p>
             Upload a PDF, run extraction → domain → dry-run. Builds the menu
-            onto TakeAwayHero (hidden creates when live writes are gated on).
+            onto TakeAwayHero (storefront-visible when live writes run).
           </p>
           <span className="workflow-cta">Start create →</span>
         </Link>

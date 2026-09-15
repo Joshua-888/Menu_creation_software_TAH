@@ -42,7 +42,7 @@ With admin credentials configured:
 
 1. Certify createCategory canary on Veroni: `npm run m67:category` (needs `TAH_ADMIN_*` in `.env`)
 2. Destination host must be allowlisted (`veronipizza.dk` by default; add others via `PORTAL_LIVE_WRITE_HOSTS`)
-3. Live execute runs after dry-run when there are no open review questions (creates stay hidden)
+3. Live execute runs after dry-run when there are no open review questions (products are storefront-visible by default; `PORTAL_CREATE_HIDDEN=1` to keep Skjult)
 
 To force dry-run-only: `PORTAL_LIVE_WRITES=0`. Customer Pasta create uses `allowCustomerCategory: true` at the executor call site after the canary gate.
 
