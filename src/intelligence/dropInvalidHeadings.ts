@@ -44,6 +44,14 @@ export function dropInvalidHeadingProducts(menu: CanonicalMenu): {
         (cls.entityType === "CATEGORY" &&
           cat.name.toLowerCase().includes(name.toLowerCase()) &&
           name.length <= cat.name.length + 2);
+      const hasPositiveSourcePrice =
+        (p.basePrice ?? 0) > 0 ||
+        p.variants.some((variant) => (variant.sourceTotalPrice ?? 0) > 0);
+      const hasProductDetail =
+        p.ingredients.length > 0 || Boolean(p.description?.trim());
+      const photographedEvidence =
+        p.evidence?.origin === "SOURCE_LAYOUT" ||
+        p.evidence?.origin === "SOURCE_VISION";
 
       if (cls.entityType === "META_INSTRUCTION" || META_PRODUCT_RE.test(name)) {
         dropped.push({
@@ -60,6 +68,16 @@ export function dropInvalidHeadingProducts(menu: CanonicalMenu): {
         sameAsCategory ||
         (cls.entityType === "CATEGORY" && name.split(/\s+/).length <= 3)
       ) {
+        // A real printed product may share a generic category label. Positive
+        // source pricing plus card detail is stronger than the heading prior.
+        if (
+          sameAsCategory &&
+          photographedEvidence &&
+          hasPositiveSourcePrice &&
+          hasProductDetail
+        ) {
+          return true;
+        }
         if (/\b(hawaii|pepperoni|margarita|vesuvio|calzone|bambino)\b/i.test(name)) {
           return true;
         }
@@ -97,8 +115,7 @@ export function dropInvalidHeadingProducts(menu: CanonicalMenu): {
 
       // Ingredient-phrase mistaken as pasta/sauce product with no dish structure
       if (
-        /^(klassisk\s+italiensk\s+kødsovs|kødsovs|kødsauce)$/i.test(name) &&
-        p.ingredients.length === 0
+        /^(klassisk\s+italiensk\s+kødsovs|kødsovs|kødsauce)$/i.test(name)
       ) {
         dropped.push({
           sourceId: p.sourceId,

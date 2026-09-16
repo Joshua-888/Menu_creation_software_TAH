@@ -53,6 +53,8 @@ const INGREDIENTISH_RE =
   /\b(grillet|bøf|bef|cheddar|ost|agurk|løg|sauce|jalapeño|jalapenos|champignon|chicken|crispy|pickles|karamellis|burgersauce|bearnaise|colslaw|coleslaw|honey|peberfrugt|nuggets|fries|dip|kylling|syltede?)\b/i;
 const PRICE_LINE_RE =
   /(?:^|\b)(?:menu\s*)?(\d{2,3})\s*[,.\-°]/gi;
+const IMAGE_PRICE_LINE_RE =
+  /(?:\bkr\.?\s*(\d{2,3})\b|(?:^|\b)(?:menu\s*)?(\d{2,3})\s*[,.\-°])/gi;
 const SECTION_HEADER_RE =
   /^(burgers?|grill|pizza|pasta|drikkevarer|sides|tilbehør|menuer|sandwich|durum|pita)\b/i;
 
@@ -77,10 +79,27 @@ function looksLikeTitle(line: string): boolean {
   return TITLE_RE.test(t) && /[A-Za-zÆØÅæøå]{3,}/.test(t);
 }
 
-function pricesFromLine(line: string): number[] {
+function isStrongPricedProductLine(raw: string): boolean {
+  const name = cleanTitle(raw, true);
+  if (pricesFromLine(raw, true).length === 0 || name.length < 3) return false;
+  if (!/[A-Za-zÆØÅæøå]{3,}/.test(name)) return false;
+  const kind = classifyProductKind({ name });
+  return kind !== "other" && kind !== "drinks";
+}
+
+function looksLikeProductLine(raw: string, image: boolean): boolean {
+  const cleaned = cleanTitle(raw, image);
+  return (
+    looksLikeTitle(raw) ||
+    looksLikeTitle(cleaned) ||
+    (image && isStrongPricedProductLine(raw))
+  );
+}
+
+function pricesFromLine(line: string, image = false): number[] {
   const out: number[] = [];
-  for (const m of line.matchAll(PRICE_LINE_RE)) {
-    const n = Number(m[1]);
+  for (const m of line.matchAll(image ? IMAGE_PRICE_LINE_RE : PRICE_LINE_RE)) {
+    const n = Number(m[1] ?? m[2]);
     if (n >= 10 && n <= 400) out.push(n);
   }
   return out;
@@ -90,6 +109,8 @@ function evidence(
   sourceFile: string,
   pageNumber: number,
   raw: string,
+  image: boolean,
+  region?: SourceEvidence["region"],
 ): SourceEvidence {
   return {
     extractorVersion: "1.0.0",
@@ -97,6 +118,33 @@ function evidence(
     sourceFile,
     pageNumber,
     confidence: 0.72,
+    ...(image ? { origin: "SOURCE_LAYOUT" as const } : {}),
+    ...(region ? { region } : {}),
+  };
+}
+
+function titleRegion(
+  page: ClassifiedPdfPage,
+  name: string,
+): SourceEvidence["region"] | undefined {
+  const key = name.toLowerCase().replace(/[^a-z0-9æøå]+/g, "");
+  const line = page.lines.find((candidate) =>
+    cleanTitle(candidate.text, true)
+      .toLowerCase()
+      .replace(/[^a-z0-9æøå]+/g, "")
+      .includes(key),
+  );
+  if (!line?.items.length) return undefined;
+  const x0 = Math.min(...line.items.map((item) => item.x));
+  const x1 = Math.max(...line.items.map((item) => item.x + item.width));
+  const y0 = Math.min(...line.items.map((item) => item.y));
+  const y1 = Math.max(...line.items.map((item) => item.y + item.height));
+  return {
+    x: x0,
+    y: y0,
+    width: x1 - x0,
+    height: y1 - y0,
+    pageNumber: page.pageNumber,
   };
 }
 
@@ -141,8 +189,10 @@ export function joinTitleFragments(lines: string[]): string[] {
   return out;
 }
 
-function cleanTitle(raw: string): string {
+function cleanTitle(raw: string, image = false): string {
   return raw
+    .replace(image ? IMAGE_PRICE_LINE_RE : /$^/, " ")
+    .replace(image ? /\bkr\.?\s*$/i : /$^/, " ")
     .replace(/\s+/g, " ")
     .replace(/\s+\d+\s*$/, "")
     .replace(/\s+(sl|si|oy|as)$/i, "")
@@ -191,6 +241,44 @@ export function dominantBaseMenuPair(flat: string): [number, number] | null {
   const b = ranked[1]![0];
   if (Math.abs(a - b) < 15) return null;
   return a < b ? [a, b] : [b, a];
+}
+
+function dominantImageMenuPair(flat: string): [number, number] | null {
+  const menuStart = flat.search(/^menu$/im);
+  const scoped = menuStart >= 0 ? flat.slice(menuStart) : flat;
+  const counts = new Map<number, number>();
+  for (const match of scoped.matchAll(/\b(\d{2,3})\b/g)) {
+    const value = Number(match[1]);
+    if (value < 40 || value > 350) continue;
+    counts.set(value, (counts.get(value) ?? 0) + 1);
+  }
+  const ranked = [...counts.entries()]
+    .filter(([, count]) => count >= 2)
+    .sort((a, b) => b[1] - a[1] || b[0] - a[0]);
+  if (ranked.length < 2) return null;
+  const first = ranked[0]![0];
+  const second = ranked[1]![0];
+  return first < second ? [first, second] : [second, first];
+}
+
+function joinImageTitleFragments(lines: string[]): string[] {
+  const out: string[] = [];
+  for (let i = 0; i < lines.length; i += 1) {
+    const first = lines[i]!.trim();
+    const middle = lines[i + 1]?.trim() ?? "";
+    const last = lines[i + 2]?.trim() ?? "";
+    if (
+      /^[A-ZÆØÅ][A-Za-zÆØÅæøå'’–-]{3,}$/.test(first) &&
+      /^[\d\s.,»|]+$/.test(middle) &&
+      /^[A-ZÆØÅ][A-Za-zÆØÅæøå'’–-]+(?:\s+(?:sl|si|oy|as))?$/i.test(last)
+    ) {
+      out.push(`${first} ${last.replace(/\s+(sl|si|oy|as)$/i, "")}`);
+      i += 2;
+      continue;
+    }
+    out.push(first);
+  }
+  return out;
 }
 
 function pricesNearTitle(flat: string, name: string): number[] {
@@ -246,6 +334,15 @@ function sectionHintFromContext(lines: string[], titleIndex: number): string | u
   return undefined;
 }
 
+function strongImageFamilyCategory(name: string): string | undefined {
+  if (/\bburger\b/i.test(name)) return "Burgers";
+  if (/\b(d[uü]r[uü]m)\b/i.test(name)) return "Durum";
+  if (/\bpita\b/i.test(name)) return "Pita";
+  if (/\bkebab\b/i.test(name)) return "Kebab";
+  if (/\b(menu|nuggets?|pomfrit)\b/i.test(name)) return "Menuer";
+  return undefined;
+}
+
 /**
  * Walk page lines; when a dish title is followed by ingredient/price lines,
  * emit a candidate (no menu number — domain assigns decade blocks per category).
@@ -259,24 +356,40 @@ export function detectNamePriceCandidates(
 
   for (const page of pages) {
     const rawLines = page.lines.map((l) => l.text.trim()).filter(Boolean);
-    const lines = joinTitleFragments(rawLines);
+    const imageSource = page.sourceKind === "image";
+    const lines = joinTitleFragments(
+      imageSource ? joinImageTitleFragments(rawLines) : rawLines,
+    );
     const flat = lines.join("\n");
-    const pagePair = dominantBaseMenuPair(flat);
+    const imageHasMenuColumnHeader = rawLines.some((line) =>
+      /^menu$/i.test(line.trim()),
+    );
+    const pagePair =
+      !imageSource || imageHasMenuColumnHeader
+        ? imageSource
+          ? dominantImageMenuPair(flat) ?? dominantBaseMenuPair(flat)
+          : dominantBaseMenuPair(flat)
+        : null;
 
     let i = 0;
     while (i < lines.length) {
       const line = lines[i]!;
-      if (!looksLikeTitle(line) && !looksLikeTitle(cleanTitle(line))) {
+      if (!looksLikeProductLine(line, imageSource)) {
         i += 1;
         continue;
       }
 
-      const name = cleanTitle(line);
+      const name = cleanTitle(line, imageSource);
       if (name.length < 3 || seen.has(name.toLowerCase())) {
         i += 1;
         continue;
       }
-      if (!looksLikeTitle(name) || !isCredibleDishTitle(name)) {
+      const strongPricedLine =
+        imageSource && isStrongPricedProductLine(line);
+      if (
+        (!looksLikeTitle(name) || !isCredibleDishTitle(name)) &&
+        !strongPricedLine
+      ) {
         i += 1;
         continue;
       }
@@ -284,26 +397,39 @@ export function detectNamePriceCandidates(
       if (
         INGREDIENTISH_RE.test(name) &&
         !PRODUCT_NOUN_RE.test(name) &&
-        !/\b(burger|smash|pizza|durum|pita|sandwich)\b/i.test(name)
+        !/\b(burger|smash|pizza|durum|pita|sandwich)\b/i.test(name) &&
+        !(imageSource && /\b(pomfrit|nuggets?)\b/i.test(name))
       ) {
         i += 1;
         continue;
       }
 
-      const bundle: string[] = [name];
+      const bundle: string[] = [imageSource ? line : name];
       const descParts: string[] = [];
-      const prices: number[] = [];
+      const prices: number[] = imageSource
+        ? pricesFromLine(line, true)
+        : [];
+      if (
+        imageSource &&
+        prices.length === 0 &&
+        i > 0 &&
+        !/[A-Za-zÆØÅæøå]{3,}/.test(lines[i - 1]!)
+      ) {
+        prices.push(...pricesFromLine(lines[i - 1]!, imageSource));
+      }
       let j = i + 1;
-      let sawPrice = false;
+      let sawPrice = prices.length > 0;
 
       while (j < lines.length && j < i + 10) {
         const next = lines[j]!;
-        const nextTitle = cleanTitle(next);
-        if (looksLikeTitle(nextTitle) && prices.length > 0) break;
-        if (looksLikeTitle(nextTitle) && j > i + 1) break;
+        const nextIsTitle = imageSource
+          ? looksLikeProductLine(next, true)
+          : looksLikeTitle(cleanTitle(next));
+        if (nextIsTitle && prices.length > 0) break;
+        if (nextIsTitle && j > i + 1) break;
         if (SECTION_HEADER_RE.test(next) && next.split(/\s+/).length <= 2) break;
         bundle.push(next);
-        const ps = pricesFromLine(next);
+        const ps = pricesFromLine(next, imageSource);
         if (ps.length) {
           for (const p of ps) {
             if (!prices.includes(p)) prices.push(p);
@@ -353,6 +479,10 @@ export function detectNamePriceCandidates(
           ? descParts.join(", ").slice(0, 400)
           : undefined);
       const sectionFromCard = sectionHintFromContext(lines, i);
+      const strongImageCategory = imageSource
+        ? strongImageFamilyCategory(name)
+        : undefined;
+      const resolvedSection = strongImageCategory ?? sectionFromCard;
       const rawLineBundle = bundle.join("\n");
       seen.add(name.toLowerCase());
 
@@ -368,11 +498,22 @@ export function detectNamePriceCandidates(
         rawVariantNames: dual ? ["BASE", "Menu"] : ["Alm."],
         rawVariantPrices: dual ? [base, menu] : [base],
         priceMode: dual ? "base_menu" : "single",
-        ...(sectionFromCard ? { sectionHint: sectionFromCard } : {}),
+        ...(resolvedSection
+          ? {
+              sectionHint: resolvedSection,
+              categoryHint: resolvedSection,
+            }
+          : {}),
         additions: [],
         choiceHints: [],
         confidence: 0.76,
-        evidence: evidence(sourceFile, page.pageNumber, rawLineBundle),
+        evidence: evidence(
+          sourceFile,
+          page.pageNumber,
+          rawLineBundle,
+          imageSource,
+          imageSource ? titleRegion(page, name) : undefined,
+        ),
         rawLineBundle,
       });
 

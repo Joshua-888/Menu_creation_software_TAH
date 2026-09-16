@@ -1,0 +1,25 @@
+{
+  "fixtureId": "bella-kebab-target-menu-v1",
+  "minimumProductCount": 12,
+  "requiredProducts": [
+    "Smash burger",
+    "BBQ burger",
+    "Durum Kebab",
+    "Durum menu",
+    "Lille pita brød",
+    "Lille pita brød menu",
+    "Stort pita brød",
+    "Stor pita brød menu",
+    "Kebab box",
+    "Durum",
+    "Pomfrit og 6 nuggets menu",
+    "Hamburger menu"
+  ],
+  "forbiddenNames": ["Syttede sds"],
+  "forbiddenCategories": ["PIZZA"],
+  "requirements": {
+    "positiveSourceSupportedPrices": true,
+    "noMenuVariant": true,
+    "coverageSuspicious": false
+  }
+}

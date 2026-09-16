@@ -352,9 +352,17 @@ export function detectSourceCandidatesLayout(
       continue;
     }
 
+    const imageSource = page.sourceKind === "image";
     let state: SectionState = {
-      section: page.pageNumber <= 4 ? "PIZZA" : "UNKNOWN",
-      priceMode: page.pageNumber <= 4 ? "alm_familie" : "none",
+      // Page-number defaults are a legacy PDF layout prior. Photos must earn a
+      // category from visible evidence; otherwise they remain unresolved.
+      section: !imageSource && page.pageNumber <= 4 ? "PIZZA" : "UNKNOWN",
+      priceMode:
+        imageSource
+          ? "single"
+          : page.pageNumber <= 4
+            ? "alm_familie"
+            : "none",
       pendingLocalVariants: null,
       pendingLocalPrices: [],
     };
@@ -755,6 +763,7 @@ export function detectSourceCandidatesLayout(
         imageRef: page.imageRef,
         confidence,
         extractorVersion: PDF_EXTRACTOR_VERSION,
+        ...(imageSource ? { origin: "SOURCE_LAYOUT" as const } : {}),
       };
 
       candidates.push({

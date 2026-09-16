@@ -13,6 +13,8 @@ export type PdfTextItem = {
   y: number;
   width: number;
   height: number;
+  /** OCR confidence normalized to 0..1; absent for embedded PDF text. */
+  confidence?: number;
 };
 
 export type PdfPageLine = {
@@ -34,6 +36,7 @@ export type IngestedPdfPage = {
 export type ClassifiedPdfPage = IngestedPdfPage & {
   classification: PageClass;
   classificationReason: string;
+  sourceKind?: "pdf" | "image";
 };
 
 export type OverlapLink = {
@@ -107,4 +110,4 @@ export type SourceAccounting = {
   };
 };
 
-export const PDF_EXTRACTOR_VERSION = "pdf-source-adapter@1.1.0-m5r";
+export const PDF_EXTRACTOR_VERSION = "pdf-source-adapter@1.2.0-multi-evidence";

@@ -10,6 +10,18 @@ export const SourceEvidenceSchema = z.object({
   imageRef: z.string().optional(),
   confidence: z.number().min(0).max(1).optional(),
   extractorVersion: z.string().optional(),
+  origin: z
+    .enum(["SOURCE_OCR", "SOURCE_VISION", "SOURCE_LAYOUT", "SOURCE_PDF_TEXT"])
+    .optional(),
+  region: z
+    .object({
+      x: z.number(),
+      y: z.number(),
+      width: z.number().nonnegative(),
+      height: z.number().nonnegative(),
+      pageNumber: z.number().int().positive().optional(),
+    })
+    .optional(),
 });
 
 export type SourceEvidence = z.infer<typeof SourceEvidenceSchema>;

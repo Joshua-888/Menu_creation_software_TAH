@@ -55,6 +55,19 @@ export default async function JobDetailPage({
     categories?: Array<{ products?: unknown[] }>;
     productCount?: number;
   } | null;
+  const extractionAccounting = readJobArtifact(
+    id,
+    "extraction-accounting.json",
+  ) as {
+    accounting?: { summary?: { candidatesDetected?: number } };
+    uniqueProducts?: number;
+  } | null;
+  const sourceCoverage = readJobArtifact(id, "source-coverage.json") as {
+    suspicious?: boolean;
+    detail?: string;
+    priceAnchorCount?: number;
+    priceLikeTokens?: number;
+  } | null;
   const approval = readJobArtifact(
     id,
     "awaiting-operator-approval.json",
@@ -82,6 +95,9 @@ export default async function JobDetailPage({
       (count, category) => count + (category.products?.length ?? 0),
       0,
     ) ?? null;
+  const sourceCandidates =
+    extractionAccounting?.accounting?.summary?.candidatesDetected ?? null;
+  const coverageBlocked = sourceCoverage?.suspicious === true;
   const liveCount = (key: string): number | null =>
     typeof liveResult?.[key] === "number"
       ? (liveResult[key] as number)
@@ -130,7 +146,21 @@ export default async function JobDetailPage({
             staged hidden by default. TAH category creation is customer-facing
             immediately.
           </p>
-          <ApproveCreateMenuButton jobId={job.id} />
+          <p className={coverageBlocked ? "error" : "muted"}>
+            Source candidates: {sourceCandidates ?? "—"} · Extracted source
+            products: {sourceProducts ?? "—"} · TargetMenu products:{" "}
+            {targetProducts ?? "—"} · Coverage:{" "}
+            {coverageBlocked ? "SUSPICIOUS — approval disabled" : "OK"}
+          </p>
+          <ApproveCreateMenuButton
+            jobId={job.id}
+            disabledReason={
+              coverageBlocked
+                ? sourceCoverage?.detail ??
+                  "Source coverage is suspicious; re-extract before approval."
+                : undefined
+            }
+          />
         </div>
       ) : null}
 

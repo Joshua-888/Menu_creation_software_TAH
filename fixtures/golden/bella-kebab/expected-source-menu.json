@@ -1,0 +1,19 @@
+{
+  "fixtureId": "bella-kebab-source-menu-v1",
+  "productCount": 12,
+  "forbidden": ["Syttede sds", "PIZZA"],
+  "products": [
+    { "name": "Smash burger", "description": "Burgerdressing el. chilimayo, syltede rødløg, agurk og ost", "priceOre": 7500 },
+    { "name": "BBQ burger", "description": "BBQ sovs, mayo, syltede rødløg, ristede løg", "priceOre": 7500 },
+    { "name": "Durum Kebab", "description": "Creme fraiche dressing el. tahin dressing", "priceOre": 7500 },
+    { "name": "Durum menu", "description": "Kebab, sodavand og pomfritter", "priceOre": 11000 },
+    { "name": "Lille pita brød", "description": "Kebab, creme fraiche dressing el. tahin dressing", "priceOre": 4500 },
+    { "name": "Lille pita brød menu", "description": "Kebab, sodavand og pomfritter", "priceOre": 6500 },
+    { "name": "Stort pita brød", "description": "Kebab, creme fraiche dressing el. tahin dressing", "priceOre": 5500 },
+    { "name": "Stor pita brød menu", "description": "Kebab, sodavand og pomfritter", "priceOre": 7500 },
+    { "name": "Kebab box", "description": "Kebab, pomfritter, salat, tomat, agurk, løg og creme fraiche dressing el. tahin dressing", "priceOre": 6000 },
+    { "name": "Durum", "description": "Falafel, creme fraiche dressing el. tahin dressing", "priceOre": 6500 },
+    { "name": "Pomfrit og 6 nuggets menu", "description": "Ketchup el. salat mayonnaise", "priceOre": 5500 },
+    { "name": "Hamburger menu", "description": "Pomfritter og sodavand", "priceOre": 12000 }
+  ]
+}

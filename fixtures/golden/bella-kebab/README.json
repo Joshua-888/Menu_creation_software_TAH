@@ -1,0 +1,14 @@
+{
+  "fixtureId": "bella-kebab-raw-photo-v1",
+  "purpose": "Golden regression for a perspective-skewed photographed menu whose old OCR-only path collapsed to one unsupported garbage product.",
+  "source": "raw-source.jpeg",
+  "oraclePolicy": "Human-reviewed printed sellable rows; handwriting excluded. Golden data is test-only and must never become runtime merchant logic.",
+  "manualProductCount": 12,
+  "runtimeConstraints": [
+    "No merchant or hostname checks in src/",
+    "No live admin writes",
+    "No invented PIZZA category",
+    "No zero source prices",
+    "Escalate weak OCR through the pluggable vision boundary"
+  ]
+}

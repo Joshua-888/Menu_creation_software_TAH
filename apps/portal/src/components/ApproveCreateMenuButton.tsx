@@ -3,7 +3,13 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-export function ApproveCreateMenuButton({ jobId }: { jobId: string }) {
+export function ApproveCreateMenuButton({
+  jobId,
+  disabledReason,
+}: {
+  jobId: string;
+  disabledReason?: string;
+}) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -41,10 +47,11 @@ export function ApproveCreateMenuButton({ jobId }: { jobId: string }) {
         type="button"
         className="btn"
         onClick={approve}
-        disabled={busy}
+        disabled={busy || Boolean(disabledReason)}
       >
         {busy ? "Starting…" : "APPROVE & CREATE MENU"}
       </button>
+      {disabledReason ? <p className="error">{disabledReason}</p> : null}
       {error ? <p className="error">{error}</p> : null}
     </div>
   );

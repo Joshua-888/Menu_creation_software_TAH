@@ -43,9 +43,21 @@ function stableSourceId(
 
 function isUnnumberedProductCandidate(c: SourceCandidate): boolean {
   if (c.menuNumber?.trim()) return false;
-  if (looksLikeBadProductName(c.name)) return false;
+  if (looksLikeBadProductName(c.name) && !isPhotographedNamedProduct(c)) {
+    return false;
+  }
   const prices = stripMenuNumberFalsePrices(c.rawPrices, c.menuNumber);
   return prices.length > 0 || !!(c.ingredientText ?? c.description);
+}
+
+function isPhotographedNamedProduct(candidate: SourceCandidate): boolean {
+  return (
+    (candidate.evidence.origin === "SOURCE_LAYOUT" ||
+      candidate.evidence.origin === "SOURCE_VISION") &&
+    /\b(box|menu|burger|pizza|pita|d[uü]r[uü]m|sandwich|wrap)\b/i.test(
+      candidate.name ?? "",
+    )
+  );
 }
 
 function menuNumberSortKey(n: string): [number, string] {
@@ -456,7 +468,8 @@ export function reconcileCandidatesToSourceMenu(input: {
     }
     const dupes = sorted.filter((c) => c.candidateId !== primary.candidateId);
     const merged = dupes.length ? mergeEvidence(primary, dupes) : primary;
-    if (looksLikeBadProductName(merged.name)) {
+    const photographedNamedProduct = isPhotographedNamedProduct(merged);
+    if (looksLikeBadProductName(merged.name) && !photographedNamedProduct) {
       entries.push({
         candidateId: primary.candidateId,
         sourceLocation: `page:${primary.pageNumber}`,

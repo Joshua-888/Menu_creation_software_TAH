@@ -321,6 +321,9 @@ export async function runMigrationJob(
         pageCount: extraction.pageCount,
         uniqueProducts: extraction.uniqueProducts,
         duplicateOccurrences: extraction.duplicateOccurrences,
+        ...(extraction.imageDiagnostics
+          ? { imageDiagnostics: extraction.imageDiagnostics }
+          : {}),
       });
       metrics.pageCount = extraction.pageCount;
       metrics.uniqueProducts = extraction.uniqueProducts;

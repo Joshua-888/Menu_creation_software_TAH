@@ -1,0 +1,20 @@
+{
+  "fixtureId": "bella-kebab-source-evidence-v1",
+  "expectedOrigin": ["SOURCE_LAYOUT", "SOURCE_VISION"],
+  "minimumPriceAnchors": 12,
+  "minimumProductRows": 12,
+  "products": [
+    { "name": "Smash burger", "priceOre": 7500 },
+    { "name": "BBQ burger", "priceOre": 7500 },
+    { "name": "Durum Kebab", "priceOre": 7500 },
+    { "name": "Durum menu", "priceOre": 11000 },
+    { "name": "Lille pita brød", "priceOre": 4500 },
+    { "name": "Lille pita brød menu", "priceOre": 6500 },
+    { "name": "Stort pita brød", "priceOre": 5500 },
+    { "name": "Stor pita brød menu", "priceOre": 7500 },
+    { "name": "Kebab box", "priceOre": 6000 },
+    { "name": "Durum", "priceOre": 6500 },
+    { "name": "Pomfrit og 6 nuggets menu", "priceOre": 5500 },
+    { "name": "Hamburger menu", "priceOre": 12000 }
+  ]
+}
