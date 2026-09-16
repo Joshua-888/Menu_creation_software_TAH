@@ -1,47 +1,47 @@
 # Architecture
 
+> **Authoritative freeze:** [`docs/architecture/MENU_PLATFORM_ARCHITECTURE_V1.md`](./architecture/MENU_PLATFORM_ARCHITECTURE_V1.md)  
+> Code marker: `src/architecture/menuPlatformArchitectureV1.ts`
+
 ## Goal
 
-Migrate restaurant menus into TakeAwayHero with verified correctness, auditability, and recoverability.
+Migrate restaurant menus into TakeAwayHero with verified correctness, auditability, and recoverability — ending at `VERIFIED_LIVE`.
 
-## Stages
+## Canonical pipeline (V1)
 
-Each stage has explicit inputs/outputs and is independently testable.
+RAW → extraction → SourceMenu → MenuIntelligenceEngine → TargetMenu → MenuQualityContract → approval → immutable WritePlan → executor → field-aware verify → `VERIFIED_COMPLETE_HIDDEN` → PublicationPlan → storefront → `VERIFIED_LIVE`.
 
-1. Source acquisition  
-2. Extraction → `SourceMenu`  
-3. Normalization + domain rules → `CanonicalMenu`  
-4. Validation  
-5. Human review (exceptions)  
-6. Immutable `WritePlan`  
-7. Admin contract probe  
-8. Playwright execution (adapter)  
-9. Read-back → normalize → compare → `VERIFIED` | `VERIFY_FAILED`
+**No business intelligence after TargetMenu.**
 
 ## Layers
 
 ```text
-src/domain     pure business rules (M1)
-src/extraction adapters + LLM behind interfaces (M5)
-src/review     corrections / approval (M6)
-src/tah        versioned admin adapters (M2+)
-src/runs       SQLite run state + artifacts (M4)
-src/runner     planner / executor (M4)
+src/architecture   version marker (MENU_PLATFORM_ARCHITECTURE_V1)
+src/domain         pure business rules
+src/extraction     multi-evidence adapters
+src/intelligence   constitution, policies, completion, quality
+src/planning       WritePlan mapping (no re-invent)
+src/runner         executor + field-aware verify + recovery helpers
+src/tah            versioned admin adapters (mechanical)
+src/portal         Create / QA operator spine
+src/runs           SQLite run state + artifacts
 ```
 
-## Identity
+## Stages (legacy summary)
 
-Every category, product, and choice-relevant entity carries a stable `sourceId`. ProductChoice references `sourceId`s. Names are display data only.
+1. Source acquisition  
+2. Extraction → `SourceMenu`  
+3. Intelligence → `TargetMenu`  
+4. Quality → READY / REVIEW / BLOCK  
+5. Human approval (hash-bound)  
+6. Immutable `WritePlan` / RecoveryPlan / PublicationPlan  
+7. Playwright execution (adapter)  
+8. Field-aware read-back → menu verify → hidden or live
 
-## Money
+## Identity / money
 
-`MoneyMinor` = integer øre (DKK × 100). No floating point arithmetic in domain.
+Stable `sourceId`s; `MoneyMinor` = integer øre.
 
-## Versions recorded on runs
+## Ship gate
 
-`canonicalMenuSchema`, `domainRuleEngine`, later: extractor, adminContract, adminAdapter, migrationRunner.
-
-## Playwright timing
-
-- **M2:** read-only discovery and contract probe  
-- **M3:** first writes against canary restaurant only
+`npm run check:ship` — see architecture V1 doc. CI runs this gate.

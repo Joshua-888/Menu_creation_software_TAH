@@ -50,6 +50,44 @@ describe("multi-merchant host allowlist", () => {
     expect(isHostAllowlistedForLiveWrites("veronipizza.dk", env)).toBe(false);
   });
 
+  // BELLA-012: HOST_ALLOWLIST_UNDEFINED_BEFORE_WRITE
+  it("BELLA-012 missing host fails closed without TypeError", () => {
+    expect(() => normalizeDestinationHost(undefined as unknown as string)).toThrow(
+      /INVALID_DESTINATION_HOST/,
+    );
+    expect(() => normalizeDestinationHost(null as unknown as string)).toThrow(
+      /INVALID_DESTINATION_HOST/,
+    );
+    expect(() => normalizeDestinationHost("")).toThrow(/INVALID_DESTINATION_HOST/);
+    expect(() => normalizeDestinationHost("   ")).toThrow(/INVALID_DESTINATION_HOST/);
+    expect(isHostAllowlistedForLiveWrites(undefined as unknown as string, {})).toBe(
+      false,
+    );
+    expect(isHostAllowlistedForLiveWrites("", {})).toBe(false);
+  });
+
+  it("BELLA-012 assertAllowlistedAdminHost missing host returns fail-closed", async () => {
+    const { assertAllowlistedAdminHost } = await import(
+      "../../src/tah/write/targetLock.js"
+    );
+    expect(
+      assertAllowlistedAdminHost({
+        pageUrl: "https://bellakebab.dk/admin/menu",
+        expectedHost: undefined as unknown as string,
+      }),
+    ).toEqual({ ok: false, reason: "missing_expected_host" });
+    expect(
+      assertAllowlistedAdminHost({
+        pageUrl: undefined as unknown as string,
+        expectedHost: "bellakebab.dk",
+      }),
+    ).toEqual({ ok: false, reason: "missing_page_url" });
+    // Must not throw TypeError when called with empty object
+    expect(() =>
+      assertAllowlistedAdminHost({} as { pageUrl: string; expectedHost: string }),
+    ).not.toThrow();
+  });
+
   it("opens live gate for any host when allowlist is open", () => {
     const gated = evaluatePortalLiveWriteGate({
       destinationHost: "smashmburger.dk",

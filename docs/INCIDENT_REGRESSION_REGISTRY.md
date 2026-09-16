@@ -2,6 +2,8 @@
 
 Traceability only. Permanent memory remains: code, tests, fixtures, constitution/policies, quality gates.
 
+Architecture: [`docs/architecture/MENU_PLATFORM_ARCHITECTURE_V1.md`](./architecture/MENU_PLATFORM_ARCHITECTURE_V1.md)
+
 | ID | Title | Root cause | Generic fix | Runtime guard | Regression test | Status | Introduced / Fixed SHA |
 |----|-------|------------|-------------|---------------|-----------------|--------|------------------------|
 | BELLA-001 | 12 visible → 1 OCR product | Incomplete/incorrect extraction + premature write path left destination sparse vs source | Full TargetMenu freeze + READY gate before write | Refuse execute unless TargetMenu READY count matches approved freeze | certification / Bella TargetMenu verification | DOCUMENTED | — |
@@ -15,6 +17,7 @@ Traceability only. Permanent memory remains: code, tests, fixtures, constitution
 | BELLA-009 | Orphan category recovery | Incident left empty wrong category (PIZZA) | Certified `deleteCategory` + rebound RecoveryPlan from destination snapshot | requireEmpty + read-back absence | M80 Veroni delete cert | DOCUMENTED | — |
 | BELLA-010 | Representation-equivalent description caused false semantic failure | Exact string compare on description; `gateWriteLabels`→`polishDescriptionText` (`description_hygiene`) transforms TargetMenu `"…ketchup og mayo"` into submitted `"…Ketchup, Mayo"` before form fill | Field-aware `INGREDIENT_DESCRIPTION_SEMANTIC` comparator; REPRESENTATION_EQUIVALENT ≠ fail | `compareProductExact` / `verifyProductFields` ignore representation-only diffs | `tests/unit/field-aware-verify.test.ts` BELLA-010 | FIXED | `68523de76a48fab3694a431299905c6f7775a4a4` |
 | BELLA-011 | Hidden products but public empty categories | TAH has no category visibility; createCategory immediately exposes nav labels | `CATEGORY_CREATE_IS_PUBLIC_MUTATION=true`; dependency-minimizing create (category only immediately before its hidden products); empty-category compensation propose-only | `buildMinimizedCategoryExposureSteps` + pre-create READY validation | field-aware-verify BELLA-011 + categoryExposure | FIXED | `68523de76a48fab3694a431299905c6f7775a4a4` |
+| BELLA-012 | HOST_ALLOWLIST_UNDEFINED_BEFORE_WRITE | `assertAllowlistedAdminHost` / `normalizeDestinationHost` called with undefined host → runtime `.trim()` TypeError before fail-closed lock | Validate host presence; throw `InvalidDestinationHostError` or return `{ok:false, reason:missing_*}` | missing/empty host → clean validation failure, never TypeError | `tests/unit/multi-merchant-go-live.test.ts` BELLA-012 | FIXED | — |
 
 ## BELLA-010 forensic note (verified)
 

@@ -15,7 +15,7 @@
     "test:extraction": "vitest run tests/extraction",
     "test:watch": "vitest",
     "check": "npm run typecheck && npm run test:domain && npm run test:contract && npm run test:unit",
-    "check:ship": "npm run typecheck && npm run test:domain && npm run test:unit && npm run test:portal && npm run portal:build",
+    "check:ship": "npm run typecheck && npm run test:domain && npm run test:unit && npm run test:contract && npm run test:certification && npm run test:extraction && npm run test:portal && npm run portal:build",
     "discover:admin": "tsx scripts/discover-admin-readonly.ts",
     "m5:veroni": "tsx scripts/m5-veroni-extraction.ts",
     "m5r:veroni": "tsx scripts/m5r-veroni-extraction.ts",

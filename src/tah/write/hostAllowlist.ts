@@ -12,7 +12,18 @@ export const DEFAULT_LIVE_WRITE_HOSTS = ["veronipizza.dk"] as const;
 
 export const LIVE_WRITE_HOSTS_ALLOW_ALL = "*" as const;
 
-export function normalizeDestinationHost(hostOrUrl: string): string {
+/** Fail-closed: never TypeError on undefined/null/empty host. */
+export class InvalidDestinationHostError extends Error {
+  constructor(message = "INVALID_DESTINATION_HOST: missing or empty host") {
+    super(message);
+    this.name = "InvalidDestinationHostError";
+  }
+}
+
+export function normalizeDestinationHost(hostOrUrl: unknown): string {
+  if (typeof hostOrUrl !== "string" || !hostOrUrl.trim()) {
+    throw new InvalidDestinationHostError();
+  }
   const raw = hostOrUrl.trim().toLowerCase();
   try {
     if (raw.includes("://")) return new URL(raw).hostname.replace(/^www\./, "");
@@ -63,11 +74,18 @@ export function formatLiveWriteHostAllowlist(
 }
 
 export function isHostAllowlistedForLiveWrites(
-  destinationHost: string,
+  destinationHost: unknown,
   env: NodeJS.ProcessEnv = process.env,
 ): boolean {
+  if (typeof destinationHost !== "string" || !destinationHost.trim()) {
+    return false;
+  }
   const list = parseLiveWriteHostAllowlist(env);
   if (list === LIVE_WRITE_HOSTS_ALLOW_ALL) return true;
-  const host = normalizeDestinationHost(destinationHost);
-  return list.includes(host);
+  try {
+    const host = normalizeDestinationHost(destinationHost);
+    return list.includes(host);
+  } catch {
+    return false;
+  }
 }

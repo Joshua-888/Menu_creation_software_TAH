@@ -63,11 +63,22 @@ export function assertVeroniTargetLock(input: {
  * Allowlisted-host lock for production multi-merchant writes.
  */
 export function assertAllowlistedAdminHost(input: {
-  pageUrl: string;
-  expectedHost: string;
+  pageUrl?: string;
+  expectedHost?: string;
   env?: NodeJS.ProcessEnv;
 }): TargetLockResult {
-  const expected = normalizeDestinationHost(input.expectedHost);
+  if (typeof input.expectedHost !== "string" || !input.expectedHost.trim()) {
+    return { ok: false, reason: "missing_expected_host" };
+  }
+  if (typeof input.pageUrl !== "string" || !input.pageUrl.trim()) {
+    return { ok: false, reason: "missing_page_url" };
+  }
+  let expected: string;
+  try {
+    expected = normalizeDestinationHost(input.expectedHost);
+  } catch {
+    return { ok: false, reason: "missing_expected_host" };
+  }
   let actual: string;
   try {
     actual = normalizeDestinationHost(new URL(input.pageUrl).host);

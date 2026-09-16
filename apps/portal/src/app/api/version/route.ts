@@ -2,6 +2,11 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { NextResponse } from "next/server";
 import { MENU_CONSTITUTION_VERSION } from "@engine/intelligence/constitution.js";
+import {
+  CAPABILITY_MATRIX_VERSION,
+  CORE_PIPELINE_VERSION,
+  MENU_PLATFORM_ARCHITECTURE_VERSION,
+} from "@engine/architecture/menuPlatformArchitectureV1.js";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -77,5 +82,8 @@ export async function GET() {
     buildTime: resolveBuildTime(baked),
     environment: resolveEnvironment(),
     menuConstitution: MENU_CONSTITUTION_VERSION,
+    menuPlatformArchitecture: MENU_PLATFORM_ARCHITECTURE_VERSION,
+    corePipeline: CORE_PIPELINE_VERSION,
+    capabilityMatrix: CAPABILITY_MATRIX_VERSION,
   });
 }
