@@ -85,11 +85,11 @@ describe("multi-merchant host allowlist", () => {
 });
 
 describe("default Tilbehør seed scoping", () => {
-  it("seeds Veroni only by default", () => {
+  it("seeds only via env host list (no Veroni hardcode)", () => {
     const prev = process.env.PORTAL_SEED_DEFAULT_TILBEHOR_HOSTS;
     delete process.env.PORTAL_SEED_DEFAULT_TILBEHOR_HOSTS;
     try {
-      expect(shouldSeedDefaultTilbehor("veronipizza.dk")).toBe(true);
+      expect(shouldSeedDefaultTilbehor("veronipizza.dk")).toBe(false);
       expect(shouldSeedDefaultTilbehor("shop-a.dk")).toBe(false);
     } finally {
       if (prev === undefined) delete process.env.PORTAL_SEED_DEFAULT_TILBEHOR_HOSTS;
@@ -180,8 +180,8 @@ describe("structure write confirm env", () => {
 });
 
 describe("peer probability scoping", () => {
-  it("applies to Veroni by default, not new merchants", () => {
-    expect(shouldApplyPeerProbabilityPolicy("veronipizza.dk", {})).toBe(true);
+  it("applies only via env opt-in (no Veroni hardcode)", () => {
+    expect(shouldApplyPeerProbabilityPolicy("veronipizza.dk", {})).toBe(false);
     expect(shouldApplyPeerProbabilityPolicy("shop-a.dk", {})).toBe(false);
   });
 

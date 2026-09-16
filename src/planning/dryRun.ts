@@ -24,6 +24,10 @@ import {
 } from "./categoryMapping.js";
 import { assertDecisionsResolvedForWrite } from "../decisions/transforms.js";
 import {
+  mapProductChoicesToWriteFields,
+  type ProductPolicyTrace,
+} from "./structureMapping.js";
+import {
   assessLabelQuality,
   labelQualityBlocksWrite,
 } from "../domain/textNormalize.js";
@@ -38,25 +42,12 @@ import {
   filterAdditionsWithTrace,
   type ProbabilityPolicyMap,
 } from "../learning/categoryLikelihood.js";
-import { mapProductChoicesToWriteFields } from "./structureMapping.js";
-import {
-  applyProbabilityFilterToMenu,
-  fanOutRestaurantAdditions,
-  type ProductPolicyTrace,
-} from "./structureMapping.js";
-import { menuNumbersWithKeepTilbehorOverride } from "../learning/tilbehorOverride.js";
-import { proposePizzaToppingsFromDescription } from "../learning/pizzaToppings.js";
-import {
-  applyCategoryVariantFanOut,
-  stripForbiddenMenuVariants,
-} from "../learning/categorySizeVariantPolicy.js";
 import type { IngredientLikelihoodPolicy } from "../learning/ingredientLikelihood.js";
 import {
-  grillIngredientsInsufficient,
-  preferGrillDipAdditions,
-  preferBurgerEkstraAdditions,
-  resolveGrillIngredients,
-} from "../domain/grillCardFill.js";
+  sanitizeAdditionList,
+  sanitizeIngredientList,
+} from "../domain/menuCardQuality.js";
+import { stripForbiddenMenuVariants } from "../learning/categorySizeVariantPolicy.js";
 import {
   capabilitiesForReconcileFields,
   diffProductReconcile,
@@ -72,10 +63,6 @@ import {
   liveSnapshotCategoryName,
   qaTargetHasWriteBlockingIssues,
 } from "./qaLiveImprove.js";
-import {
-  sanitizeAdditionList,
-  sanitizeIngredientList,
-} from "../domain/menuCardQuality.js";
 
 export type DryRunDestinationSnapshot = {
   host: string;
@@ -150,6 +137,11 @@ function missingCaps(
   return missing;
 }
 
+/**
+ * Map TargetMenu product → WritePlan payload.
+ * TRUSTS TargetMenu from MenuIntelligenceEngine — does not invent ingredients,
+ * additions, descriptions, or peer fills. Fail-closed strips only.
+ */
 function toPayload(
   product: CanonicalProduct,
   categoryIds: string[],
@@ -159,41 +151,15 @@ function toPayload(
     ingredients?: string[];
   },
   structurePattern?: StructurePatternSummary | null,
-  probabilityPolicy?: ProbabilityPolicyMap | null,
+  _probabilityPolicy?: ProbabilityPolicyMap | null,
   categoryName?: string,
-  ingredientLikelihood?: IngredientLikelihoodPolicy | null,
+  _ingredientLikelihood?: IngredientLikelihoodPolicy | null,
 ): PlannedProductPayload {
   const productName = overrides?.name ?? product.name;
   const desc = overrides?.description ?? product.description ?? "";
-  let ingredientList =
+  const ingredientList =
     overrides?.ingredients ?? product.ingredients.map((i) => i.display);
-  if (!ingredientList.some((i) => i.trim().length > 0)) {
-    const proposal = proposePizzaToppingsFromDescription({
-      name: productName,
-      ...(categoryName ? { categoryName } : {}),
-      description: desc,
-      existingIngredients: ingredientList,
-    });
-    if (proposal) {
-      ingredientList = proposal.ingredients;
-    }
-  }
-  if (
-    ingredientList.length === 0 ||
-    grillIngredientsInsufficient(ingredientList, productName)
-  ) {
-    const resolved = resolveGrillIngredients({
-      name: productName,
-      ...(categoryName ? { categoryName } : {}),
-      description: desc,
-      ...(ingredientLikelihood != null
-        ? { ingredientPolicy: ingredientLikelihood }
-        : {}),
-    });
-    if (resolved.ingredients.length > ingredientList.length) {
-      ingredientList = resolved.ingredients;
-    }
-  }
+
   const assessment = assessLabelQuality({
     name: productName,
     description: desc,
@@ -201,41 +167,23 @@ function toPayload(
   });
   const pattern = structurePattern ?? defaultStructurePattern();
   const mapped = mapProductChoicesToWriteFields(product, pattern);
-  let additions = mapped.additions.length
-    ? mapped.additions
-    : product.addOns.map((a) => ({
-        name: a.name,
-        priceOre: a.price ?? 0,
-      }));
-  if (probabilityPolicy) {
-    additions = filterAdditionsWithTrace({
-      name: productName,
-      ...(categoryName ? { categoryNames: [categoryName] } : {}),
-      ...(desc ? { description: desc } : {}),
-      additions,
-      policy: probabilityPolicy,
-    }).after;
-  } else {
-    // Hard priors still apply without peer policy (esp. drinks → no Tilbehør).
-    additions = filterAdditionsWithTrace({
-      name: productName,
-      ...(categoryName ? { categoryNames: [categoryName] } : {}),
-      ...(desc ? { description: desc } : {}),
-      additions,
-      policy: null,
-    }).after;
+  // Prefer TargetMenu addOns; structure mapping only places already-decided choices.
+  let additions = product.addOns.map((a) => ({
+    name: a.name,
+    priceOre: a.price ?? 0,
+  }));
+  if (mapped.additions.length && additions.length === 0) {
+    additions = mapped.additions;
   }
-  additions = preferGrillDipAdditions(additions, {
+  // Fail-closed: strip drinks/forbidden — never invent replacements.
+  additions = filterAdditionsWithTrace({
     name: productName,
-    ...(categoryName ? { categoryName } : {}),
-    description: desc,
-    variants: mapped.variants.map((v) => ({ name: v.name })),
-  });
-  additions = preferBurgerEkstraAdditions(additions, {
-    name: productName,
-    ...(categoryName ? { categoryName } : {}),
-    description: desc,
-  });
+    ...(categoryName ? { categoryNames: [categoryName] } : {}),
+    ...(desc ? { description: desc } : {}),
+    additions,
+    policy: null,
+  }).after;
+
   const safeName = assessment.repaired.name || product.name;
   const safeIngredients = sanitizeIngredientList(
     assessment.repaired.ingredients.length
@@ -248,14 +196,16 @@ function toPayload(
     safeName,
     categoryName,
   );
-  let description = assessment.repaired.description || desc;
-  if (
-    (!description || description.length < 8) &&
-    safeIngredients.length >= 2
-  ) {
-    description = safeIngredients.join(", ");
-  }
-  const safeVariants = stripForbiddenMenuVariants(mapped.variants);
+  // Description must already be on TargetMenu; only use label hygiene repairs.
+  const description = assessment.repaired.description || desc;
+  const safeVariants = stripForbiddenMenuVariants(
+    mapped.variants.length
+      ? mapped.variants
+      : product.variants.map((v) => ({
+          name: v.name,
+          surchargeOre: v.surcharge ?? 0,
+        })),
+  );
   return {
     sourceId: product.sourceId,
     menuNumber:
@@ -269,7 +219,6 @@ function toPayload(
       : [{ name: "Alm.", surchargeOre: 0 }],
     ingredients: safeIngredients,
     additions: safeAdditions,
-    // Default: appear on storefront. Kill switch: PORTAL_CREATE_HIDDEN=1
     intendedHidden: shouldCreateProductsHidden(),
   };
 }
@@ -287,9 +236,9 @@ export function shouldCreateProductsHidden(
 }
 
 /**
- * Build a DRY_RUN WritePlan. Never mutates destination.
- * When probabilityPolicy (or collector) is provided, category-likelihood filtering
- * runs after Tilbehør fan-out so plans match peer-standardized dip/meat rules.
+ * Build a DRY_RUN WritePlan from an already-complete TargetMenu.
+ * Does NOT invent ingredients/additions/variants — MenuIntelligenceEngine owns that.
+ * Planning role: TargetMenu + destination snapshot + capabilities → WritePlan.
  */
 export function buildDryRunWritePlan(input: {
   runId: string;
@@ -315,9 +264,9 @@ export function buildDryRunWritePlan(input: {
   decisionStore?: DecisionStore | null;
   /** Peer-learned structure pattern; falls back to store ACTIVE policy or defaults. */
   structurePattern?: StructurePatternSummary | null;
-  /** Category-likelihood policy; dips/meat filtered in plan when set. */
+  /** @deprecated Applied in MenuIntelligenceEngine — ignored here. */
   probabilityPolicy?: ProbabilityPolicyMap | null;
-  /** Peer ingredient/beskrivelse likelihood — peer-first card fill. */
+  /** @deprecated Applied in MenuIntelligenceEngine — ignored here. */
   ingredientLikelihood?: IngredientLikelihoodPolicy | null;
   /** Optional sink filled with per-product policy traces for owner reports. */
   policyTraces?: ProductPolicyTrace[];
@@ -341,127 +290,10 @@ export function buildDryRunWritePlan(input: {
       : null) ??
     defaultStructurePattern();
 
-  let canonical = input.canonical;
-
-  // SEMANTIC_RULE: category structural variants (Alm/Fam, Deep, Glutenfri, …)
-  // before Tilbehør fan-out / probability, so write mapping sees full size axes.
-  {
-    const fan = applyCategoryVariantFanOut({
-      menu: canonical,
-      policy:
-        structurePattern.categoryVariantFanOut ??
-        defaultStructurePattern().categoryVariantFanOut,
-    });
-    canonical = fan.menu;
-    if (input.policyTraces) {
-      for (const t of fan.traces) {
-        if (!t.applied) continue;
-        for (const u of t.productsUpdated) {
-          input.policyTraces.push({
-            menuNumber: u.menuNumber,
-            sourceId: u.sourceId,
-            name: "",
-            categoryName: t.categoryName,
-            kind: "other",
-            reasonCodes: ["CATEGORY_STRUCTURAL_VARIANT_FANOUT"],
-            additionsBefore: [],
-            additionsAfter: [],
-            removed: [],
-            fanOutTilbehor: false,
-            structureNotes: [
-              `category structural variants → [${t.kindsApplied.join(", ")}] ` +
-                `(${u.beforeVariants.join("|") || "∅"} → ${u.afterVariants.join("|")})`,
-            ],
-          });
-        }
-      }
-    }
-  }
-
-  let fanOutMenus: string[] = [];
-  let keepTilbehorMenus: Set<string> = new Set();
-  if (input.decisionStore) {
-    keepTilbehorMenus = menuNumbersWithKeepTilbehorOverride(
-      input.decisionStore.facts,
-      input.restaurant,
-    );
-    const fan = fanOutRestaurantAdditions({
-      menu: canonical,
-      registry: input.decisionStore.facts,
-      restaurantKey: input.restaurant,
-    });
-    canonical = fan.menu;
-    fanOutMenus = fan.fanOutMenus;
-  }
-
-  if (input.probabilityPolicy) {
-    const filtered = applyProbabilityFilterToMenu({
-      menu: canonical,
-      policy: input.probabilityPolicy,
-      fanOutMenus,
-      keepTilbehorMenus,
-    });
-    canonical = filtered.menu;
-    if (input.policyTraces) {
-      input.policyTraces.push(...filtered.traces);
-    }
-  } else {
-    // No peer policy file — still enforce hard priors (drinks never Tilbehør).
-    const categories = canonical.categories.map((cat) => ({
-      ...cat,
-      products: cat.products.map((p) => {
-        const before = (p.addOns ?? []).map((a) => ({
-          name: a.name,
-          priceOre: a.price ?? 0,
-        }));
-        const filter = filterAdditionsWithTrace({
-          name: p.name,
-          categoryNames: [cat.name],
-          additions: before,
-          policy: null,
-        });
-        const menuNumber = p.sourceMenuNumber ?? p.assignedMenuNumber ?? null;
-        if (input.policyTraces && menuNumber && fanOutMenus.includes(menuNumber)) {
-          input.policyTraces.push({
-            menuNumber,
-            sourceId: p.sourceId,
-            name: p.name,
-            categoryName: cat.name,
-            kind: filter.kind,
-            reasonCodes: [
-              "FANOUT_TILBEHOR",
-              ...filter.reasonCodes.filter((r) => r !== "KEPT"),
-            ],
-            additionsBefore: filter.before.map((a) => a.name),
-            additionsAfter: filter.after.map((a) => a.name),
-            removed: filter.removed.map((a) => ({
-              name: a.name,
-              reason: a.reason,
-            })),
-            fanOutTilbehor: true,
-            structureNotes: [],
-          });
-        }
-        if (filter.after.length === 0 && before.length === 0) return p;
-        if (
-          filter.after.length === before.length &&
-          filter.removed.length === 0
-        ) {
-          return p;
-        }
-        return {
-          ...p,
-          addOns: filter.after.map((a, idx) => ({
-            sourceId: `${p.sourceId}::addon-hard-${idx}`,
-            name: a.name,
-            price: a.priceOre,
-            origin: "DERIVED" as const,
-          })),
-        };
-      }),
-    }));
-    canonical = { ...canonical, categories };
-  }
+  // TargetMenu is authoritative — no variant/Tilbehør invent here.
+  const canonical = input.canonical;
+  void input.probabilityPolicy;
+  void input.ingredientLikelihood;
 
   const catBySource = new Map(
     input.categoryMappings.map((m) => [m.sourceCategoryId, m]),

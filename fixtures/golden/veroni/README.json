@@ -1,0 +1,15 @@
+{
+  "fixtureId": "VERONI_GOLDEN_V2",
+  "oraclePath": "fixtures/golden/veroni/VERONI_GOLDEN_V2.json",
+  "migrationReview": "docs/certification/veroni-golden-migration-review.md",
+  "rawSource": "fixtures/veroni/Scanner-2026-08-11-14_33_58.pdf",
+  "constitutionVersion": "MenuConstitutionV1",
+  "acceptance": {
+    "menuVariantCount": 0,
+    "statusAccountingReconciles": true,
+    "allQualityReady": true,
+    "noSmashLeakage": true,
+    "noRuntimeVeroniHardcoding": true
+  },
+  "notes": "V1 72-count oracle superseded — see veroni-golden-migration-review.md"
+}

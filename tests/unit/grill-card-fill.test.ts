@@ -107,7 +107,7 @@ describe("grillCardFill", () => {
 });
 
 describe("qaLiveImprove grill", () => {
-  it("fills Grill burger cards with name-derived ingredients and strips Menu variants", () => {
+  it("uses TargetMenu ingredients and strips Menu variants (no invent)", () => {
     const target = buildQaTargetPayload({
       live: {
         databaseId: "40",
@@ -127,15 +127,19 @@ describe("qaLiveImprove grill", () => {
         sourceId: "s40",
         menuNumber: "40",
         name: "Baconburger",
-        description: "",
+        description: "Oksekød, bacon, salat, tomat, ketchup og mayo",
         basePriceOre: 6900,
         categoryIds: ["grill"],
-        variants: [
-          { name: "Alm.", surchargeOre: 0 },
-          { name: "Menu", surchargeOre: 5600 },
+        variants: [{ name: "Alm.", surchargeOre: 0 }],
+        ingredients: [
+          "Oksekød",
+          "Bacon",
+          "Salat",
+          "Tomat",
+          "Ketchup",
+          "Mayo",
         ],
-        ingredients: [],
-        additions: [],
+        additions: [{ name: "Ost", priceOre: 1000 }],
         intendedHidden: false,
       },
       liveCategoryName: "Grill",
@@ -180,31 +184,24 @@ describe("qaLiveImprove grill", () => {
         sourceId: "s40",
         menuNumber: "40",
         name: "Baconburger",
-        description: "Bacon",
+        description: "Oksekød, bacon, salat og tomat",
         basePriceOre: 6900,
         categoryIds: ["grill"],
         variants: [{ name: "Alm.", surchargeOre: 0 }],
-        ingredients: ["Bacon"],
-        additions: [],
+        ingredients: ["Oksekød", "Bacon", "Salat", "Tomat"],
+        additions: [
+          { name: "Ost", priceOre: 1000 },
+          { name: "Bacon", priceOre: 2000 },
+        ],
         intendedHidden: false,
       },
       liveCategoryName: "Grill",
       destinationCategories: [{ databaseId: "grill", name: "Grill" }],
     });
-    expect(target.additions.some((a) => /pommes|dyppelse/i.test(a.name))).toBe(
-      false,
-    );
-    // Plain burgers are sandwich_grill — dips not allowed (only fries plates).
     expect(
-      target.additions.some((a) =>
-        /mayo|remoulade|ketchup/i.test(a.name),
-      ),
+      target.additions.some((a) => /pommes|valgfri/i.test(a.name)),
     ).toBe(false);
-    // After strip, refill paid ekstra toppings — never leave Tilbehør empty.
-    expect(target.additions.length).toBeGreaterThanOrEqual(3);
-    expect(target.additions.some((a) => /bacon|ost|salat|tomat/i.test(a.name))).toBe(
-      true,
-    );
+    expect(target.additions.length).toBeGreaterThanOrEqual(1);
   });
 
   it("never renames Salatpizza rows to Tomat", () => {
@@ -322,7 +319,7 @@ describe("qaLiveImprove grill", () => {
     expect(kept).toHaveLength(1);
   });
 
-  it("upgrades thin Baconburger ingredient list beyond a single token", () => {
+  it("upgrades thin Baconburger via TargetMenu source (not QA invent)", () => {
     const target = buildQaTargetPayload({
       live: {
         databaseId: "40",
@@ -343,12 +340,12 @@ describe("qaLiveImprove grill", () => {
         sourceId: "s40",
         menuNumber: "40",
         name: "Baconburger",
-        description: "Bacon",
+        description: "Oksekød, bacon, ketchup og mayo",
         basePriceOre: 6900,
         categoryIds: ["grill"],
         variants: [{ name: "Alm.", surchargeOre: 0 }],
-        ingredients: ["Bacon"],
-        additions: [],
+        ingredients: ["Oksekød", "Bacon", "Ketchup", "Mayo"],
+        additions: [{ name: "Ost", priceOre: 1000 }],
         intendedHidden: false,
       },
       liveCategoryName: "Grill",
@@ -417,7 +414,7 @@ describe("qaLiveImprove grill", () => {
           field: "additions",
           before,
           after,
-          reasons: ["ADDITIONS_MISMATCH"],
+          reasons: ["ADDITIONS_DRIFT"],
         },
       ],
     });

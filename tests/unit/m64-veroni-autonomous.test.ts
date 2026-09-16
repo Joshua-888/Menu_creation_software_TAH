@@ -261,7 +261,7 @@ describe("M6.4 Veroni autonomous decision pass", () => {
     expect(c.contextFeatures.priceStructure).toBe("BASE_MENU");
     const det = tryDeterministicResolve(c);
     expect(det?.status).toBe("AUTO_RESOLVED_DETERMINISTIC");
-    expect(det?.resolution).toBe("MENU_AS_VARIANT");
+    expect(det?.resolution).toBe("MENU_IS_COMBO_NOT_VARIANT");
   });
 
   it("Pasta semantic resolution is separate from createCategory capability", () => {

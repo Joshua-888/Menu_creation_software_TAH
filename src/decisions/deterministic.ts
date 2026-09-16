@@ -14,23 +14,25 @@ export function tryDeterministicResolve(
     classifyChoiceLanguageStrength(decisionCase.sourceText);
   const type = String(decisionCase.decisionType);
 
-  // MENU structure: BASE + Menu prices present — keep Menu as priced variant,
-  // do not invent combo contents.
+  // MENU structure: BASE + Menu prices → COMBO / Menuer product, NEVER a variant.
+  // MenuConstitutionV1: MENU_AS_VARIANT superseded by MENU_IS_COMBO_NOT_VARIANT.
   if (
     type === "MENU_PRICE_OPTION_SEMANTICS" &&
     decisionCase.contextFeatures.priceStructure === "BASE_MENU"
   ) {
     const opt =
-      decisionCase.availableOptions.find((o) => o.id === "variant") ??
+      decisionCase.availableOptions.find((o) => o.id === "combo") ??
+      decisionCase.availableOptions.find((o) => o.id === "menuer") ??
+      decisionCase.availableOptions.find((o) => o.id === "review") ??
       decisionCase.availableOptions[0];
     if (!opt) return null;
     return outcome(decisionCase, {
       status: "AUTO_RESOLVED_DETERMINISTIC",
-      resolution: "MENU_AS_VARIANT",
+      resolution: "MENU_IS_COMBO_NOT_VARIANT",
       optionId: opt.id,
       method: "DETERMINISTIC",
       explanation:
-        "DETERMINISTIC: BASE+Menu structure kept as priced Menu variant; contents not invented",
+        "DETERMINISTIC (MenuConstitutionV1): Menu is combo/Menuer — never a size/price variant; contents not invented",
     });
   }
 

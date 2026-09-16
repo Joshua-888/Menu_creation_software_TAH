@@ -6,7 +6,8 @@ import {
   proposePeerIngredients,
 } from "../../src/learning/ingredientLikelihood.js";
 import { resolveGrillIngredients } from "../../src/domain/grillCardFill.js";
-import { buildQaTargetPayload } from "../../src/planning/qaLiveImprove.js";
+import { completeProductCard } from "../../src/intelligence/completeProductCard.js";
+import type { CanonicalProduct } from "../../src/domain/schema/canonical.js";
 
 function burgerPeers(): PeerMenuSnapshot[] {
   const burger = (name: string, ingredients: string[], description: string) => ({
@@ -116,45 +117,44 @@ describe("ingredientLikelihood", () => {
     );
   });
 
-  it("QA prefers peer ingredients over thin live card", () => {
+  it("completeProductCard prefers peer ingredients over thin source card", () => {
     const policy = distillIngredientLikelihood(burgerPeers());
-    const target = buildQaTargetPayload({
-      live: {
-        databaseId: "40",
-        menuNumber: "40",
-        name: "Baconburger",
-        description: "Bacon",
-        basePriceOre: 6900,
-        categoryIds: ["grill"],
-        ingredients: ["Bacon"],
-        variants: [
-          { name: "Alm.", priceOre: 0 },
-          { name: "Menu", priceOre: 5600 },
-        ],
-        additions: [],
-      },
-      sourcePayload: {
-        sourceId: "s40",
-        menuNumber: "40",
-        name: "Baconburger",
-        description: "Bacon",
-        basePriceOre: 6900,
-        categoryIds: ["grill"],
-        variants: [
-          { name: "Alm.", surchargeOre: 0 },
-          { name: "Menu", surchargeOre: 5600 },
-        ],
-        ingredients: ["Bacon"],
-        additions: [],
-        intendedHidden: false,
-      },
-      liveCategoryName: "Grill",
-      destinationCategories: [{ databaseId: "grill", name: "Grill" }],
+    const product = {
+      sourceId: "s40",
+      sourceMenuNumber: "40",
+      name: "Baconburger",
+      status: "READY",
+      description: "Bacon",
+      variants: [
+        {
+          sourceId: "v1",
+          name: "Alm.",
+          nameOrigin: "SOURCE",
+          surcharge: 0,
+          surchargeOrigin: "SOURCE",
+          isBase: true,
+        },
+        {
+          sourceId: "v2",
+          name: "Menu",
+          nameOrigin: "SOURCE",
+          surcharge: 5600,
+          surchargeOrigin: "SOURCE",
+          isBase: false,
+        },
+      ],
+      ingredients: [{ display: "Bacon", origin: "SOURCE" }],
+      addOns: [],
+    } as unknown as CanonicalProduct;
+
+    const card = completeProductCard({
+      product,
+      categoryName: "Grill",
       ingredientLikelihood: policy,
     });
-    expect(target.ingredients.length).toBeGreaterThanOrEqual(4);
-    expect(target.ingredients.join(" ").toLowerCase()).toMatch(/oksekød/);
-    expect(target.ingredients).toEqual(
+    expect(card.ingredients.length).toBeGreaterThanOrEqual(4);
+    expect(card.ingredients.join(" ").toLowerCase()).toMatch(/oksekød/);
+    expect(card.ingredients).toEqual(
       expect.arrayContaining(
         proposePeerIngredients({
           name: "Baconburger",

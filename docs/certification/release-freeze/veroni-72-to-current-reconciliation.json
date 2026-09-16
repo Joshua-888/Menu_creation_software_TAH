@@ -1,0 +1,628 @@
+{
+  "HISTORICAL_SOURCE_PRODUCTS": 72,
+  "CURRENT_SOURCE_SELLABLE_PRODUCTS": 71,
+  "CURRENT_DERIVED_SELLABLE_PRODUCTS": 17,
+  "CURRENT_TARGET_PRODUCTS": 88,
+  "EXPECTED_EQUATION": "X + Y = TargetMenu",
+  "holds": true,
+  "deltaFrom72": 16,
+  "additionalProducts": [
+    {
+      "menuNumber": "72",
+      "name": "Klassisk",
+      "category": "Pasta",
+      "accountingClass": "SOURCE_SELLABLE_PRODUCT",
+      "visibleAsIndependentSellable": "Candidate — see sourceText",
+      "previouslyMissedByExtraction": "Yes or renumbered/OCR extra",
+      "createdAsDerivedMenuCombo": false,
+      "isDuplicate": false,
+      "isOcrArtifact": false,
+      "constitutionAllowance": "Explicit source product row",
+      "sellableEvidence": "Explicit dish/drink row on source menu with independent purchase price or size variants",
+      "sourceEvidence": "Klassisk [Pasta]",
+      "priceEvidence": "baseOre=3500; variants=Alm.:3500"
+    },
+    {
+      "menuNumber": "80",
+      "name": "Gorgonzola -",
+      "category": "UNCATEGORIZED",
+      "accountingClass": "SOURCE_SELLABLE_PRODUCT",
+      "visibleAsIndependentSellable": "Candidate — see sourceText",
+      "previouslyMissedByExtraction": "Yes or renumbered/OCR extra",
+      "createdAsDerivedMenuCombo": false,
+      "isDuplicate": false,
+      "isOcrArtifact": false,
+      "constitutionAllowance": "Explicit source product row",
+      "sellableEvidence": "Explicit dish/drink row on source menu with independent purchase price or size variants",
+      "sourceEvidence": "Gorgonzola - [UNCATEGORIZED]",
+      "priceEvidence": "menuOre=18500; baseOre=9500"
+    },
+    {
+      "menuNumber": "83",
+      "name": "Salatpizza",
+      "category": "UNCATEGORIZED",
+      "accountingClass": "SOURCE_SELLABLE_PRODUCT",
+      "visibleAsIndependentSellable": "Candidate — see sourceText",
+      "previouslyMissedByExtraction": "Yes or renumbered/OCR extra",
+      "createdAsDerivedMenuCombo": false,
+      "isDuplicate": false,
+      "isOcrArtifact": false,
+      "constitutionAllowance": "Explicit source product row",
+      "sellableEvidence": "Explicit dish/drink row on source menu with independent purchase price or size variants",
+      "sourceEvidence": "Salatpizza [UNCATEGORIZED]",
+      "priceEvidence": "menuOre=18000; baseOre=9500"
+    },
+    {
+      "menuNumber": "84",
+      "name": "Vegetarpizza",
+      "category": "UNCATEGORIZED",
+      "accountingClass": "SOURCE_SELLABLE_PRODUCT",
+      "visibleAsIndependentSellable": "Candidate — see sourceText",
+      "previouslyMissedByExtraction": "Yes or renumbered/OCR extra",
+      "createdAsDerivedMenuCombo": false,
+      "isDuplicate": false,
+      "isOcrArtifact": false,
+      "constitutionAllowance": "Explicit source product row",
+      "sellableEvidence": "Explicit dish/drink row on source menu with independent purchase price or size variants",
+      "sourceEvidence": "Vegetarpizza [UNCATEGORIZED]",
+      "priceEvidence": "baseOre=3200; variants=Alm.:3200"
+    },
+    {
+      "menuNumber": "85",
+      "name": "Bambino",
+      "category": "UNCATEGORIZED",
+      "accountingClass": "SOURCE_SELLABLE_PRODUCT",
+      "visibleAsIndependentSellable": "Candidate — see sourceText",
+      "previouslyMissedByExtraction": "Yes or renumbered/OCR extra",
+      "createdAsDerivedMenuCombo": false,
+      "isDuplicate": false,
+      "isOcrArtifact": false,
+      "constitutionAllowance": "Explicit source product row",
+      "sellableEvidence": "Explicit dish/drink row on source menu with independent purchase price or size variants",
+      "sourceEvidence": "Bambino [UNCATEGORIZED]",
+      "priceEvidence": "baseOre=1000; variants=Alm.:1000"
+    },
+    {
+      "menuNumber": "86",
+      "name": "Brianboss syltet",
+      "category": "UNCATEGORIZED",
+      "accountingClass": "SOURCE_SELLABLE_PRODUCT",
+      "visibleAsIndependentSellable": "Candidate — see sourceText",
+      "previouslyMissedByExtraction": "Yes or renumbered/OCR extra",
+      "createdAsDerivedMenuCombo": false,
+      "isDuplicate": false,
+      "isOcrArtifact": false,
+      "constitutionAllowance": "Explicit source product row",
+      "sellableEvidence": "Explicit dish/drink row on source menu with independent purchase price or size variants",
+      "sourceEvidence": "Brianboss syltet [UNCATEGORIZED]",
+      "priceEvidence": "menuOre=18000; baseOre=9500"
+    },
+    {
+      "menuNumber": "87",
+      "name": "Calzone",
+      "category": "UNCATEGORIZED",
+      "accountingClass": "SOURCE_SELLABLE_PRODUCT",
+      "visibleAsIndependentSellable": "Candidate — see sourceText",
+      "previouslyMissedByExtraction": "Yes or renumbered/OCR extra",
+      "createdAsDerivedMenuCombo": false,
+      "isDuplicate": false,
+      "isOcrArtifact": false,
+      "constitutionAllowance": "Explicit source product row",
+      "sellableEvidence": "Explicit dish/drink row on source menu with independent purchase price or size variants",
+      "sourceEvidence": "Calzone [UNCATEGORIZED]",
+      "priceEvidence": "menuOre=18000; baseOre=9500"
+    },
+    {
+      "menuNumber": "88",
+      "name": "Jega Calzone-",
+      "category": "UNCATEGORIZED",
+      "accountingClass": "SOURCE_SELLABLE_PRODUCT",
+      "visibleAsIndependentSellable": "Candidate — see sourceText",
+      "previouslyMissedByExtraction": "Yes or renumbered/OCR extra",
+      "createdAsDerivedMenuCombo": false,
+      "isDuplicate": false,
+      "isOcrArtifact": false,
+      "constitutionAllowance": "Explicit source product row",
+      "sellableEvidence": "Explicit dish/drink row on source menu with independent purchase price or size variants",
+      "sourceEvidence": "Jega Calzone- [UNCATEGORIZED]",
+      "priceEvidence": "menuOre=18000; baseOre=9500"
+    },
+    {
+      "menuNumber": "89",
+      "name": "Ufo - Seetha",
+      "category": "UNCATEGORIZED",
+      "accountingClass": "SOURCE_SELLABLE_PRODUCT",
+      "visibleAsIndependentSellable": "Candidate — see sourceText",
+      "previouslyMissedByExtraction": "Yes or renumbered/OCR extra",
+      "createdAsDerivedMenuCombo": false,
+      "isDuplicate": false,
+      "isOcrArtifact": false,
+      "constitutionAllowance": "Explicit source product row",
+      "sellableEvidence": "Explicit dish/drink row on source menu with independent purchase price or size variants",
+      "sourceEvidence": "Ufo - Seetha [UNCATEGORIZED]",
+      "priceEvidence": "menuOre=18000; baseOre=9500"
+    },
+    {
+      "menuNumber": "90",
+      "name": "Ufo og log",
+      "category": "UNCATEGORIZED",
+      "accountingClass": "SOURCE_SELLABLE_PRODUCT",
+      "visibleAsIndependentSellable": "Candidate — see sourceText",
+      "previouslyMissedByExtraction": "Yes or renumbered/OCR extra",
+      "createdAsDerivedMenuCombo": false,
+      "isDuplicate": false,
+      "isOcrArtifact": false,
+      "constitutionAllowance": "Explicit source product row",
+      "sellableEvidence": "Explicit dish/drink row on source menu with independent purchase price or size variants",
+      "sourceEvidence": "Ufo og log [UNCATEGORIZED]",
+      "priceEvidence": "menuOre=18000; baseOre=9500"
+    },
+    {
+      "menuNumber": "100",
+      "name": "Noah og log",
+      "category": "Pizza",
+      "accountingClass": "SOURCE_SELLABLE_PRODUCT",
+      "visibleAsIndependentSellable": "Candidate — see sourceText",
+      "previouslyMissedByExtraction": "Yes or renumbered/OCR extra",
+      "createdAsDerivedMenuCombo": false,
+      "isDuplicate": false,
+      "isOcrArtifact": false,
+      "constitutionAllowance": "Explicit source product row",
+      "sellableEvidence": "Explicit dish/drink row on source menu with independent purchase price or size variants",
+      "sourceEvidence": "Noah og log [Pizza]",
+      "priceEvidence": "menuOre=18000; baseOre=9500"
+    },
+    {
+      "menuNumber": "101",
+      "name": "Hotchicken syltet",
+      "category": "Pizza",
+      "accountingClass": "SOURCE_SELLABLE_PRODUCT",
+      "visibleAsIndependentSellable": "Candidate — see sourceText",
+      "previouslyMissedByExtraction": "Yes or renumbered/OCR extra",
+      "createdAsDerivedMenuCombo": false,
+      "isDuplicate": false,
+      "isOcrArtifact": false,
+      "constitutionAllowance": "Explicit source product row",
+      "sellableEvidence": "Explicit dish/drink row on source menu with independent purchase price or size variants",
+      "sourceEvidence": "Hotchicken syltet [Pizza]",
+      "priceEvidence": "menuOre=18000; baseOre=9500"
+    },
+    {
+      "menuNumber": "111",
+      "name": "Hjemmelavet Cafeteriaburger Menu",
+      "category": "Menuer",
+      "accountingClass": "DERIVED_SELLABLE_PRODUCT",
+      "visibleAsIndependentSellable": "Derived from Menu price column (not a separate PDF dish title)",
+      "previouslyMissedByExtraction": "Yes or renumbered/OCR extra",
+      "createdAsDerivedMenuCombo": true,
+      "isDuplicate": false,
+      "isOcrArtifact": false,
+      "constitutionAllowance": "MENU_IS_COMBO_NOT_VARIANT: Menu price column cannot be a size variant; synthesized as separate Menuer/combo product",
+      "sellableEvidence": "Separately priced Menu column on source requires independent combo/menu product under MenuConstitutionV1 (not a variant)",
+      "sourceEvidence": "Hjemmelavet Cafeteriaburger Menu [Menuer]",
+      "priceEvidence": "baseOre=13000; variants=Alm.:13000"
+    },
+    {
+      "menuNumber": "112",
+      "name": "Baconburger Menu",
+      "category": "Menuer",
+      "accountingClass": "DERIVED_SELLABLE_PRODUCT",
+      "visibleAsIndependentSellable": "Derived from Menu price column (not a separate PDF dish title)",
+      "previouslyMissedByExtraction": "Yes or renumbered/OCR extra",
+      "createdAsDerivedMenuCombo": true,
+      "isDuplicate": false,
+      "isOcrArtifact": false,
+      "constitutionAllowance": "MENU_IS_COMBO_NOT_VARIANT: Menu price column cannot be a size variant; synthesized as separate Menuer/combo product",
+      "sellableEvidence": "Separately priced Menu column on source requires independent combo/menu product under MenuConstitutionV1 (not a variant)",
+      "sourceEvidence": "Baconburger Menu [Menuer]",
+      "priceEvidence": "baseOre=12500; variants=Alm.:12500"
+    },
+    {
+      "menuNumber": "113",
+      "name": "Cheeseburger Menu",
+      "category": "Menuer",
+      "accountingClass": "DERIVED_SELLABLE_PRODUCT",
+      "visibleAsIndependentSellable": "Derived from Menu price column (not a separate PDF dish title)",
+      "previouslyMissedByExtraction": "Yes or renumbered/OCR extra",
+      "createdAsDerivedMenuCombo": true,
+      "isDuplicate": false,
+      "isOcrArtifact": false,
+      "constitutionAllowance": "MENU_IS_COMBO_NOT_VARIANT: Menu price column cannot be a size variant; synthesized as separate Menuer/combo product",
+      "sellableEvidence": "Separately priced Menu column on source requires independent combo/menu product under MenuConstitutionV1 (not a variant)",
+      "sourceEvidence": "Cheeseburger Menu [Menuer]",
+      "priceEvidence": "baseOre=12500; variants=Alm.:12500"
+    },
+    {
+      "menuNumber": "114",
+      "name": "Fiskefilet m. pommes frites Menu",
+      "category": "Menuer",
+      "accountingClass": "DERIVED_SELLABLE_PRODUCT",
+      "visibleAsIndependentSellable": "Derived from Menu price column (not a separate PDF dish title)",
+      "previouslyMissedByExtraction": "Yes or renumbered/OCR extra",
+      "createdAsDerivedMenuCombo": true,
+      "isDuplicate": false,
+      "isOcrArtifact": false,
+      "constitutionAllowance": "MENU_IS_COMBO_NOT_VARIANT: Menu price column cannot be a size variant; synthesized as separate Menuer/combo product",
+      "sellableEvidence": "Separately priced Menu column on source requires independent combo/menu product under MenuConstitutionV1 (not a variant)",
+      "sourceEvidence": "Fiskefilet m. pommes frites Menu [Menuer]",
+      "priceEvidence": "baseOre=11500; variants=Alm.:11500"
+    },
+    {
+      "menuNumber": "115",
+      "name": "½ Grillkyling m. pommes frites Menu",
+      "category": "Menuer",
+      "accountingClass": "DERIVED_SELLABLE_PRODUCT",
+      "visibleAsIndependentSellable": "Derived from Menu price column (not a separate PDF dish title)",
+      "previouslyMissedByExtraction": "Yes or renumbered/OCR extra",
+      "createdAsDerivedMenuCombo": true,
+      "isDuplicate": false,
+      "isOcrArtifact": false,
+      "constitutionAllowance": "MENU_IS_COMBO_NOT_VARIANT: Menu price column cannot be a size variant; synthesized as separate Menuer/combo product",
+      "sellableEvidence": "Separately priced Menu column on source requires independent combo/menu product under MenuConstitutionV1 (not a variant)",
+      "sourceEvidence": "½ Grillkyling m. pommes frites Menu [Menuer]",
+      "priceEvidence": "baseOre=13000; variants=Alm.:13000"
+    },
+    {
+      "menuNumber": "116",
+      "name": "Gorgonzola - Menu",
+      "category": "Menuer",
+      "accountingClass": "DERIVED_SELLABLE_PRODUCT",
+      "visibleAsIndependentSellable": "Derived from Menu price column (not a separate PDF dish title)",
+      "previouslyMissedByExtraction": "Yes or renumbered/OCR extra",
+      "createdAsDerivedMenuCombo": true,
+      "isDuplicate": false,
+      "isOcrArtifact": false,
+      "constitutionAllowance": "MENU_IS_COMBO_NOT_VARIANT: Menu price column cannot be a size variant; synthesized as separate Menuer/combo product",
+      "sellableEvidence": "Separately priced Menu column on source requires independent combo/menu product under MenuConstitutionV1 (not a variant)",
+      "sourceEvidence": "Gorgonzola - Menu [Menuer]",
+      "priceEvidence": "baseOre=18500; variants=Alm.:18500"
+    },
+    {
+      "menuNumber": "119",
+      "name": "Salatpizza Menu",
+      "category": "Menuer",
+      "accountingClass": "DERIVED_SELLABLE_PRODUCT",
+      "visibleAsIndependentSellable": "Derived from Menu price column (not a separate PDF dish title)",
+      "previouslyMissedByExtraction": "Yes or renumbered/OCR extra",
+      "createdAsDerivedMenuCombo": true,
+      "isDuplicate": false,
+      "isOcrArtifact": false,
+      "constitutionAllowance": "MENU_IS_COMBO_NOT_VARIANT: Menu price column cannot be a size variant; synthesized as separate Menuer/combo product",
+      "sellableEvidence": "Separately priced Menu column on source requires independent combo/menu product under MenuConstitutionV1 (not a variant)",
+      "sourceEvidence": "Salatpizza Menu [Menuer]",
+      "priceEvidence": "baseOre=18000; variants=Alm.:18000"
+    },
+    {
+      "menuNumber": "120",
+      "name": "Brianboss syltet Menu",
+      "category": "Menuer",
+      "accountingClass": "DERIVED_SELLABLE_PRODUCT",
+      "visibleAsIndependentSellable": "Derived from Menu price column (not a separate PDF dish title)",
+      "previouslyMissedByExtraction": "Yes or renumbered/OCR extra",
+      "createdAsDerivedMenuCombo": true,
+      "isDuplicate": false,
+      "isOcrArtifact": false,
+      "constitutionAllowance": "MENU_IS_COMBO_NOT_VARIANT: Menu price column cannot be a size variant; synthesized as separate Menuer/combo product",
+      "sellableEvidence": "Separately priced Menu column on source requires independent combo/menu product under MenuConstitutionV1 (not a variant)",
+      "sourceEvidence": "Brianboss syltet Menu [Menuer]",
+      "priceEvidence": "baseOre=18000; variants=Alm.:18000"
+    },
+    {
+      "menuNumber": "121",
+      "name": "Calzone Menu",
+      "category": "Menuer",
+      "accountingClass": "DERIVED_SELLABLE_PRODUCT",
+      "visibleAsIndependentSellable": "Derived from Menu price column (not a separate PDF dish title)",
+      "previouslyMissedByExtraction": "Yes or renumbered/OCR extra",
+      "createdAsDerivedMenuCombo": true,
+      "isDuplicate": false,
+      "isOcrArtifact": false,
+      "constitutionAllowance": "MENU_IS_COMBO_NOT_VARIANT: Menu price column cannot be a size variant; synthesized as separate Menuer/combo product",
+      "sellableEvidence": "Separately priced Menu column on source requires independent combo/menu product under MenuConstitutionV1 (not a variant)",
+      "sourceEvidence": "Calzone Menu [Menuer]",
+      "priceEvidence": "baseOre=18000; variants=Alm.:18000"
+    },
+    {
+      "menuNumber": "122",
+      "name": "Jega Calzone- Menu",
+      "category": "Menuer",
+      "accountingClass": "DERIVED_SELLABLE_PRODUCT",
+      "visibleAsIndependentSellable": "Derived from Menu price column (not a separate PDF dish title)",
+      "previouslyMissedByExtraction": "Yes or renumbered/OCR extra",
+      "createdAsDerivedMenuCombo": true,
+      "isDuplicate": false,
+      "isOcrArtifact": false,
+      "constitutionAllowance": "MENU_IS_COMBO_NOT_VARIANT: Menu price column cannot be a size variant; synthesized as separate Menuer/combo product",
+      "sellableEvidence": "Separately priced Menu column on source requires independent combo/menu product under MenuConstitutionV1 (not a variant)",
+      "sourceEvidence": "Jega Calzone- Menu [Menuer]",
+      "priceEvidence": "baseOre=18000; variants=Alm.:18000"
+    },
+    {
+      "menuNumber": "123",
+      "name": "Ufo - Seetha Menu",
+      "category": "Menuer",
+      "accountingClass": "DERIVED_SELLABLE_PRODUCT",
+      "visibleAsIndependentSellable": "Derived from Menu price column (not a separate PDF dish title)",
+      "previouslyMissedByExtraction": "Yes or renumbered/OCR extra",
+      "createdAsDerivedMenuCombo": true,
+      "isDuplicate": false,
+      "isOcrArtifact": false,
+      "constitutionAllowance": "MENU_IS_COMBO_NOT_VARIANT: Menu price column cannot be a size variant; synthesized as separate Menuer/combo product",
+      "sellableEvidence": "Separately priced Menu column on source requires independent combo/menu product under MenuConstitutionV1 (not a variant)",
+      "sourceEvidence": "Ufo - Seetha Menu [Menuer]",
+      "priceEvidence": "baseOre=18000; variants=Alm.:18000"
+    },
+    {
+      "menuNumber": "124",
+      "name": "Ufo og log Menu",
+      "category": "Menuer",
+      "accountingClass": "DERIVED_SELLABLE_PRODUCT",
+      "visibleAsIndependentSellable": "Derived from Menu price column (not a separate PDF dish title)",
+      "previouslyMissedByExtraction": "Yes or renumbered/OCR extra",
+      "createdAsDerivedMenuCombo": true,
+      "isDuplicate": false,
+      "isOcrArtifact": false,
+      "constitutionAllowance": "MENU_IS_COMBO_NOT_VARIANT: Menu price column cannot be a size variant; synthesized as separate Menuer/combo product",
+      "sellableEvidence": "Separately priced Menu column on source requires independent combo/menu product under MenuConstitutionV1 (not a variant)",
+      "sourceEvidence": "Ufo og log Menu [Menuer]",
+      "priceEvidence": "baseOre=18000; variants=Alm.:18000"
+    },
+    {
+      "menuNumber": "128",
+      "name": "Noah og log Menu",
+      "category": "Menuer",
+      "accountingClass": "DERIVED_SELLABLE_PRODUCT",
+      "visibleAsIndependentSellable": "Derived from Menu price column (not a separate PDF dish title)",
+      "previouslyMissedByExtraction": "Yes or renumbered/OCR extra",
+      "createdAsDerivedMenuCombo": true,
+      "isDuplicate": false,
+      "isOcrArtifact": false,
+      "constitutionAllowance": "MENU_IS_COMBO_NOT_VARIANT: Menu price column cannot be a size variant; synthesized as separate Menuer/combo product",
+      "sellableEvidence": "Separately priced Menu column on source requires independent combo/menu product under MenuConstitutionV1 (not a variant)",
+      "sourceEvidence": "Noah og log Menu [Menuer]",
+      "priceEvidence": "baseOre=18000; variants=Alm.:18000"
+    },
+    {
+      "menuNumber": "129",
+      "name": "Hotchicken syltet Menu",
+      "category": "Menuer",
+      "accountingClass": "DERIVED_SELLABLE_PRODUCT",
+      "visibleAsIndependentSellable": "Derived from Menu price column (not a separate PDF dish title)",
+      "previouslyMissedByExtraction": "Yes or renumbered/OCR extra",
+      "createdAsDerivedMenuCombo": true,
+      "isDuplicate": false,
+      "isOcrArtifact": false,
+      "constitutionAllowance": "MENU_IS_COMBO_NOT_VARIANT: Menu price column cannot be a size variant; synthesized as separate Menuer/combo product",
+      "sellableEvidence": "Separately priced Menu column on source requires independent combo/menu product under MenuConstitutionV1 (not a variant)",
+      "sourceEvidence": "Hotchicken syltet Menu [Menuer]",
+      "priceEvidence": "baseOre=18000; variants=Alm.:18000"
+    },
+    {
+      "menuNumber": "130",
+      "name": "Dürüm rulle Menu",
+      "category": "Menuer",
+      "accountingClass": "DERIVED_SELLABLE_PRODUCT",
+      "visibleAsIndependentSellable": "Derived from Menu price column (not a separate PDF dish title)",
+      "previouslyMissedByExtraction": "Yes or renumbered/OCR extra",
+      "createdAsDerivedMenuCombo": true,
+      "isDuplicate": false,
+      "isOcrArtifact": false,
+      "constitutionAllowance": "MENU_IS_COMBO_NOT_VARIANT: Menu price column cannot be a size variant; synthesized as separate Menuer/combo product",
+      "sellableEvidence": "Separately priced Menu column on source requires independent combo/menu product under MenuConstitutionV1 (not a variant)",
+      "sourceEvidence": "Dürüm rulle Menu [Menuer]",
+      "priceEvidence": "baseOre=12500; variants=Alm.:12500"
+    },
+    {
+      "menuNumber": "131",
+      "name": "Hjemmelavet pitabrød Menu",
+      "category": "Menuer",
+      "accountingClass": "DERIVED_SELLABLE_PRODUCT",
+      "visibleAsIndependentSellable": "Derived from Menu price column (not a separate PDF dish title)",
+      "previouslyMissedByExtraction": "Yes or renumbered/OCR extra",
+      "createdAsDerivedMenuCombo": true,
+      "isDuplicate": false,
+      "isOcrArtifact": false,
+      "constitutionAllowance": "MENU_IS_COMBO_NOT_VARIANT: Menu price column cannot be a size variant; synthesized as separate Menuer/combo product",
+      "sellableEvidence": "Separately priced Menu column on source requires independent combo/menu product under MenuConstitutionV1 (not a variant)",
+      "sourceEvidence": "Hjemmelavet pitabrød Menu [Menuer]",
+      "priceEvidence": "baseOre=12500; variants=Alm.:12500"
+    }
+  ],
+  "droppedEntities": [
+    {
+      "rawExtractedEntity": "log",
+      "sourceId": "src:9:log",
+      "sourceLocation": "PIZZA",
+      "classification": "TOPPING_TOKEN_AS_PRODUCT",
+      "reasonDropped": "TOPPING_TOKEN_AS_PRODUCT"
+    },
+    {
+      "rawExtractedEntity": "Valgfri dyppelse",
+      "sourceId": "src:10:valgfridyppelse",
+      "sourceLocation": "PIZZA",
+      "classification": "OCR_META_AS_PRODUCT",
+      "reasonDropped": "OCR_META_AS_PRODUCT"
+    },
+    {
+      "rawExtractedEntity": "Klassisk italiensk kødsovs",
+      "sourceId": "src:?:klassiskitalienskkdsovs",
+      "sourceLocation": "Pasta",
+      "classification": "INGREDIENT_PHRASE_AS_PRODUCT",
+      "reasonDropped": "INGREDIENT_PHRASE_AS_PRODUCT"
+    },
+    {
+      "rawExtractedEntity": "Ekstra tilbehør",
+      "sourceId": "src:49:ekstratilbehr",
+      "sourceLocation": "Sides",
+      "classification": "OCR_META_AS_PRODUCT",
+      "reasonDropped": "OCR_META_AS_PRODUCT"
+    },
+    {
+      "rawExtractedEntity": "Nachos",
+      "sourceId": "src:53:nachos",
+      "sourceLocation": "Nachos",
+      "classification": "OCR_CATEGORY_HEADING_AS_PRODUCT",
+      "reasonDropped": "OCR_CATEGORY_HEADING_AS_PRODUCT"
+    },
+    {
+      "rawExtractedEntity": "Sodavand",
+      "sourceId": "src:64:sodavand",
+      "sourceLocation": "DRIKKEVARER",
+      "classification": "OCR_CATEGORY_HEADING_AS_PRODUCT",
+      "reasonDropped": "OCR_CATEGORY_HEADING_AS_PRODUCT"
+    },
+    {
+      "rawExtractedEntity": "Josu Tomat",
+      "sourceId": "src:?:josutomat",
+      "sourceLocation": "UNCATEGORIZED",
+      "classification": "OCR_GARBAGE_TOPPING_NAME",
+      "reasonDropped": "OCR_GARBAGE_TOPPING_NAME"
+    },
+    {
+      "rawExtractedEntity": "Seetha Tomat",
+      "sourceId": "src:?:seethatomat",
+      "sourceLocation": "UNCATEGORIZED",
+      "classification": "OCR_GARBAGE_TOPPING_NAME",
+      "reasonDropped": "OCR_GARBAGE_TOPPING_NAME"
+    },
+    {
+      "rawExtractedEntity": "Stor Lille",
+      "sourceId": "src:?:storlille",
+      "sourceLocation": "UNCATEGORIZED",
+      "classification": "OCR_VARIANT_LABEL_AS_PRODUCT",
+      "reasonDropped": "OCR_VARIANT_LABEL_AS_PRODUCT"
+    },
+    {
+      "rawExtractedEntity": "VERONI's lokale kan rumme op til",
+      "sourceId": "src:?:veronislokalekanrummeoptil",
+      "sourceLocation": "UNCATEGORIZED",
+      "classification": "OCR_MARKETING_PROSE_AS_PRODUCT",
+      "reasonDropped": "OCR_MARKETING_PROSE_AS_PRODUCT"
+    },
+    {
+      "rawExtractedEntity": "Restaurant",
+      "sourceId": "src:?:restaurant",
+      "sourceLocation": "UNCATEGORIZED",
+      "classification": "OCR_MARKETING_PROSE_AS_PRODUCT",
+      "reasonDropped": "OCR_MARKETING_PROSE_AS_PRODUCT"
+    },
+    {
+      "rawExtractedEntity": "INDISK Forretter",
+      "sourceId": "src:?:indiskforretter",
+      "sourceLocation": "UNCATEGORIZED",
+      "classification": "OCR_CATEGORY_HEADING_AS_PRODUCT",
+      "reasonDropped": "OCR_CATEGORY_HEADING_AS_PRODUCT"
+    },
+    {
+      "rawExtractedEntity": "Hovedretter",
+      "sourceId": "src:?:hovedretter",
+      "sourceLocation": "UNCATEGORIZED",
+      "classification": "OCR_CATEGORY_HEADING_AS_PRODUCT",
+      "reasonDropped": "OCR_CATEGORY_HEADING_AS_PRODUCT"
+    },
+    {
+      "rawExtractedEntity": "Klassisk italiensk kødsovs Menu",
+      "sourceId": "src:menuer:src:?:klassiskitalienskkdsovs",
+      "sourceLocation": "Menuer",
+      "classification": "OCR_GARBAGE_MENU_CLONE",
+      "reasonDropped": "OCR_GARBAGE_MENU_CLONE"
+    },
+    {
+      "rawExtractedEntity": "Josu Tomat Menu",
+      "sourceId": "src:menuer:src:?:josutomat",
+      "sourceLocation": "Menuer",
+      "classification": "OCR_GARBAGE_MENU_CLONE",
+      "reasonDropped": "OCR_GARBAGE_MENU_CLONE"
+    },
+    {
+      "rawExtractedEntity": "Seetha Tomat Menu",
+      "sourceId": "src:menuer:src:?:seethatomat",
+      "sourceLocation": "Menuer",
+      "classification": "OCR_GARBAGE_MENU_CLONE",
+      "reasonDropped": "OCR_GARBAGE_MENU_CLONE"
+    },
+    {
+      "rawExtractedEntity": "Stor Lille Menu",
+      "sourceId": "src:menuer:src:?:storlille",
+      "sourceLocation": "Menuer",
+      "classification": "OCR_GARBAGE_MENU_CLONE",
+      "reasonDropped": "OCR_GARBAGE_MENU_CLONE"
+    },
+    {
+      "rawExtractedEntity": "INDISK Forretter Menu",
+      "sourceId": "src:menuer:src:?:indiskforretter",
+      "sourceLocation": "Menuer",
+      "classification": "OCR_GARBAGE_MENU_CLONE",
+      "reasonDropped": "OCR_GARBAGE_MENU_CLONE"
+    },
+    {
+      "rawExtractedEntity": "Hovedretter Menu",
+      "sourceId": "src:menuer:src:?:hovedretter",
+      "sourceLocation": "Menuer",
+      "classification": "OCR_GARBAGE_MENU_CLONE",
+      "reasonDropped": "OCR_GARBAGE_MENU_CLONE"
+    }
+  ],
+  "historicalMissing": [
+    {
+      "menuNumber": "9",
+      "expectedName": null,
+      "note": "Historical V1 number not present as TargetMenu menuNumber — may be renamed, merged, or dropped as NON_PRODUCT"
+    },
+    {
+      "menuNumber": "10",
+      "expectedName": null,
+      "note": "Historical V1 number not present as TargetMenu menuNumber — may be renamed, merged, or dropped as NON_PRODUCT"
+    },
+    {
+      "menuNumber": "16",
+      "expectedName": null,
+      "note": "Historical V1 number not present as TargetMenu menuNumber — may be renamed, merged, or dropped as NON_PRODUCT"
+    },
+    {
+      "menuNumber": "17",
+      "expectedName": null,
+      "note": "Historical V1 number not present as TargetMenu menuNumber — may be renamed, merged, or dropped as NON_PRODUCT"
+    },
+    {
+      "menuNumber": "27",
+      "expectedName": null,
+      "note": "Historical V1 number not present as TargetMenu menuNumber — may be renamed, merged, or dropped as NON_PRODUCT"
+    },
+    {
+      "menuNumber": "28",
+      "expectedName": null,
+      "note": "Historical V1 number not present as TargetMenu menuNumber — may be renamed, merged, or dropped as NON_PRODUCT"
+    },
+    {
+      "menuNumber": "29",
+      "expectedName": null,
+      "note": "Historical V1 number not present as TargetMenu menuNumber — may be renamed, merged, or dropped as NON_PRODUCT"
+    },
+    {
+      "menuNumber": "30",
+      "expectedName": null,
+      "note": "Historical V1 number not present as TargetMenu menuNumber — may be renamed, merged, or dropped as NON_PRODUCT"
+    },
+    {
+      "menuNumber": "31",
+      "expectedName": null,
+      "note": "Historical V1 number not present as TargetMenu menuNumber — may be renamed, merged, or dropped as NON_PRODUCT"
+    },
+    {
+      "menuNumber": "49",
+      "expectedName": null,
+      "note": "Historical V1 number not present as TargetMenu menuNumber — may be renamed, merged, or dropped as NON_PRODUCT"
+    },
+    {
+      "menuNumber": "53",
+      "expectedName": null,
+      "note": "Historical V1 number not present as TargetMenu menuNumber — may be renamed, merged, or dropped as NON_PRODUCT"
+    },
+    {
+      "menuNumber": "64",
+      "expectedName": null,
+      "note": "Historical V1 number not present as TargetMenu menuNumber — may be renamed, merged, or dropped as NON_PRODUCT"
+    }
+  ]
+}

@@ -21,3 +21,15 @@ Thumbs.db
 .railway-bootstrap-local.txt
 railway-login-result.txt
 
+# Local OCR/debug artifacts — never part of release certification
+fixtures/smash-b64*.txt
+fixtures/smash-*-debug.json
+fixtures/smash-extract-debug.json
+fixtures/smash-ingest-raw.txt
+fixtures/smash-photo-ocr*.json
+fixtures/smash-photo-ocr-pre.json
+fixtures/smash-photo-preprocessed.png
+fixtures/smash-photo.b64.txt
+fixtures/smash-pages-debug.json
+scripts/debug-smash-*.ts
+

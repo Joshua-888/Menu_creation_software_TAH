@@ -1,0 +1,89 @@
+{
+  "purpose": "Freeze golden oracle hashes before certification — do not modify goldens during the run",
+  "commitSha": "e9837bc4515d2acafa77c9b4b8abdee481f6ed07",
+  "generatedAt": "2026-09-16T10:09:18.043Z",
+  "constitutionVersion": "MenuConstitutionV1",
+  "goldens": [
+    {
+      "id": "smash-final",
+      "goldenPath": "fixtures/golden/smash/expected-final-menu.json",
+      "goldenVersion": "golden-smash-v2-certified",
+      "exists": true,
+      "sha256": "004630b01fa216657f72121f97f30a329fa1daf134fef4c398942fd9d197e92c",
+      "bytes": 903,
+      "lastReviewedAt": "2026-09-16T10:09:18.043Z"
+    },
+    {
+      "id": "smash-canonical",
+      "goldenPath": "fixtures/golden/smash/expected-canonical-menu.json",
+      "goldenVersion": "smash-canonical-v1",
+      "exists": true,
+      "sha256": "2b180b55980360b43e52f4ec3fe4b576f2460a0f759d6e2de77197e31f1e6c31",
+      "bytes": 418,
+      "lastReviewedAt": "2026-09-16T10:09:18.043Z"
+    },
+    {
+      "id": "smash-source",
+      "goldenPath": "fixtures/golden/smash/expected-source-menu.json",
+      "goldenVersion": "smash-source-v1",
+      "exists": true,
+      "sha256": "6b0ba069fbb1576fd91afd4a9443017a39e44c991424bac92271c0ead8a10d6a",
+      "bytes": 489,
+      "lastReviewedAt": "2026-09-16T10:09:18.043Z"
+    },
+    {
+      "id": "smash-raw-photo",
+      "goldenPath": "fixtures/golden/smash/raw-source.jpg",
+      "goldenVersion": "smash-raw-photo-v1",
+      "exists": true,
+      "sha256": "2524761f7ec8a515959cd2876bc98a91233a03872a45861d57653306c467a72a",
+      "bytes": 126771,
+      "lastReviewedAt": "2026-09-16T10:09:18.043Z"
+    },
+    {
+      "id": "veroni-v2",
+      "goldenPath": "fixtures/golden/veroni/VERONI_GOLDEN_V2.json",
+      "goldenVersion": "VERONI_GOLDEN_V2",
+      "exists": true,
+      "sha256": "8add0303bea4430e5fc75e567e766179a1e5a309d4f322bec66675388304c3f9",
+      "bytes": 41066,
+      "lastReviewedAt": "2026-09-16T10:09:18.043Z"
+    },
+    {
+      "id": "veroni-historical-72",
+      "goldenPath": "fixtures/veroni/golden-source.json",
+      "goldenVersion": "veroni-historical-72-oracle",
+      "exists": true,
+      "sha256": "b4964b0b312e001ea87d596c4bb6b4496d53a25258bfdc8563ad83cfe72c0797",
+      "bytes": 3690,
+      "lastReviewedAt": "2026-09-16T10:09:18.043Z"
+    },
+    {
+      "id": "third-thai-expected",
+      "goldenPath": "fixtures/golden/third-merchant/expected-final-menu.json",
+      "goldenVersion": "golden-third-merchant-thai-v2",
+      "exists": true,
+      "sha256": "e8152ec52a1955bbdbf3bcd17cd8553e941a733ff5b5de3cfafde36839e8cb8b",
+      "bytes": 952,
+      "lastReviewedAt": "2026-09-16T10:09:18.043Z"
+    },
+    {
+      "id": "third-thai-products",
+      "goldenPath": "fixtures/golden/third-merchant/THAI_HOUSE_GOLDEN_V1.json",
+      "goldenVersion": "THAI_HOUSE_GOLDEN_V1",
+      "exists": true,
+      "sha256": "2da6d8694775d5a95c38631e8809da9e1ff79ae00e00fe539d7864fe06a6a21d",
+      "bytes": 4492,
+      "lastReviewedAt": "2026-09-16T10:09:18.043Z"
+    },
+    {
+      "id": "third-thai-raw",
+      "goldenPath": "fixtures/golden/third-merchant/raw-source.pdf",
+      "goldenVersion": "thai-raw-pdf-v2",
+      "exists": true,
+      "sha256": "f980caa11c214c1117790f807527be77e1a6a399a9c8558fce14b8d02341240c",
+      "bytes": 2079,
+      "lastReviewedAt": "2026-09-16T10:09:18.043Z"
+    }
+  ]
+}

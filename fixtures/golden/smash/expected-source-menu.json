@@ -1,0 +1,15 @@
+{
+  "fixtureId": "golden-smash-source-v1",
+  "categories": [
+    {
+      "name": "Burgers",
+      "products": [
+        { "name": "Dirty Smash", "baseOre": 9900, "menuOre": 14900 },
+        { "name": "Classic Smash", "baseOre": 9900, "menuOre": 14900 },
+        { "name": "Crunch Murphy", "baseOre": 9900, "menuOre": 14900 },
+        { "name": "Spice Me Up", "baseOre": 9900, "menuOre": 14900 },
+        { "name": "Bearnaise Smash", "baseOre": 9900, "menuOre": 14900 }
+      ]
+    }
+  ]
+}

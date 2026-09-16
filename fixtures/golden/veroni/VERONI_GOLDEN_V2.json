@@ -1,0 +1,1843 @@
+{
+  "fixtureId": "VERONI_GOLDEN_V2",
+  "constitutionVersion": "MenuConstitutionV1",
+  "oracleReview": "docs/certification/veroni-golden-v2-oracle-review.md",
+  "rawSource": "fixtures/veroni/Scanner-2026-08-11-14_33_58.pdf",
+  "sourceProductCount": 107,
+  "targetProductCount": 88,
+  "statusAccounting": {
+    "productCount": 88,
+    "ready": 76,
+    "review": 12,
+    "blocked": 0,
+    "reconciles": true
+  },
+  "menuVariantCount": 0,
+  "products": [
+    {
+      "name": "PIZZA",
+      "category": "PIZZA",
+      "menuNumber": "1",
+      "ingredients": [
+        "Tomat",
+        "Ost"
+      ],
+      "description": "Tomat og ost",
+      "variants": [
+        "Alm.",
+        "Familie"
+      ],
+      "additions": [],
+      "isCombo": false,
+      "basePriceOre": 7700,
+      "qualityStatus": "QUALITY_READY"
+    },
+    {
+      "name": "Elia",
+      "category": "PIZZA",
+      "menuNumber": "2",
+      "ingredients": [
+        "Tomat",
+        "Ost",
+        "Skinke"
+      ],
+      "description": "Tomat, ost og skinke",
+      "variants": [
+        "Alm.",
+        "Familie"
+      ],
+      "additions": [],
+      "isCombo": false,
+      "basePriceOre": 9000,
+      "qualityStatus": "QUALITY_READY"
+    },
+    {
+      "name": "Hawaii",
+      "category": "PIZZA",
+      "menuNumber": "3",
+      "ingredients": [
+        "Tomat",
+        "Ost",
+        "Skinke, Ananas"
+      ],
+      "description": "Tomat, ost og skinke, Ananas",
+      "variants": [
+        "Alm.",
+        "Familie"
+      ],
+      "additions": [],
+      "isCombo": false,
+      "basePriceOre": 9500,
+      "qualityStatus": "QUALITY_READY"
+    },
+    {
+      "name": "Tobi",
+      "category": "PIZZA",
+      "menuNumber": "4",
+      "ingredients": [
+        "Tomat",
+        "Ost",
+        "Kebab",
+        "Bearnaisesauce"
+      ],
+      "description": "Tomat, ost, kebab og bearnaisesauce",
+      "variants": [
+        "Alm.",
+        "Familie"
+      ],
+      "additions": [],
+      "isCombo": false,
+      "basePriceOre": 9500,
+      "qualityStatus": "QUALITY_READY"
+    },
+    {
+      "name": "Nordgàrds",
+      "category": "PIZZA",
+      "menuNumber": "5",
+      "ingredients": [
+        "Tomat",
+        "Ost",
+        "Skinke, Pølse"
+      ],
+      "description": "Tomat, ost og skinke, Pølse",
+      "variants": [
+        "Alm.",
+        "Familie"
+      ],
+      "additions": [],
+      "isCombo": false,
+      "basePriceOre": 9500,
+      "qualityStatus": "QUALITY_READY"
+    },
+    {
+      "name": "Pepperoni",
+      "category": "PIZZA",
+      "menuNumber": "6",
+      "ingredients": [
+        "Tomat",
+        "Ost"
+      ],
+      "description": "Tomat og ost",
+      "variants": [
+        "Alm.",
+        "Familie"
+      ],
+      "additions": [],
+      "isCombo": false,
+      "basePriceOre": 9500,
+      "qualityStatus": "QUALITY_READY"
+    },
+    {
+      "name": "Preben",
+      "category": "PIZZA",
+      "menuNumber": "7",
+      "ingredients": [
+        "Tomat",
+        "Ost",
+        "Skinke",
+        "Bacon",
+        "Æg"
+      ],
+      "description": "Tomat, ost, skinke, bacon og æg",
+      "variants": [
+        "Alm.",
+        "Familie"
+      ],
+      "additions": [],
+      "isCombo": false,
+      "basePriceOre": 9500,
+      "qualityStatus": "QUALITY_READY"
+    },
+    {
+      "name": "Sofi",
+      "category": "PIZZA",
+      "menuNumber": "8",
+      "ingredients": [
+        "Tomat",
+        "Ost",
+        "Kebab",
+        "Champignon"
+      ],
+      "description": "Tomat, ost, kebab og champignon",
+      "variants": [
+        "Alm.",
+        "Familie"
+      ],
+      "additions": [],
+      "isCombo": false,
+      "basePriceOre": 9500,
+      "qualityStatus": "QUALITY_READY"
+    },
+    {
+      "name": "Patricia",
+      "category": "PIZZA",
+      "menuNumber": "11",
+      "ingredients": [
+        "Tomat",
+        "Ost",
+        "Skinke",
+        "Bacon",
+        "Pepperoni",
+        "Champignon",
+        "Syltet paprika",
+        "Bearnaisesauce",
+        "Løg"
+      ],
+      "description": "Tomat, ost, skinke, bacon, pepperoni, champignon, syltet paprika, bearnaisesauce og løg",
+      "variants": [
+        "Alm.",
+        "Familie"
+      ],
+      "additions": [],
+      "isCombo": false,
+      "basePriceOre": 12000,
+      "qualityStatus": "QUALITY_READY"
+    },
+    {
+      "name": "Two in one",
+      "category": "PIZZA",
+      "menuNumber": "12",
+      "ingredients": [
+        "Tomat",
+        "Ost",
+        "Skinke",
+        "Kebab",
+        "Pepperoni",
+        "½ Tomat",
+        "Salat",
+        "Dressing"
+      ],
+      "description": "Tomat, ost, skinke, kebab, pepperoni, ½ Tomat, salat og dressing",
+      "variants": [
+        "Alm.",
+        "Familie"
+      ],
+      "additions": [],
+      "isCombo": true,
+      "basePriceOre": 11000,
+      "qualityStatus": "QUALITY_READY"
+    },
+    {
+      "name": "Genova",
+      "category": "PIZZA",
+      "menuNumber": "13",
+      "ingredients": [
+        "Tomat",
+        "Ost",
+        "Kylling",
+        "Champignon",
+        "Syltet paprika",
+        "Løg"
+      ],
+      "description": "Tomat, ost, kylling, champignon, syltet paprika og løg",
+      "variants": [
+        "Alm.",
+        "Familie"
+      ],
+      "additions": [],
+      "isCombo": false,
+      "basePriceOre": 11000,
+      "qualityStatus": "QUALITY_READY"
+    },
+    {
+      "name": "Kalista",
+      "category": "PIZZA",
+      "menuNumber": "14",
+      "ingredients": [
+        "Tomat",
+        "Ost",
+        "Kødsovs",
+        "Champignon",
+        "Syltet paprika"
+      ],
+      "description": "Tomat, ost, kødsovs, champignon og syltet paprika",
+      "variants": [
+        "Alm.",
+        "Familie"
+      ],
+      "additions": [],
+      "isCombo": false,
+      "basePriceOre": 11000,
+      "qualityStatus": "QUALITY_READY"
+    },
+    {
+      "name": "Seafood",
+      "category": "PIZZA",
+      "menuNumber": "15",
+      "ingredients": [
+        "Ost",
+        "Tun",
+        "Rejer",
+        "Musling",
+        "Løg",
+        "Tomat"
+      ],
+      "description": "Ost, tun, rejer, musling, løg og tomat",
+      "variants": [
+        "Alm.",
+        "Familie"
+      ],
+      "additions": [],
+      "isCombo": false,
+      "basePriceOre": 11500,
+      "qualityStatus": "QUALITY_READY"
+    },
+    {
+      "name": "Dagulas",
+      "category": "PIZZA",
+      "menuNumber": "18",
+      "ingredients": [
+        "Ost",
+        "Kødstrimler",
+        "Syltet paprika",
+        "Jalapenos",
+        "Tomat",
+        "Champignon",
+        "Løg"
+      ],
+      "description": "Ost, kødstrimler, syltet paprika, jalapenos, tomat, champignon og løg",
+      "variants": [
+        "Alm.",
+        "Familie"
+      ],
+      "additions": [],
+      "isCombo": false,
+      "basePriceOre": 11500,
+      "qualityStatus": "QUALITY_READY"
+    },
+    {
+      "name": "Noah",
+      "category": "PIZZA",
+      "menuNumber": "19",
+      "ingredients": [
+        "Tomat",
+        "Paprika"
+      ],
+      "description": "Tomat og paprika",
+      "variants": [
+        "Alm.",
+        "Familie"
+      ],
+      "additions": [],
+      "isCombo": false,
+      "basePriceOre": 10500,
+      "qualityStatus": "QUALITY_READY"
+    },
+    {
+      "name": "Hotchicken",
+      "category": "PIZZA",
+      "menuNumber": "20",
+      "ingredients": [
+        "Tomat",
+        "Ost",
+        "Kylling",
+        "Jalapenos",
+        "Syltet",
+        "Paprika.",
+        "Champignon",
+        "Løg",
+        "Chili"
+      ],
+      "description": "Tomat, ost, kylling, jalapenos, syltet, paprika., champignon, løg og chili",
+      "variants": [
+        "Alm.",
+        "Familie"
+      ],
+      "additions": [],
+      "isCombo": false,
+      "basePriceOre": 10500,
+      "qualityStatus": "QUALITY_READY"
+    },
+    {
+      "name": "Brianboss",
+      "category": "PIZZA",
+      "menuNumber": "21",
+      "ingredients": [
+        "Tomat",
+        "Ost",
+        "Kødstrimler",
+        "Syltet",
+        "Champignon",
+        "Paprika."
+      ],
+      "description": "Tomat, ost, kødstrimler, syltet, champignon og paprika.",
+      "variants": [
+        "Alm.",
+        "Familie"
+      ],
+      "additions": [],
+      "isCombo": false,
+      "basePriceOre": 12000,
+      "qualityStatus": "QUALITY_READY"
+    },
+    {
+      "name": "Calzone -",
+      "category": "Indbagt, ufo og calzone",
+      "menuNumber": "22",
+      "ingredients": [
+        "Tomat",
+        "Ost",
+        "Skinke"
+      ],
+      "description": "Tomat, ost og skinke",
+      "variants": [
+        "Alm."
+      ],
+      "additions": [],
+      "isCombo": false,
+      "basePriceOre": 0,
+      "qualityStatus": "QUALITY_READY"
+    },
+    {
+      "name": "Calzone -Jega",
+      "category": "Indbagt, ufo og calzone",
+      "menuNumber": "23",
+      "ingredients": [
+        "Tomat",
+        "Ost",
+        "Kødsovs"
+      ],
+      "description": "Tomat, ost og kødsovs",
+      "variants": [
+        "Alm."
+      ],
+      "additions": [],
+      "isCombo": false,
+      "basePriceOre": 9500,
+      "qualityStatus": "QUALITY_READY"
+    },
+    {
+      "name": "Calzone - Karan",
+      "category": "Indbagt, ufo og calzone",
+      "menuNumber": "24",
+      "ingredients": [
+        "Tomat",
+        "Ost",
+        "Salat"
+      ],
+      "description": "Tomat, ost og salat",
+      "variants": [
+        "Alm."
+      ],
+      "additions": [],
+      "isCombo": false,
+      "basePriceOre": 9500,
+      "qualityStatus": "QUALITY_READY"
+    },
+    {
+      "name": "Rejer, champignon ost, skinke, Tomat, -Glori 25. rejer, champignon ost, skinke, Tomat, -Glori",
+      "category": "Indbagt, ufo og calzone",
+      "menuNumber": "25",
+      "ingredients": [
+        "Tomat",
+        "Ost",
+        "Skinke",
+        "Rejer",
+        "Champignon"
+      ],
+      "description": "Tomat, ost, skinke, rejer og champignon",
+      "variants": [
+        "Alm."
+      ],
+      "additions": [],
+      "isCombo": false,
+      "basePriceOre": 9500,
+      "qualityStatus": "QUALITY_READY"
+    },
+    {
+      "name": "Ufo -Glori kodsovs, spaghetti, syltet paprika og log",
+      "category": "Indbagt, ufo og calzone",
+      "menuNumber": "26",
+      "ingredients": [
+        "Tomat",
+        "Ost",
+        "Kødsovs"
+      ],
+      "description": "Tomat, ost og kødsovs",
+      "variants": [
+        "Alm."
+      ],
+      "additions": [],
+      "isCombo": false,
+      "basePriceOre": 10500,
+      "qualityStatus": "QUALITY_READY"
+    },
+    {
+      "name": "Tino Bambino",
+      "category": "Vegetarpizza",
+      "menuNumber": "32",
+      "ingredients": [
+        "Tomat",
+        "Ost",
+        "Falafel",
+        "Champignon",
+        "Syltet paprika",
+        "Ananas",
+        "Oliven",
+        "Løg."
+      ],
+      "description": "Tomat, ost, falafel, champignon, syltet paprika, ananas, oliven og løg.",
+      "variants": [
+        "Alm.",
+        "Familie"
+      ],
+      "additions": [],
+      "isCombo": false,
+      "basePriceOre": 11000,
+      "qualityStatus": "QUALITY_READY"
+    },
+    {
+      "name": "Damon",
+      "category": "Vegetarpizza",
+      "menuNumber": "32b",
+      "ingredients": [
+        "Tomat",
+        "Ost",
+        "Kartofler",
+        "Champignon"
+      ],
+      "description": "Tomat, ost, kartofler og champignon",
+      "variants": [
+        "Alm.",
+        "Familie"
+      ],
+      "additions": [],
+      "isCombo": false,
+      "basePriceOre": 9500,
+      "qualityStatus": "QUALITY_READY"
+    },
+    {
+      "name": "Stefan",
+      "category": "Vegetarpizza",
+      "menuNumber": "32C",
+      "ingredients": [
+        "Tomat",
+        "Ost",
+        "Mozzarella",
+        "Friske tomater."
+      ],
+      "description": "Tomat, ost, mozzarella og friske tomater.",
+      "variants": [
+        "Alm.",
+        "Familie"
+      ],
+      "additions": [
+        {
+          "name": "Ekstra kød",
+          "priceOre": 2000
+        }
+      ],
+      "isCombo": false,
+      "basePriceOre": 9500,
+      "qualityStatus": "QUALITY_READY"
+    },
+    {
+      "name": "Spaghetti Bolognese",
+      "category": "Pasta",
+      "menuNumber": "33",
+      "ingredients": [
+        "Spaghetti",
+        "Kødsovs"
+      ],
+      "description": "Spaghetti og kødsovs",
+      "variants": [
+        "Alm."
+      ],
+      "additions": [],
+      "isCombo": false,
+      "basePriceOre": 10500,
+      "qualityStatus": "QUALITY_READY"
+    },
+    {
+      "name": "Pasta Alfredo med Kylling",
+      "category": "Pasta",
+      "menuNumber": "34",
+      "ingredients": [
+        "Med Kylling",
+        "Klassisk ret med Penne",
+        "Parmesan"
+      ],
+      "description": "Med Kylling, klassisk ret med Penne og parmesan",
+      "variants": [
+        "Alm."
+      ],
+      "additions": [],
+      "isCombo": false,
+      "basePriceOre": 13000,
+      "qualityStatus": "QUALITY_READY"
+    },
+    {
+      "name": "Pasta Ai Gamberi",
+      "category": "Pasta",
+      "menuNumber": "35",
+      "ingredients": [
+        "Penne",
+        "Tigerrejer",
+        "Spinat",
+        "Flødesovs",
+        "Parmesan"
+      ],
+      "description": "Penne, tigerrejer, spinat, flødesovs og parmesan",
+      "variants": [
+        "Alm."
+      ],
+      "additions": [],
+      "isCombo": false,
+      "basePriceOre": 13000,
+      "qualityStatus": "QUALITY_READY"
+    },
+    {
+      "name": "Klassisk",
+      "category": "Pasta",
+      "menuNumber": "72",
+      "ingredients": [
+        "Penne",
+        "Tigerrejer",
+        "Spinat",
+        "Parmesan"
+      ],
+      "description": "Penne, tigerrejer, spinat og parmesan",
+      "variants": [
+        "Alm."
+      ],
+      "additions": [],
+      "isCombo": false,
+      "basePriceOre": 3500,
+      "qualityStatus": "QUALITY_READY"
+    },
+    {
+      "name": "Hjemmelavet Cafeteriaburger",
+      "category": "Sides",
+      "menuNumber": "39",
+      "ingredients": [
+        "Oksekød",
+        "Salat",
+        "Tomat",
+        "Løg",
+        "Ketchup",
+        "Mayo",
+        "Agurk"
+      ],
+      "description": "Oksekød, salat, tomat, løg, ketchup, mayo og agurk",
+      "variants": [
+        "Alm."
+      ],
+      "additions": [
+        {
+          "name": "Bacon",
+          "priceOre": 2000
+        },
+        {
+          "name": "Ost",
+          "priceOre": 1000
+        },
+        {
+          "name": "Salat",
+          "priceOre": 1000
+        },
+        {
+          "name": "Tomat",
+          "priceOre": 1000
+        },
+        {
+          "name": "Løg",
+          "priceOre": 1000
+        },
+        {
+          "name": "Oksekød",
+          "priceOre": 2000
+        },
+        {
+          "name": "Agurk",
+          "priceOre": 1000
+        },
+        {
+          "name": "Jalapeños",
+          "priceOre": 1000
+        }
+      ],
+      "isCombo": false,
+      "basePriceOre": 7500,
+      "qualityStatus": "QUALITY_READY"
+    },
+    {
+      "name": "Baconburger",
+      "category": "Sides",
+      "menuNumber": "40",
+      "ingredients": [
+        "Oksekød",
+        "Bacon",
+        "Salat",
+        "Tomat",
+        "Løg",
+        "Ketchup",
+        "Mayo"
+      ],
+      "description": "Oksekød, bacon, salat, tomat, løg, ketchup og mayo",
+      "variants": [
+        "Alm."
+      ],
+      "additions": [
+        {
+          "name": "Bacon",
+          "priceOre": 2000
+        },
+        {
+          "name": "Ost",
+          "priceOre": 1000
+        },
+        {
+          "name": "Salat",
+          "priceOre": 1000
+        },
+        {
+          "name": "Tomat",
+          "priceOre": 1000
+        },
+        {
+          "name": "Løg",
+          "priceOre": 1000
+        },
+        {
+          "name": "Oksekød",
+          "priceOre": 2000
+        },
+        {
+          "name": "Agurk",
+          "priceOre": 1000
+        },
+        {
+          "name": "Jalapeños",
+          "priceOre": 1000
+        }
+      ],
+      "isCombo": false,
+      "basePriceOre": 6900,
+      "qualityStatus": "QUALITY_READY"
+    },
+    {
+      "name": "Cheeseburger",
+      "category": "Sides",
+      "menuNumber": "41",
+      "ingredients": [
+        "Oksekød",
+        "Ost",
+        "Salat",
+        "Tomat",
+        "Løg",
+        "Ketchup",
+        "Mayo"
+      ],
+      "description": "Oksekød, ost, salat, tomat, løg, ketchup og mayo",
+      "variants": [
+        "Alm."
+      ],
+      "additions": [
+        {
+          "name": "Bacon",
+          "priceOre": 2000
+        },
+        {
+          "name": "Ost",
+          "priceOre": 1000
+        },
+        {
+          "name": "Salat",
+          "priceOre": 1000
+        },
+        {
+          "name": "Tomat",
+          "priceOre": 1000
+        },
+        {
+          "name": "Løg",
+          "priceOre": 1000
+        },
+        {
+          "name": "Oksekød",
+          "priceOre": 2000
+        },
+        {
+          "name": "Agurk",
+          "priceOre": 1000
+        },
+        {
+          "name": "Jalapeños",
+          "priceOre": 1000
+        }
+      ],
+      "isCombo": false,
+      "basePriceOre": 6900,
+      "qualityStatus": "QUALITY_READY"
+    },
+    {
+      "name": "Fiskefilet m. pommes frites",
+      "category": "Sides",
+      "menuNumber": "42",
+      "ingredients": [
+        "Fiskefilet",
+        "Pommes frites"
+      ],
+      "description": "Fiskefilet og pommes frites",
+      "variants": [
+        "Alm."
+      ],
+      "additions": [],
+      "isCombo": false,
+      "basePriceOre": 9000,
+      "qualityStatus": "QUALITY_READY"
+    },
+    {
+      "name": "½ Grillkyling m. pommes frites",
+      "category": "Sides",
+      "menuNumber": "43",
+      "ingredients": [
+        "Grillkylling",
+        "Pommes frites"
+      ],
+      "description": "Grillkylling og pommes frites",
+      "variants": [
+        "Alm."
+      ],
+      "additions": [],
+      "isCombo": false,
+      "basePriceOre": 9900,
+      "qualityStatus": "QUALITY_READY"
+    },
+    {
+      "name": "Kebabmix m. pommes frites",
+      "category": "Sides",
+      "menuNumber": "44",
+      "ingredients": [
+        "Kebab",
+        "Pommes frites"
+      ],
+      "description": "Kebab og pommes frites",
+      "variants": [
+        "Alm."
+      ],
+      "additions": [],
+      "isCombo": false,
+      "basePriceOre": 9900,
+      "qualityStatus": "QUALITY_READY"
+    },
+    {
+      "name": "Pølsemix m. pommes frites",
+      "category": "Sides",
+      "menuNumber": "45",
+      "ingredients": [
+        "Pølse",
+        "Pommes frites"
+      ],
+      "description": "Pølse og pommes frites",
+      "variants": [
+        "Alm."
+      ],
+      "additions": [],
+      "isCombo": false,
+      "basePriceOre": 13000,
+      "qualityStatus": "QUALITY_READY"
+    },
+    {
+      "name": "Kebabmenu",
+      "category": "Sides",
+      "menuNumber": "46",
+      "ingredients": [],
+      "description": null,
+      "variants": [
+        "Alm."
+      ],
+      "additions": [],
+      "isCombo": true,
+      "basePriceOre": 9900,
+      "qualityStatus": "QUALITY_REVIEW"
+    },
+    {
+      "name": "Nuggets (10stk.) m. pommes frites",
+      "category": "Sides",
+      "menuNumber": "47",
+      "ingredients": [
+        "Nuggets",
+        "Pommes frites"
+      ],
+      "description": "Nuggets og pommes frites",
+      "variants": [
+        "Alm."
+      ],
+      "additions": [],
+      "isCombo": false,
+      "basePriceOre": 10500,
+      "qualityStatus": "QUALITY_READY"
+    },
+    {
+      "name": "Pommes",
+      "category": "Sides",
+      "menuNumber": "48",
+      "ingredients": [
+        "Pommes frites",
+        "Kartofler"
+      ],
+      "description": "Pommes frites og kartofler",
+      "variants": [
+        "Lille",
+        "Stor"
+      ],
+      "additions": [],
+      "isCombo": false,
+      "basePriceOre": 4000,
+      "qualityStatus": "QUALITY_READY"
+    },
+    {
+      "name": "Club Sandwich",
+      "category": "Sandwich - hjemmelavet inkl. pommes frites",
+      "menuNumber": "50",
+      "ingredients": [
+        "Bacon",
+        "Kylling",
+        "Salat",
+        "Tomat",
+        "Agurk",
+        "Karrydressing"
+      ],
+      "description": "Bacon, kylling, salat, tomat, agurk og karrydressing",
+      "variants": [
+        "Alm."
+      ],
+      "additions": [
+        {
+          "name": "Salatmayonnaise",
+          "priceOre": 1000
+        },
+        {
+          "name": "Remoulade",
+          "priceOre": 1000
+        },
+        {
+          "name": "Ketchup",
+          "priceOre": 1000
+        }
+      ],
+      "isCombo": false,
+      "basePriceOre": 15900,
+      "qualityStatus": "QUALITY_READY"
+    },
+    {
+      "name": "Tun Sandwich",
+      "category": "Sandwich - hjemmelavet inkl. pommes frites",
+      "menuNumber": "51",
+      "ingredients": [
+        "Rødløg",
+        "Tomat",
+        "Tun",
+        "Salat",
+        "Avocado"
+      ],
+      "description": "Rødløg, tomat, tun, salat og avocado",
+      "variants": [
+        "Alm."
+      ],
+      "additions": [
+        {
+          "name": "Salatmayonnaise",
+          "priceOre": 1000
+        },
+        {
+          "name": "Remoulade",
+          "priceOre": 1000
+        },
+        {
+          "name": "Ketchup",
+          "priceOre": 1000
+        }
+      ],
+      "isCombo": false,
+      "basePriceOre": 15900,
+      "qualityStatus": "QUALITY_READY"
+    },
+    {
+      "name": "Falafel Sandwich hummus",
+      "category": "Sandwich - hjemmelavet inkl. pommes frites",
+      "menuNumber": "52",
+      "ingredients": [
+        "Rødløg",
+        "Tomat",
+        "Agurk",
+        "Spidskål"
+      ],
+      "description": "Rødløg, tomat, agurk og spidskål",
+      "variants": [
+        "Alm."
+      ],
+      "additions": [
+        {
+          "name": "Salatmayonnaise",
+          "priceOre": 1000
+        },
+        {
+          "name": "Remoulade",
+          "priceOre": 1000
+        },
+        {
+          "name": "Ketchup",
+          "priceOre": 1000
+        }
+      ],
+      "isCombo": false,
+      "basePriceOre": 15900,
+      "qualityStatus": "QUALITY_READY"
+    },
+    {
+      "name": "Nachos med kylling",
+      "category": "Nachos",
+      "menuNumber": "54",
+      "ingredients": [
+        "Ost",
+        "Kylling"
+      ],
+      "description": "Ost og kylling",
+      "variants": [
+        "Alm."
+      ],
+      "additions": [],
+      "isCombo": false,
+      "basePriceOre": 10900,
+      "qualityStatus": "QUALITY_READY"
+    },
+    {
+      "name": "Fried rice med grøntsager og æg",
+      "category": "INDISK",
+      "menuNumber": "62",
+      "ingredients": [
+        "GrØntsager, Æg",
+        "Champignon",
+        "Indisk ost"
+      ],
+      "description": "GrØntsager, Æg, champignon og indisk ost",
+      "variants": [
+        "Alm."
+      ],
+      "additions": [],
+      "isCombo": false,
+      "basePriceOre": 13000,
+      "qualityStatus": "QUALITY_READY"
+    },
+    {
+      "name": "Naanbrød",
+      "category": "INDISK",
+      "menuNumber": "63",
+      "ingredients": [
+        "Naan",
+        "Hvedemel"
+      ],
+      "description": "Naan og hvedemel",
+      "variants": [
+        "Alm."
+      ],
+      "additions": [],
+      "isCombo": false,
+      "basePriceOre": 13000,
+      "qualityStatus": "QUALITY_READY"
+    },
+    {
+      "name": "Samosa med grøntsager",
+      "category": "INDISK / Forretter",
+      "menuNumber": "55",
+      "ingredients": [
+        "Dej",
+        "Grøntsager"
+      ],
+      "description": "Dej og grøntsager",
+      "variants": [
+        "Alm."
+      ],
+      "additions": [],
+      "isCombo": false,
+      "basePriceOre": 6000,
+      "qualityStatus": "QUALITY_READY"
+    },
+    {
+      "name": "Indian Roles med oksefyld og",
+      "category": "INDISK / Forretter",
+      "menuNumber": "56",
+      "ingredients": [
+        "Med oksefyld",
+        "Kartofler"
+      ],
+      "description": "Med oksefyld og kartofler",
+      "variants": [
+        "Alm."
+      ],
+      "additions": [],
+      "isCombo": false,
+      "basePriceOre": 6000,
+      "qualityStatus": "QUALITY_READY"
+    },
+    {
+      "name": "Butter chicken",
+      "category": "INDISK / Hovedretter",
+      "menuNumber": "57",
+      "ingredients": [
+        "Ris/naanbrod",
+        "Stegt kylling i karry"
+      ],
+      "description": "Ris/naanbrod og stegt kylling i karry",
+      "variants": [
+        "Alm."
+      ],
+      "additions": [],
+      "isCombo": false,
+      "basePriceOre": 12000,
+      "qualityStatus": "QUALITY_READY"
+    },
+    {
+      "name": "Chicken Tikka-Masala",
+      "category": "INDISK / Hovedretter",
+      "menuNumber": "58",
+      "ingredients": [
+        "Ris/naanbrod",
+        "Stegt kylling i masala"
+      ],
+      "description": "Ris/naanbrod og stegt kylling i masala",
+      "variants": [
+        "Alm."
+      ],
+      "additions": [],
+      "isCombo": false,
+      "basePriceOre": 12000,
+      "qualityStatus": "QUALITY_READY"
+    },
+    {
+      "name": "Fried rice",
+      "category": "INDISK / Hovedretter",
+      "menuNumber": "59",
+      "ingredients": [
+        "Ris",
+        "Æg",
+        "Grøntsager"
+      ],
+      "description": "Ris, æg og grøntsager",
+      "variants": [
+        "Alm."
+      ],
+      "additions": [],
+      "isCombo": false,
+      "basePriceOre": 12000,
+      "qualityStatus": "QUALITY_READY"
+    },
+    {
+      "name": "Fried noodles",
+      "category": "INDISK / Hovedretter",
+      "menuNumber": "60",
+      "ingredients": [
+        "Nudler",
+        "Grøntsager"
+      ],
+      "description": "Nudler og grøntsager",
+      "variants": [
+        "Alm."
+      ],
+      "additions": [],
+      "isCombo": false,
+      "basePriceOre": 13000,
+      "qualityStatus": "QUALITY_READY"
+    },
+    {
+      "name": "Kottu rotti",
+      "category": "INDISK / Hovedretter",
+      "menuNumber": "61",
+      "ingredients": [
+        "Brød",
+        "Grøntsager"
+      ],
+      "description": "Brød og grøntsager",
+      "variants": [
+        "Alm."
+      ],
+      "additions": [],
+      "isCombo": false,
+      "basePriceOre": 13000,
+      "qualityStatus": "QUALITY_READY"
+    },
+    {
+      "name": "Øl",
+      "category": "DRIKKEVARER",
+      "menuNumber": "65",
+      "ingredients": [],
+      "description": null,
+      "variants": [
+        "Alm."
+      ],
+      "additions": [],
+      "isCombo": false,
+      "basePriceOre": 2500,
+      "qualityStatus": "QUALITY_READY"
+    },
+    {
+      "name": "Husets vin glas",
+      "category": "DRIKKEVARER",
+      "menuNumber": "66",
+      "ingredients": [],
+      "description": null,
+      "variants": [
+        "Alm."
+      ],
+      "additions": [],
+      "isCombo": false,
+      "basePriceOre": 4500,
+      "qualityStatus": "QUALITY_READY"
+    },
+    {
+      "name": "Husets vin - flaske",
+      "category": "DRIKKEVARER",
+      "menuNumber": "67",
+      "ingredients": [],
+      "description": null,
+      "variants": [
+        "Alm."
+      ],
+      "additions": [],
+      "isCombo": false,
+      "basePriceOre": 16500,
+      "qualityStatus": "QUALITY_READY"
+    },
+    {
+      "name": "Kildevand",
+      "category": "DRIKKEVARER",
+      "menuNumber": "68",
+      "ingredients": [],
+      "description": null,
+      "variants": [
+        "Alm."
+      ],
+      "additions": [],
+      "isCombo": false,
+      "basePriceOre": 1500,
+      "qualityStatus": "QUALITY_READY"
+    },
+    {
+      "name": "Juice",
+      "category": "DRIKKEVARER",
+      "menuNumber": "69",
+      "ingredients": [],
+      "description": null,
+      "variants": [
+        "Alm."
+      ],
+      "additions": [],
+      "isCombo": false,
+      "basePriceOre": 1500,
+      "qualityStatus": "QUALITY_READY"
+    },
+    {
+      "name": "Kaffe/Te",
+      "category": "DRIKKEVARER",
+      "menuNumber": "70",
+      "ingredients": [
+        "Som f.eks. fødselsdag",
+        "Møde eller lign"
+      ],
+      "description": "Som f.eks. fødselsdag og møde eller lign",
+      "variants": [
+        "Alm."
+      ],
+      "additions": [],
+      "isCombo": false,
+      "basePriceOre": 1500,
+      "qualityStatus": "QUALITY_READY"
+    },
+    {
+      "name": "Gorgonzola -",
+      "category": "UNCATEGORIZED",
+      "menuNumber": "80",
+      "ingredients": [
+        "Skinke",
+        "Champignon",
+        "Løg",
+        "Tomat",
+        "Ost",
+        "Gorgonzola"
+      ],
+      "description": "Skinke, champignon, løg, tomat, ost og gorgonzola",
+      "variants": [
+        "Alm."
+      ],
+      "additions": [],
+      "isCombo": false,
+      "basePriceOre": 9500,
+      "qualityStatus": "QUALITY_READY"
+    },
+    {
+      "name": "Salatpizza",
+      "category": "UNCATEGORIZED",
+      "menuNumber": "83",
+      "ingredients": [
+        "Tomat",
+        "Ost",
+        "Kebab",
+        "Salat"
+      ],
+      "description": "Tomat, ost, kebab og salat",
+      "variants": [
+        "Alm."
+      ],
+      "additions": [],
+      "isCombo": false,
+      "basePriceOre": 9500,
+      "qualityStatus": "QUALITY_READY"
+    },
+    {
+      "name": "Vegetarpizza",
+      "category": "UNCATEGORIZED",
+      "menuNumber": "84",
+      "ingredients": [
+        "Tomat",
+        "Ost",
+        "Champignon",
+        "Paprika",
+        "Løg"
+      ],
+      "description": "Tomat, ost, champignon, paprika og løg",
+      "variants": [
+        "Alm."
+      ],
+      "additions": [],
+      "isCombo": false,
+      "basePriceOre": 3200,
+      "qualityStatus": "QUALITY_READY"
+    },
+    {
+      "name": "Bambino",
+      "category": "UNCATEGORIZED",
+      "menuNumber": "85",
+      "ingredients": [
+        "Tomat",
+        "Ost"
+      ],
+      "description": "Tomat og ost",
+      "variants": [
+        "Alm."
+      ],
+      "additions": [],
+      "isCombo": false,
+      "basePriceOre": 1000,
+      "qualityStatus": "QUALITY_READY"
+    },
+    {
+      "name": "Brianboss syltet",
+      "category": "UNCATEGORIZED",
+      "menuNumber": "86",
+      "ingredients": [
+        "Kødstrimler",
+        "Ost",
+        "Tomat",
+        "Løg",
+        "Champignon"
+      ],
+      "description": "Kødstrimler, ost, tomat, løg og champignon",
+      "variants": [
+        "Alm."
+      ],
+      "additions": [],
+      "isCombo": false,
+      "basePriceOre": 9500,
+      "qualityStatus": "QUALITY_READY"
+    },
+    {
+      "name": "Calzone",
+      "category": "UNCATEGORIZED",
+      "menuNumber": "87",
+      "ingredients": [
+        "Tomat",
+        "Ost",
+        "Skinke"
+      ],
+      "description": "Tomat, ost og skinke",
+      "variants": [
+        "Alm."
+      ],
+      "additions": [],
+      "isCombo": false,
+      "basePriceOre": 9500,
+      "qualityStatus": "QUALITY_READY"
+    },
+    {
+      "name": "Jega Calzone-",
+      "category": "UNCATEGORIZED",
+      "menuNumber": "88",
+      "ingredients": [
+        "Champignon",
+        "Ost",
+        "Kødsovs"
+      ],
+      "description": "Champignon, ost og kødsovs",
+      "variants": [
+        "Alm."
+      ],
+      "additions": [],
+      "isCombo": false,
+      "basePriceOre": 9500,
+      "qualityStatus": "QUALITY_READY"
+    },
+    {
+      "name": "Ufo - Seetha",
+      "category": "UNCATEGORIZED",
+      "menuNumber": "89",
+      "ingredients": [
+        "Rejer",
+        "Champignon",
+        "Ost",
+        "Skinke"
+      ],
+      "description": "Rejer, champignon, ost og skinke",
+      "variants": [
+        "Alm."
+      ],
+      "additions": [],
+      "isCombo": false,
+      "basePriceOre": 9500,
+      "qualityStatus": "QUALITY_READY"
+    },
+    {
+      "name": "Ufo og log",
+      "category": "UNCATEGORIZED",
+      "menuNumber": "90",
+      "ingredients": [
+        "Tomat",
+        "Ost",
+        "Kødsovs"
+      ],
+      "description": "Tomat, ost og kødsovs",
+      "variants": [
+        "Alm."
+      ],
+      "additions": [],
+      "isCombo": false,
+      "basePriceOre": 9500,
+      "qualityStatus": "QUALITY_READY"
+    },
+    {
+      "name": "Noah og log",
+      "category": "Pizza",
+      "menuNumber": "100",
+      "ingredients": [
+        "Jalapenos",
+        "Ost",
+        "Kebab"
+      ],
+      "description": "Jalapenos, ost og kebab",
+      "variants": [
+        "Alm."
+      ],
+      "additions": [],
+      "isCombo": false,
+      "basePriceOre": 9500,
+      "qualityStatus": "QUALITY_READY"
+    },
+    {
+      "name": "Hotchicken syltet",
+      "category": "Pizza",
+      "menuNumber": "101",
+      "ingredients": [
+        "Jalapenos",
+        "Ost",
+        "Kylling"
+      ],
+      "description": "Jalapenos, ost og kylling",
+      "variants": [
+        "Alm."
+      ],
+      "additions": [],
+      "isCombo": false,
+      "basePriceOre": 9500,
+      "qualityStatus": "QUALITY_READY"
+    },
+    {
+      "name": "Dürüm rulle",
+      "category": "Burgers",
+      "menuNumber": "36",
+      "ingredients": [
+        "Oksekød",
+        "Salat",
+        "Tomat",
+        "Løg",
+        "Ketchup",
+        "Mayo"
+      ],
+      "description": "Oksekød, salat, tomat, løg, ketchup og mayo",
+      "variants": [
+        "Alm."
+      ],
+      "additions": [
+        {
+          "name": "Bacon",
+          "priceOre": 2000
+        },
+        {
+          "name": "Ost",
+          "priceOre": 1000
+        },
+        {
+          "name": "Salat",
+          "priceOre": 1000
+        },
+        {
+          "name": "Tomat",
+          "priceOre": 1000
+        },
+        {
+          "name": "Løg",
+          "priceOre": 1000
+        },
+        {
+          "name": "Oksekød",
+          "priceOre": 2000
+        },
+        {
+          "name": "Agurk",
+          "priceOre": 1000
+        },
+        {
+          "name": "Jalapeños",
+          "priceOre": 1000
+        }
+      ],
+      "isCombo": false,
+      "basePriceOre": 7500,
+      "qualityStatus": "QUALITY_READY"
+    },
+    {
+      "name": "Pitabrød",
+      "category": "Burgers",
+      "menuNumber": "37",
+      "ingredients": [
+        "Oksekød",
+        "Salat",
+        "Tomat",
+        "Løg",
+        "Ketchup",
+        "Mayo"
+      ],
+      "description": "Oksekød, salat, tomat, løg, ketchup og mayo",
+      "variants": [
+        "Alm."
+      ],
+      "additions": [
+        {
+          "name": "Bacon",
+          "priceOre": 2000
+        },
+        {
+          "name": "Ost",
+          "priceOre": 1000
+        },
+        {
+          "name": "Salat",
+          "priceOre": 1000
+        },
+        {
+          "name": "Tomat",
+          "priceOre": 1000
+        },
+        {
+          "name": "Løg",
+          "priceOre": 1000
+        },
+        {
+          "name": "Oksekød",
+          "priceOre": 2000
+        },
+        {
+          "name": "Agurk",
+          "priceOre": 1000
+        },
+        {
+          "name": "Jalapeños",
+          "priceOre": 1000
+        }
+      ],
+      "isCombo": false,
+      "basePriceOre": 7500,
+      "qualityStatus": "QUALITY_READY"
+    },
+    {
+      "name": "Hvidløgsbrød",
+      "category": "Burgers",
+      "menuNumber": "38",
+      "ingredients": [
+        "Oksekød",
+        "Salat",
+        "Tomat",
+        "Løg",
+        "Ketchup",
+        "Mayo"
+      ],
+      "description": "Oksekød, salat, tomat, løg, ketchup og mayo",
+      "variants": [
+        "Alm."
+      ],
+      "additions": [
+        {
+          "name": "Bacon",
+          "priceOre": 2000
+        },
+        {
+          "name": "Ost",
+          "priceOre": 1000
+        },
+        {
+          "name": "Salat",
+          "priceOre": 1000
+        },
+        {
+          "name": "Tomat",
+          "priceOre": 1000
+        },
+        {
+          "name": "Løg",
+          "priceOre": 1000
+        },
+        {
+          "name": "Oksekød",
+          "priceOre": 2000
+        },
+        {
+          "name": "Agurk",
+          "priceOre": 1000
+        },
+        {
+          "name": "Jalapeños",
+          "priceOre": 1000
+        }
+      ],
+      "isCombo": false,
+      "basePriceOre": 8000,
+      "qualityStatus": "QUALITY_READY"
+    },
+    {
+      "name": "Hjemmelavet Cafeteriaburger Menu",
+      "category": "Menuer",
+      "menuNumber": "111",
+      "ingredients": [],
+      "description": "Menu: Hjemmelavet Cafeteriaburger, fries, dip & sodavand",
+      "variants": [
+        "Alm."
+      ],
+      "additions": [],
+      "isCombo": true,
+      "basePriceOre": 13000,
+      "qualityStatus": "QUALITY_READY"
+    },
+    {
+      "name": "Baconburger Menu",
+      "category": "Menuer",
+      "menuNumber": "112",
+      "ingredients": [],
+      "description": "Menu: Baconburger, fries, dip & sodavand",
+      "variants": [
+        "Alm."
+      ],
+      "additions": [],
+      "isCombo": true,
+      "basePriceOre": 12500,
+      "qualityStatus": "QUALITY_READY"
+    },
+    {
+      "name": "Cheeseburger Menu",
+      "category": "Menuer",
+      "menuNumber": "113",
+      "ingredients": [],
+      "description": "Menu: Cheeseburger, fries, dip & sodavand",
+      "variants": [
+        "Alm."
+      ],
+      "additions": [],
+      "isCombo": true,
+      "basePriceOre": 12500,
+      "qualityStatus": "QUALITY_READY"
+    },
+    {
+      "name": "Fiskefilet m. pommes frites Menu",
+      "category": "Menuer",
+      "menuNumber": "114",
+      "ingredients": [],
+      "description": "Menu: Fiskefilet m. pommes frites",
+      "variants": [
+        "Alm."
+      ],
+      "additions": [],
+      "isCombo": true,
+      "basePriceOre": 11500,
+      "qualityStatus": "QUALITY_REVIEW"
+    },
+    {
+      "name": "½ Grillkyling m. pommes frites Menu",
+      "category": "Menuer",
+      "menuNumber": "115",
+      "ingredients": [],
+      "description": "Menu: ½ Grillkyling m. pommes frites",
+      "variants": [
+        "Alm."
+      ],
+      "additions": [],
+      "isCombo": true,
+      "basePriceOre": 13000,
+      "qualityStatus": "QUALITY_REVIEW"
+    },
+    {
+      "name": "Gorgonzola - Menu",
+      "category": "Menuer",
+      "menuNumber": "116",
+      "ingredients": [],
+      "description": "Menu: Gorgonzola -",
+      "variants": [
+        "Alm."
+      ],
+      "additions": [],
+      "isCombo": true,
+      "basePriceOre": 18500,
+      "qualityStatus": "QUALITY_REVIEW"
+    },
+    {
+      "name": "Salatpizza Menu",
+      "category": "Menuer",
+      "menuNumber": "119",
+      "ingredients": [],
+      "description": "Menu: Salatpizza",
+      "variants": [
+        "Alm."
+      ],
+      "additions": [],
+      "isCombo": true,
+      "basePriceOre": 18000,
+      "qualityStatus": "QUALITY_REVIEW"
+    },
+    {
+      "name": "Brianboss syltet Menu",
+      "category": "Menuer",
+      "menuNumber": "120",
+      "ingredients": [],
+      "description": "Menu: Brianboss syltet",
+      "variants": [
+        "Alm."
+      ],
+      "additions": [],
+      "isCombo": true,
+      "basePriceOre": 18000,
+      "qualityStatus": "QUALITY_REVIEW"
+    },
+    {
+      "name": "Calzone Menu",
+      "category": "Menuer",
+      "menuNumber": "121",
+      "ingredients": [],
+      "description": "Menu: Calzone",
+      "variants": [
+        "Alm."
+      ],
+      "additions": [],
+      "isCombo": true,
+      "basePriceOre": 18000,
+      "qualityStatus": "QUALITY_REVIEW"
+    },
+    {
+      "name": "Jega Calzone- Menu",
+      "category": "Menuer",
+      "menuNumber": "122",
+      "ingredients": [],
+      "description": "Menu: Jega Calzone-",
+      "variants": [
+        "Alm."
+      ],
+      "additions": [],
+      "isCombo": true,
+      "basePriceOre": 18000,
+      "qualityStatus": "QUALITY_REVIEW"
+    },
+    {
+      "name": "Ufo - Seetha Menu",
+      "category": "Menuer",
+      "menuNumber": "123",
+      "ingredients": [],
+      "description": "Menu: Ufo - Seetha",
+      "variants": [
+        "Alm."
+      ],
+      "additions": [],
+      "isCombo": true,
+      "basePriceOre": 18000,
+      "qualityStatus": "QUALITY_REVIEW"
+    },
+    {
+      "name": "Ufo og log Menu",
+      "category": "Menuer",
+      "menuNumber": "124",
+      "ingredients": [
+        "Løg"
+      ],
+      "description": "Menu: Ufo og log",
+      "variants": [
+        "Alm."
+      ],
+      "additions": [],
+      "isCombo": true,
+      "basePriceOre": 18000,
+      "qualityStatus": "QUALITY_REVIEW"
+    },
+    {
+      "name": "Noah og log Menu",
+      "category": "Menuer",
+      "menuNumber": "128",
+      "ingredients": [],
+      "description": "Menu: Noah og log",
+      "variants": [
+        "Alm."
+      ],
+      "additions": [],
+      "isCombo": true,
+      "basePriceOre": 18000,
+      "qualityStatus": "QUALITY_REVIEW"
+    },
+    {
+      "name": "Hotchicken syltet Menu",
+      "category": "Menuer",
+      "menuNumber": "129",
+      "ingredients": [],
+      "description": "Menu: Hotchicken syltet",
+      "variants": [
+        "Alm."
+      ],
+      "additions": [],
+      "isCombo": true,
+      "basePriceOre": 18000,
+      "qualityStatus": "QUALITY_REVIEW"
+    },
+    {
+      "name": "Dürüm rulle Menu",
+      "category": "Menuer",
+      "menuNumber": "130",
+      "ingredients": [],
+      "description": "Menu: Dürüm rulle, fries, dip & sodavand",
+      "variants": [
+        "Alm."
+      ],
+      "additions": [],
+      "isCombo": true,
+      "basePriceOre": 12500,
+      "qualityStatus": "QUALITY_READY"
+    },
+    {
+      "name": "Hjemmelavet pitabrød Menu",
+      "category": "Menuer",
+      "menuNumber": "131",
+      "ingredients": [],
+      "description": "Menu: Hjemmelavet pitabrød, fries, dip & sodavand",
+      "variants": [
+        "Alm."
+      ],
+      "additions": [],
+      "isCombo": true,
+      "basePriceOre": 12500,
+      "qualityStatus": "QUALITY_READY"
+    }
+  ]
+}

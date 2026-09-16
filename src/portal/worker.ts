@@ -42,8 +42,11 @@ import {
 import { upsertPeerAdditionFactsForMenu } from "../learning/additionLikelihood.js";
 import { upsertCategoryIngredientAdditionFacts } from "../learning/categoryIngredientAdditions.js";
 import { normalizeSourceCategoriesByKind } from "../learning/categoryKindNaming.js";
-import { enrichCanonicalBurgerCards } from "../planning/enrichBurgerCards.js";
 import { assertCreateCardQuality } from "../domain/menuCardQuality.js";
+import {
+  runMenuIntelligence,
+  MENU_CONSTITUTION_VERSION,
+} from "../intelligence/index.js";
 import { buildAndWritePolicyApplicationReport } from "../learning/policyApplicationReport.js";
 import type { StructurePatternSummary } from "../learning/peerMenuStructure.js";
 import { M2B_ADAPTER_CAPABILITIES } from "../tah/contracts/evidence.js";
@@ -409,12 +412,12 @@ export async function runMigrationJob(
 
     const additionLikelihood = loadAdditionLikelihood(root);
     const ingredientLikelihoodEarly = loadIngredientLikelihood(root);
-    recovered.menu = enrichCanonicalBurgerCards(
-      recovered.menu,
-      ingredientLikelihoodEarly,
+    const probabilityPolicyEarly = loadProbabilityPolicyForRestaurant(
+      root,
+      job.restaurantKey,
     );
-    writeJson(outDir, "canonical-menu-enriched.json", recovered.menu);
 
+    // Persist addition facts BEFORE intelligence so fan-out is inside the engine.
     const categoryIngredient = upsertCategoryIngredientAdditionFacts({
       store: decisionStore,
       restaurantKey: job.restaurantKey,
@@ -468,6 +471,40 @@ export async function runMigrationJob(
         })),
       });
     }
+
+    // ONE Menu Intelligence Engine for Create + QA (facts already in DecisionStore).
+    const intelligence = runMenuIntelligence({
+      mode: isQaJob ? "QA_RECONCILE" : "CREATE_MENU",
+      restaurantName: job.merchantName,
+      restaurantKey: job.restaurantKey,
+      canonicalMenu: recovered.menu,
+      decisionStore,
+      ingredientLikelihood: ingredientLikelihoodEarly,
+      additionLikelihood,
+      probabilityPolicy: probabilityPolicyEarly,
+    });
+    recovered.menu = intelligence.targetMenu;
+    writeJson(outDir, "target-menu.json", recovered.menu);
+    writeJson(outDir, "canonical-menu-enriched.json", recovered.menu);
+    writeJson(outDir, "quality-report.json", intelligence.quality);
+    writeJson(outDir, "intelligence-trace.json", {
+      constitutionVersion: intelligence.constitutionVersion,
+      mode: intelligence.mode,
+      writeEligible: intelligence.writeEligible,
+      writeBlockReason: intelligence.writeBlockReason ?? null,
+      policyTraces: intelligence.policyTraces,
+    });
+    writeJson(outDir, "menu-intelligence-result.json", {
+      constitutionVersion: intelligence.constitutionVersion,
+      mode: intelligence.mode,
+      writeEligible: intelligence.writeEligible,
+      writeBlockReason: intelligence.writeBlockReason ?? null,
+      quality: intelligence.quality,
+    });
+    writeJson(outDir, "policy-application-trace.json", {
+      constitutionVersion: MENU_CONSTITUTION_VERSION,
+      products: intelligence.policyTraces,
+    });
 
     store.updateJobStatus(jobId, "ARTIFACTS");
     store.db
@@ -548,8 +585,25 @@ export async function runMigrationJob(
 
     writeJson(outDir, "dry-run-writeplan.json", plan);
 
-    const cardGate = assertCreateCardQuality(plan);
+    const planGate = assertCreateCardQuality(plan);
+    const cardGate = {
+      ok: planGate.ok && intelligence.writeEligible,
+      blockers: [
+        ...(!intelligence.writeEligible
+          ? [
+              intelligence.writeBlockReason ??
+                `MenuQualityContract ${intelligence.quality.menuStatus}`,
+            ]
+          : []),
+        ...planGate.blockers,
+      ],
+      constitutionVersion: MENU_CONSTITUTION_VERSION,
+      menuQualityStatus: intelligence.quality.menuStatus,
+      planGateOk: planGate.ok,
+      intelligenceWriteEligible: intelligence.writeEligible,
+    };
     writeJson(outDir, "create-card-quality-gate.json", cardGate);
+    writeJson(outDir, "menu-quality-contract.json", intelligence.quality);
 
     let reconcileReport = null as ReturnType<
       typeof buildMenuReconcileReport
@@ -746,16 +800,17 @@ export async function runMigrationJob(
     let finalStatus: JobStatus =
       created.length > 0
         ? "AWAITING_REVIEW"
-        : !cardGate.ok && !isQa
+        : !cardGate.ok
           ? "READY_DRY_RUN"
           : "READY_DRY_RUN";
 
+    // MenuQualityContract blocks live writes for BOTH Create and QA.
     const willAutoLive =
       liveGate.canLiveExecute &&
       created.length === 0 &&
-      (isQa || cardGate.ok);
+      cardGate.ok;
 
-    if (!cardGate.ok && !isQa) {
+    if (!cardGate.ok) {
       writeJson(outDir, "live-write-blocked-by-card-gate.json", cardGate);
     }
 
@@ -774,6 +829,7 @@ export async function runMigrationJob(
           canonical: recovered.menu,
           runsDbPath: portalLiveRunsDbPath(portalDataDir()),
           workflow: job.workflow,
+          ingredientLikelihood: ingredientLikelihoodEarly,
         });
         writeJson(outDir, "live-writeplan.json", live.livePlan);
         writeJson(outDir, "live-destination-snapshot.json", live.destination);
@@ -802,15 +858,15 @@ export async function runMigrationJob(
     store.updateJobStatus(jobId, finalStatus, {
       remainingQuestions: created.length,
       errorMessage:
-        !cardGate.ok && !isQa && finalStatus === "READY_DRY_RUN"
-          ? `Create card quality gate blocked live write: ${cardGate.blockers.join("; ")}`
+        !cardGate.ok && finalStatus === "READY_DRY_RUN"
+          ? `MenuQualityContract blocked live write: ${cardGate.blockers.join("; ")}`
           : null,
     });
     store.finishJobRun(
       runStub.id,
       finalStatus,
       metrics,
-      !cardGate.ok && !isQa ? cardGate.blockers.join("; ") : null,
+      !cardGate.ok ? cardGate.blockers.join("; ") : null,
     );
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);

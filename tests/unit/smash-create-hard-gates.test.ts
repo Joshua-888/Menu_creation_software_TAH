@@ -108,7 +108,6 @@ describe("Menu is never a variant + Menuer synthesis", () => {
               variants: [
                 variant("v1", "Alm.", { totalKroner: 99 }),
               ],
-              // @ts-expect-error helpers may not type sourcePriceOptions
               sourcePriceOptions: [
                 { label: "BASE", sourceTotalPrice: kronerToOre(99) },
                 { label: "Menu", sourceTotalPrice: kronerToOre(149) },
@@ -145,11 +144,6 @@ describe("assertCreateCardQuality gate", () => {
       operations: [
         planCreateProduct({
           operationId: "op1",
-          identity: {
-            sourceId: "p1",
-            name: "Classic Smash",
-            categoryHint: "Burgers",
-          },
           payload: {
             sourceId: "p1",
             menuNumber: "1",

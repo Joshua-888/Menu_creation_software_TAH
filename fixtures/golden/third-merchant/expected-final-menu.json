@@ -1,0 +1,30 @@
+{
+  "fixtureId": "golden-third-merchant-thai-v2",
+  "purpose": "Realistic Thai takeaway menu — multi-category, ingredients, prices, additions, drinks; prove no Smash/Veroni leakage",
+  "restaurantName": "Fixture Thai House",
+  "restaurantKey": "fixture-thai.example",
+  "rawSource": "fixtures/golden/third-merchant/raw-source.pdf",
+  "menuType": "Thai takeaway",
+  "expectedCategories": [
+    "Forretter",
+    "Hovedretter",
+    "Nudler og Ris",
+    "Vegetar",
+    "Tilbehør",
+    "Drikkevarer"
+  ],
+  "minSourceProducts": 15,
+  "mustNotLeak": {
+    "burgerIngredients": ["Oksekød", "Ketchup", "Mayo"],
+    "veroniTilbehorSeed": ["Salatmayonnaise"],
+    "smashDishNames": ["Dirty Smash", "Classic Smash"],
+    "veroniHosts": ["veronipizza"]
+  },
+  "acceptance": {
+    "multipleCategories": true,
+    "drinksHaveNoFoodAdditions": true,
+    "noBurgerCategoryInvented": true,
+    "zeroMenuVariants": true,
+    "statusAccountingReconciles": true
+  }
+}

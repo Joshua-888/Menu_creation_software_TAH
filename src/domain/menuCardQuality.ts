@@ -112,6 +112,7 @@ const FOOD_LEXICON = new Set(
     "flødesovs",
     "penne",
     "spaghetti",
+    "pasta",
     "tigerrejer",
     "naanbrød",
     "naan",
@@ -136,6 +137,41 @@ const FOOD_LEXICON = new Set(
     "reje",
     "muslinger",
     "syltet",
+    "fisk",
+    "fiskefilet",
+    "grillkylling",
+    "kylling",
+    "nuggets",
+    "pommes",
+    "pommes frites",
+    "frites",
+    "kebab",
+    "dej",
+    "hvedemel",
+    "smør",
+    "brød",
+    "risnudler",
+    "bønnespirer",
+    "bonnespirer",
+    "jordnødder",
+    "jordnodder",
+    "kokosmælk",
+    "kokosmaelk",
+    "lemongrass",
+    "chili",
+    "peanut sauce",
+    "peanut",
+    "tofu",
+    "bamboo",
+    "cashewnødder",
+    "cashewnodder",
+    "sojasauce",
+    "gulerod",
+    "ærter",
+    "aerter",
+    "hvidløg",
+    "hvidloeg",
+    "peber",
   ].map((s) => s.toLowerCase()),
 );
 
@@ -699,7 +735,7 @@ export function assertCreateCardQuality(
   );
   if (grillCategoryCreates.length && burgerProductCount >= 2) {
     blockers.push(
-      "Category Grill created for burger/smash products — use Burgers",
+      "Category Grill created for burger products — use Burgers",
     );
   }
 

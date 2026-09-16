@@ -122,6 +122,8 @@ describe("peer menu structure learning", () => {
     const dir = mkdtempSync(join(tmpdir(), "peer-til-"));
     dirs.push(dir);
     const store = new DecisionStore(join(dir, "d.sqlite"));
+    const prevSeed = process.env.PORTAL_SEED_DEFAULT_TILBEHOR_HOSTS;
+    process.env.PORTAL_SEED_DEFAULT_TILBEHOR_HOSTS = "veronipizza.dk";
     upsertVeroniTilbehorBusinessFact({
       store,
       restaurantKey: "veronipizza.dk",
@@ -189,6 +191,8 @@ describe("peer menu structure learning", () => {
     expect(p1.addOns.map((a) => a.name)).toEqual(
       expect.arrayContaining(["Salatmayonnaise", "Remoulade", "Ketchup"]),
     );
+    if (prevSeed === undefined) delete process.env.PORTAL_SEED_DEFAULT_TILBEHOR_HOSTS;
+    else process.env.PORTAL_SEED_DEFAULT_TILBEHOR_HOSTS = prevSeed;
     store.close();
   });
 

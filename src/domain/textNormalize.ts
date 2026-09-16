@@ -128,13 +128,23 @@ export function formatProductName(raw: string): string {
   return capitalizeFirstLetter(s.replace(/,+\s*$/g, "").trim());
 }
 
+/**
+ * Professional Danish description from the FINAL normalized ingredient list.
+ * Example: "Oksekød, bacon, salat, tomat, løg, ketchup og mayo"
+ */
 export function formatDescriptionFromIngredients(
   ingredients: readonly string[],
 ): string {
-  return ingredients
+  const parts = ingredients
     .map((i) => formatIngredientDisplay(i))
     .filter(Boolean)
-    .join(", ");
+    .map((p, idx) =>
+      idx === 0 ? p : p.charAt(0).toLocaleLowerCase("da-DK") + p.slice(1),
+    );
+  if (parts.length === 0) return "";
+  if (parts.length === 1) return parts[0]!;
+  if (parts.length === 2) return `${parts[0]} og ${parts[1]}`;
+  return `${parts.slice(0, -1).join(", ")} og ${parts[parts.length - 1]}`;
 }
 
 function ingredientStillPriceHeavy(raw: string, formatted: string): boolean {

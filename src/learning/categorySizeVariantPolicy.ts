@@ -148,8 +148,15 @@ export function isStructuralCategoryVariantName(name: string): boolean {
  * "Menuer" category, where each item has its own required sub-choices —
  * not as Alm./Menu size variants on Grill/burger cards.
  */
+/**
+ * Menu / Menü is NEVER a size/price variant (MenuConstitutionV1).
+ * Matches exact "Menu" and common OCR variants like "Menu.", "Menü", "Menu med …".
+ */
 export function isForbiddenMenuVariantName(name: string): boolean {
-  return /^(menu|menü)\.?$/i.test(name.trim());
+  const t = name.trim();
+  if (/^(menu|menü|menus)\.?$/i.test(t)) return true;
+  if (/^menu\b/i.test(t) && t.length <= 24) return true;
+  return false;
 }
 
 export function stripForbiddenMenuVariants<T extends { name: string }>(

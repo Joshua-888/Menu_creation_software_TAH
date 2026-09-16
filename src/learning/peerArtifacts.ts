@@ -146,9 +146,12 @@ export function loadProbabilityPolicy(
 }
 
 /**
- * Peer probability policies are Veroni/pilot-shaped by default.
- * New merchants must opt in via PORTAL_APPLY_PEER_PROBABILITY_HOSTS
- * or PORTAL_APPLY_PEER_PROBABILITY=1 (all hosts).
+ * Peer probability policies are opt-in.
+ * No restaurant-specific default (Veroni must opt in via env like any merchant).
+ * PORTAL_APPLY_PEER_PROBABILITY=1 enables all hosts;
+ * PORTAL_APPLY_PEER_PROBABILITY_HOSTS=host1,host2 enables a list.
+ *
+ * Hard constitution rules (e.g. drinks never get food dips) apply regardless.
  */
 export function shouldApplyPeerProbabilityPolicy(
   restaurantKey: string,
@@ -161,7 +164,6 @@ export function shouldApplyPeerProbabilityPolicy(
     return true;
   }
   const host = restaurantKey.trim().toLowerCase().replace(/^www\./, "");
-  if (host === "veronipizza.dk") return true;
   const extra = (env.PORTAL_APPLY_PEER_PROBABILITY_HOSTS ?? "")
     .split(",")
     .map((s) => s.trim().toLowerCase().replace(/^www\./, ""))

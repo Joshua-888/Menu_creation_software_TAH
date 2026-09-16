@@ -112,10 +112,12 @@ export function defaultStructurePattern(): StructurePatternSummary {
   };
 }
 
+/**
+ * Default Tilbehør seed is opt-in only (env hosts).
+ * No restaurant-specific runtime hardcoding (Veroni must use scoped BUSINESS_FACT).
+ */
 export function shouldSeedDefaultTilbehor(restaurantKey: string): boolean {
   const host = restaurantKey.trim().toLowerCase().replace(/^www\./, "");
-  // Veroni pilot only — never invent Tilbehør for other merchants
-  if (host === "veronipizza.dk") return true;
   const extra = (process.env.PORTAL_SEED_DEFAULT_TILBEHOR_HOSTS ?? "")
     .split(",")
     .map((s) => s.trim().toLowerCase().replace(/^www\./, ""))

@@ -14,7 +14,8 @@ import {
 } from "./choiceLanguage.js";
 
 export type DecisionTransformKind =
-  | "MENU_AS_VARIANT"
+  | "MENU_AS_VARIANT" // SUPERSEDED — maps to no-op strip; use MENU_IS_COMBO_NOT_VARIANT
+  | "MENU_IS_COMBO_NOT_VARIANT"
   | "PRODUCT_CHOICE"
   | "INGREDIENT"
   | "CATEGORY_MAPPING"
@@ -34,8 +35,17 @@ export function mapResolutionToTransform(
 ): DecisionTransformKind {
   const id = optionId.toLowerCase();
   const res = resolution.toLowerCase();
+  if (
+    res.includes("menu_is_combo") ||
+    res.includes("combo_not_variant") ||
+    id === "combo" ||
+    id === "menuer"
+  ) {
+    return "MENU_IS_COMBO_NOT_VARIANT";
+  }
+  // Legacy resolutions — superseded; never re-activate Menu-as-variant behavior
   if (id === "variant" || res.includes("menu_as_variant") || res.includes("priced variant")) {
-    return "MENU_AS_VARIANT";
+    return "MENU_IS_COMBO_NOT_VARIANT";
   }
   if (id === "product-choice" || res.includes("product_choice")) {
     return "PRODUCT_CHOICE";
@@ -73,10 +83,11 @@ export function applyDecisionTransform(input: {
 
   switch (input.kind) {
     case "MENU_AS_VARIANT":
+    case "MENU_IS_COMBO_NOT_VARIANT":
       return {
         menu: input.menu,
         changed: false,
-        note: "MENU_AS_VARIANT: keep existing Menu variant prices; no contents invented",
+        note: "MENU_IS_COMBO_NOT_VARIANT (MenuConstitutionV1): Menu is combo/Menuer — never a variant; contents not invented",
       };
     case "PRODUCT_CHOICE": {
       if (input.choiceSpec) {

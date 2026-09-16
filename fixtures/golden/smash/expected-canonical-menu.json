@@ -1,0 +1,16 @@
+{
+  "fixtureId": "golden-smash-canonical-shape-v1",
+  "notes": "Shape oracle for CanonicalMenu after MenuIntelligenceEngine — not a runtime dish dictionary.",
+  "categories": [
+    {
+      "name": "Burgers",
+      "productCount": 5,
+      "eachProduct": {
+        "minIngredients": 2,
+        "requireDescription": true,
+        "forbidVariantNames": ["Menu", "Menü"],
+        "minAdditions": 1
+      }
+    }
+  ]
+}

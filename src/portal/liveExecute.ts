@@ -31,6 +31,7 @@ import {
   loadProbabilityPolicyForRestaurant,
   peerStructureSummaryPath,
 } from "../learning/peerArtifacts.js";
+import type { IngredientLikelihoodPolicy } from "../learning/ingredientLikelihood.js";
 import { resolvePortalDecisionDbPath } from "../learning/tilbehorOverride.js";
 import { DecisionStore } from "../decisions/store.js";
 import type { ProductPolicyTrace } from "../planning/index.js";
@@ -212,6 +213,8 @@ export async function executePortalLiveWrites(input: {
   runsDbPath: string;
   /** QA_RECONCILE enables UPDATE ops + deep snapshot. */
   workflow?: "CREATE_MENU" | "QA_RECONCILE";
+  /** Must match dry-run intelligence path — no divergent live replan. */
+  ingredientLikelihood?: IngredientLikelihoodPolicy | null;
 }): Promise<{
   livePlan: MigrationWritePlan;
   result: ExecuteResult;
@@ -277,6 +280,9 @@ export async function executePortalLiveWrites(input: {
         capabilities: M2B_ADAPTER_CAPABILITIES,
         ...(decisionStore ? { decisionStore } : {}),
         ...(probabilityPolicy ? { probabilityPolicy } : {}),
+        ...(input.ingredientLikelihood
+          ? { ingredientLikelihood: input.ingredientLikelihood }
+          : {}),
         policyTraces,
         ...(isQa ? { emitReconcileUpdates: true } : {}),
       });

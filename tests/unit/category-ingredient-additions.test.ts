@@ -121,7 +121,7 @@ function menu(): CanonicalMenu {
             sourceMenuNumber: "20",
             name: "Cheese",
             status: "READY",
-            description: "Oksekød, cheddar, salat, tomat",
+            description: "Oksekød, ost, salat, tomat",
             variants: [],
             ingredients: [],
             addOns: [],
@@ -162,7 +162,7 @@ describe("category ingredient Tilbehør", () => {
 
     const burgers = comps.find((c) => c.categoryName === "Burgers")!;
     expect(burgers.additions.map((a) => a.name.toLowerCase())).toEqual(
-      expect.arrayContaining(["oksekød", "cheddar", "salat", "tomat"]),
+      expect.arrayContaining(["oksekød", "ost", "salat", "tomat"]),
     );
   });
 
@@ -206,45 +206,51 @@ describe("category ingredient Tilbehør", () => {
     dirs.push(dir);
     const store = new DecisionStore(join(dir, "d.sqlite"));
     const m = menu();
-    upsertCategoryIngredientAdditionFacts({
-      store,
-      restaurantKey: "veronipizza.dk",
-      menu: m,
-    });
-    upsertVeroniTilbehorBusinessFact({
-      store,
-      restaurantKey: "veronipizza.dk",
-    });
+    const prevSeed = process.env.PORTAL_SEED_DEFAULT_TILBEHOR_HOSTS;
+    process.env.PORTAL_SEED_DEFAULT_TILBEHOR_HOSTS = "veronipizza.dk";
+    try {
+      upsertCategoryIngredientAdditionFacts({
+        store,
+        restaurantKey: "veronipizza.dk",
+        menu: m,
+      });
+      upsertVeroniTilbehorBusinessFact({
+        store,
+        restaurantKey: "veronipizza.dk",
+      });
 
-    const fan = fanOutRestaurantAdditions({
-      menu: m,
-      registry: store.facts,
-      restaurantKey: "veronipizza.dk",
-    });
-    const p1 = fan.menu.categories[0]!.products.find(
-      (p) => p.sourceMenuNumber === "1",
-    )!;
-    expect(p1.addOns.map((a) => a.name.toLowerCase())).toEqual(
-      expect.arrayContaining(["tomat", "ost", "oregano"]),
-    );
-    // Restaurant mayo may merge in; probability would strip later
-    const p3 = fan.menu.categories[0]!.products.find(
-      (p) => p.sourceMenuNumber === "3",
-    )!;
-    expect(p3.addOns.map((a) => a.name)).toEqual(["Ekstra ost"]);
+      const fan = fanOutRestaurantAdditions({
+        menu: m,
+        registry: store.facts,
+        restaurantKey: "veronipizza.dk",
+      });
+      const p1 = fan.menu.categories[0]!.products.find(
+        (p) => p.sourceMenuNumber === "1",
+      )!;
+      expect(p1.addOns.map((a) => a.name.toLowerCase())).toEqual(
+        expect.arrayContaining(["tomat", "ost", "oregano"]),
+      );
+      // Restaurant mayo may merge in; probability would strip later
+      const p3 = fan.menu.categories[0]!.products.find(
+        (p) => p.sourceMenuNumber === "3",
+      )!;
+      expect(p3.addOns.map((a) => a.name)).toEqual(["Ekstra ost"]);
 
-    const resolved = resolveAdditionsForProduct({
-      registry: store.facts,
-      restaurantKey: "veronipizza.dk",
-      sourceCategory: "PIZZA",
-      sourceId: "p1",
-      menuNumber: "1",
-      sourceAdditions: [],
-    });
-    expect(resolved.origin).toBe("RESTAURANT_CATEGORY_OR_RESTAURANT_FACT");
-    expect(resolved.additions.some((a) => a.nameKey === "ost")).toBe(true);
-
-    store.close();
+      const resolved = resolveAdditionsForProduct({
+        registry: store.facts,
+        restaurantKey: "veronipizza.dk",
+        sourceCategory: "PIZZA",
+        sourceId: "p1",
+        menuNumber: "1",
+        sourceAdditions: [],
+      });
+      expect(resolved.origin).toBe("RESTAURANT_CATEGORY_OR_RESTAURANT_FACT");
+      expect(resolved.additions.some((a) => a.nameKey === "ost")).toBe(true);
+    } finally {
+      if (prevSeed === undefined) delete process.env.PORTAL_SEED_DEFAULT_TILBEHOR_HOSTS;
+      else process.env.PORTAL_SEED_DEFAULT_TILBEHOR_HOSTS = prevSeed;
+      store.close();
+    }
   });
 
   it("skips peer upsert for categories with ingredient union", () => {

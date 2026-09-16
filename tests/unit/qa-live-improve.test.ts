@@ -194,7 +194,7 @@ describe("qaLiveImprove merge", () => {
           field: "additions",
           before: live.additions,
           after: [],
-          reasons: ["ADDITIONS_MISMATCH"],
+          reasons: ["ADDITIONS_DRIFT"],
         },
       ],
     });

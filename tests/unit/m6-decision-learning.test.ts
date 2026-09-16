@@ -297,7 +297,7 @@ describe("M6 decision learning", () => {
       expect(c.isSystemRecommendationOnly).toBe(true);
     }
     expect(mapResolutionToTransform("MENU_AS_VARIANT", "variant")).toBe(
-      "MENU_AS_VARIANT",
+      "MENU_IS_COMBO_NOT_VARIANT",
     );
   });
 

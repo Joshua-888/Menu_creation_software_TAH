@@ -1,0 +1,29 @@
+{
+  "fixtureId": "golden-smash-v2-certified",
+  "rawSource": "fixtures/golden/smash/raw-source.jpg",
+  "notes": "Updated after raw photo certification. Ingredients class=INFERRED for burgers when OCR empty. Menuer from Menu price — not variants.",
+  "burgersCategory": "Burgers",
+  "forbiddenCategory": "Grill",
+  "burgerProducts": [
+    "Dirty Smash",
+    "Classic Smash",
+    "Crunch Murphy",
+    "Spice Me Up",
+    "Bearnaise Smash"
+  ],
+  "menuerProducts": [
+    "Dirty Smash Menu",
+    "Classic Smash Menu",
+    "Crunch Murphy Menu",
+    "Spice Me Up Menu",
+    "Bearnaise Smash Menu"
+  ],
+  "acceptance": {
+    "menuVariantCount": 0,
+    "burgerMinIngredients": 2,
+    "burgerRequireDescription": true,
+    "burgerIngredientProvenanceAllowed": ["SOURCE", "PEER_INFERENCE", "DOMAIN_PRIOR", "DERIVED", "SYSTEM_DEFAULT"],
+    "menuerIsComboNotVariant": true,
+    "noMerchantHardcoding": true
+  }
+}

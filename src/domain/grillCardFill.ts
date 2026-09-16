@@ -132,9 +132,18 @@ export function isGrillCategory(categoryName?: string): boolean {
   return /\b(grill|burgers?)\b/i.test(categoryName ?? "");
 }
 
+/**
+ * Generic burger / smash-style product detection.
+ * "Smash" is a product-family signal (smash burgers), not a merchant dictionary.
+ * Do not list restaurant-specific dish titles here.
+ */
 export function isBurgerProductName(name: string): boolean {
-  return /burger|cafeteria|smash|murphy|crunch|spice\s+me|dirty\s+smash|bearnaise\s+smash|classic\s+smash/i.test(
-    name,
+  // Compound titles like "Cafeteriaburger" / "Baconburger" have no word-boundary
+  // before "burger" — match the stem without requiring \\b before burger.
+  return (
+    /burger|cheeseburger|baconburger|hamburgers?/i.test(name) ||
+    /\bsmash\b/i.test(name) ||
+    /cafeteria/i.test(name)
   );
 }
 
@@ -299,6 +308,13 @@ export function inferGrillIngredients(input: {
     push("Pommes frites");
     return out;
   }
+
+  // Specialty names under a Burgers category (no "burger" token) still get
+  // the burger baseline — not Grill finger-food plates.
+  if (/\bburgers?\b/i.test(input.categoryName ?? "")) {
+    return inferBurgerIngredients(name);
+  }
+
   return out;
 }
 
@@ -395,10 +411,10 @@ export function preferBurgerEkstraAdditions(
   if (productWantsGrillDips(input)) return additions;
   const burgerLike =
     isBurgerProductName(input.name) ||
-    (/\b(grill|burgers?)\b/i.test(input.categoryName ?? "") &&
-      /burger|sandwich|cafeteria|smash|murphy|crunch|spice|dirty|bearnaise/i.test(
-        `${input.name} ${input.description ?? ""}`,
-      ));
+    /\b(grill|burgers?)\b/i.test(input.categoryName ?? "") ||
+    /\b(burger|sandwich|smash)\b/i.test(
+      `${input.name} ${input.description ?? ""}`,
+    );
   if (!burgerLike) return additions;
   if (additions.length > 0) return additions;
   return BURGER_EKSTRA_ADDITIONS.map((a) => ({ ...a }));

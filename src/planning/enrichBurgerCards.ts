@@ -79,6 +79,10 @@ function enrichProduct(
   };
 }
 
+/**
+ * @deprecated Use completeProductCard / runMenuIntelligence.
+ * Kept for historical tests; portal worker no longer calls this.
+ */
 export function enrichCanonicalBurgerCards(
   menu: CanonicalMenu,
   ingredientLikelihood?: IngredientLikelihoodPolicy | null,

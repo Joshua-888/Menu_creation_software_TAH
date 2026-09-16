@@ -1,0 +1,1557 @@
+{
+  "meta": {
+    "commitSha": "e9837bc4515d2acafa77c9b4b8abdee481f6ed07",
+    "rawExtractedEntityCount": 107,
+    "constitutionVersion": "MenuConstitutionV1"
+  },
+  "entities": [
+    {
+      "sourceId": "src:1:pizzaalmfamilie",
+      "name": "PIZZA Alm. Familie",
+      "category": "PIZZA",
+      "menuNumber": "1",
+      "page": 2,
+      "classification": "SELLABLE_PRODUCT",
+      "disposition": "MAPPED_TO_TARGET",
+      "variants": [
+        "Alm.",
+        "Familie"
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:2:elia",
+      "name": "Elia",
+      "category": "PIZZA",
+      "menuNumber": "2",
+      "page": 2,
+      "classification": "SELLABLE_PRODUCT",
+      "disposition": "MAPPED_TO_TARGET",
+      "variants": [
+        "Alm.",
+        "Familie"
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:3:hawaii",
+      "name": "Hawaii",
+      "category": "PIZZA",
+      "menuNumber": "3",
+      "page": 2,
+      "classification": "SELLABLE_PRODUCT",
+      "disposition": "MAPPED_TO_TARGET",
+      "variants": [
+        "Alm.",
+        "Familie"
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:4:tobi",
+      "name": "Tobi",
+      "category": "PIZZA",
+      "menuNumber": "4",
+      "page": 2,
+      "classification": "SELLABLE_PRODUCT",
+      "disposition": "MAPPED_TO_TARGET",
+      "variants": [
+        "Alm.",
+        "Familie"
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:5:nordgards",
+      "name": "Nordgàrds",
+      "category": "PIZZA",
+      "menuNumber": "5",
+      "page": 2,
+      "classification": "SELLABLE_PRODUCT",
+      "disposition": "MAPPED_TO_TARGET",
+      "variants": [
+        "Alm.",
+        "Familie"
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:6:pepperoni",
+      "name": "Pepperoni",
+      "category": "PIZZA",
+      "menuNumber": "6",
+      "page": 2,
+      "classification": "SELLABLE_PRODUCT",
+      "disposition": "MAPPED_TO_TARGET",
+      "variants": [
+        "Alm.",
+        "Familie"
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:7:preben",
+      "name": "Preben",
+      "category": "PIZZA",
+      "menuNumber": "7",
+      "page": 2,
+      "classification": "SELLABLE_PRODUCT",
+      "disposition": "MAPPED_TO_TARGET",
+      "variants": [
+        "Alm.",
+        "Familie"
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:8:sofi",
+      "name": "Sofi",
+      "category": "PIZZA",
+      "menuNumber": "8",
+      "page": 2,
+      "classification": "SELLABLE_PRODUCT",
+      "disposition": "MAPPED_TO_TARGET",
+      "variants": [
+        "Alm.",
+        "Familie"
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:9:log",
+      "name": "log",
+      "category": "PIZZA",
+      "menuNumber": "9",
+      "page": 2,
+      "classification": "INGREDIENTS",
+      "disposition": "DROPPED:TOPPING_TOKEN_AS_PRODUCT",
+      "variants": [
+        "Alm.",
+        "Familie"
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:10:valgfridyppelse",
+      "name": "Valgfri dyppelse",
+      "category": "PIZZA",
+      "menuNumber": "10",
+      "page": 2,
+      "classification": "META",
+      "disposition": "DROPPED:OCR_META_AS_PRODUCT",
+      "variants": [
+        "Alm.",
+        "Familie"
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:11:patricia",
+      "name": "Patricia",
+      "category": "PIZZA",
+      "menuNumber": "11",
+      "page": 2,
+      "classification": "SELLABLE_PRODUCT",
+      "disposition": "MAPPED_TO_TARGET",
+      "variants": [
+        "Alm.",
+        "Familie"
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:12:twoinone",
+      "name": "Two in one",
+      "category": "PIZZA",
+      "menuNumber": "12",
+      "page": 2,
+      "classification": "SELLABLE_PRODUCT",
+      "disposition": "MAPPED_TO_TARGET",
+      "variants": [
+        "Alm.",
+        "Familie"
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:13:genova",
+      "name": "Genova",
+      "category": "PIZZA",
+      "menuNumber": "13",
+      "page": 2,
+      "classification": "SELLABLE_PRODUCT",
+      "disposition": "MAPPED_TO_TARGET",
+      "variants": [
+        "Alm.",
+        "Familie"
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:14:kalista",
+      "name": "Kalista",
+      "category": "PIZZA",
+      "menuNumber": "14",
+      "page": 2,
+      "classification": "SELLABLE_PRODUCT",
+      "disposition": "MAPPED_TO_TARGET",
+      "variants": [
+        "Alm.",
+        "Familie"
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:15:seafood",
+      "name": "Seafood",
+      "category": "PIZZA",
+      "menuNumber": "15",
+      "page": 2,
+      "classification": "SELLABLE_PRODUCT",
+      "disposition": "MAPPED_TO_TARGET",
+      "variants": [
+        "Alm.",
+        "Familie"
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:18:dagulas",
+      "name": "Dagulas",
+      "category": "PIZZA",
+      "menuNumber": "18",
+      "page": 2,
+      "classification": "SELLABLE_PRODUCT",
+      "disposition": "MAPPED_TO_TARGET",
+      "variants": [
+        "Alm.",
+        "Familie"
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:19:noah",
+      "name": "Noah",
+      "category": "PIZZA",
+      "menuNumber": "19",
+      "page": 3,
+      "classification": "SELLABLE_PRODUCT",
+      "disposition": "MAPPED_TO_TARGET",
+      "variants": [
+        "Alm.",
+        "Familie"
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:20:hotchicken",
+      "name": "Hotchicken",
+      "category": "PIZZA",
+      "menuNumber": "20",
+      "page": 3,
+      "classification": "SELLABLE_PRODUCT",
+      "disposition": "MAPPED_TO_TARGET",
+      "variants": [
+        "Alm.",
+        "Familie"
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:21:brianboss",
+      "name": "Brianboss",
+      "category": "PIZZA",
+      "menuNumber": "21",
+      "page": 3,
+      "classification": "SELLABLE_PRODUCT",
+      "disposition": "MAPPED_TO_TARGET",
+      "variants": [
+        "Alm.",
+        "Familie"
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:22:calzone",
+      "name": "Calzone -",
+      "category": "Indbagt, ufo og calzone",
+      "menuNumber": "22",
+      "page": 3,
+      "classification": "SELLABLE_PRODUCT",
+      "disposition": "MAPPED_TO_TARGET",
+      "variants": [],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:23:calzonejega",
+      "name": "Calzone -Jega",
+      "category": "Indbagt, ufo og calzone",
+      "menuNumber": "23",
+      "page": 3,
+      "classification": "SELLABLE_PRODUCT",
+      "disposition": "MAPPED_TO_TARGET",
+      "variants": [
+        "Alm."
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:24:calzonekaran",
+      "name": "Calzone - Karan",
+      "category": "Indbagt, ufo og calzone",
+      "menuNumber": "24",
+      "page": 3,
+      "classification": "SELLABLE_PRODUCT",
+      "disposition": "MAPPED_TO_TARGET",
+      "variants": [
+        "Alm."
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:25:rejerchampignonostskinketomatglori25reje",
+      "name": "rejer, champignon ost, skinke, Tomat, -Glori 25. rejer, champignon ost, skinke, Tomat, -Glori",
+      "category": "Indbagt, ufo og calzone",
+      "menuNumber": "25",
+      "page": 3,
+      "classification": "SELLABLE_PRODUCT",
+      "disposition": "MAPPED_TO_TARGET",
+      "variants": [
+        "Alm."
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:26:ufoglorikodsovsspaghettisyltetpaprikaogl",
+      "name": "Ufo -Glori kodsovs, spaghetti, syltet paprika og log",
+      "category": "Indbagt, ufo og calzone",
+      "menuNumber": "26",
+      "page": 3,
+      "classification": "SELLABLE_PRODUCT",
+      "disposition": "MAPPED_TO_TARGET",
+      "variants": [
+        "Alm."
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:32:tinobambino",
+      "name": "Tino Bambino",
+      "category": "Vegetarpizza",
+      "menuNumber": "32",
+      "page": 3,
+      "classification": "SELLABLE_PRODUCT",
+      "disposition": "MAPPED_TO_TARGET",
+      "variants": [
+        "Alm.",
+        "Familie"
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:32b:damon",
+      "name": "Damon",
+      "category": "Vegetarpizza",
+      "menuNumber": "32b",
+      "page": 3,
+      "classification": "SELLABLE_PRODUCT",
+      "disposition": "MAPPED_TO_TARGET",
+      "variants": [
+        "Alm.",
+        "Familie"
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:32C:stefan",
+      "name": "Stefan",
+      "category": "Vegetarpizza",
+      "menuNumber": "32C",
+      "page": 3,
+      "classification": "SELLABLE_PRODUCT",
+      "disposition": "MAPPED_TO_TARGET",
+      "variants": [
+        "Alm.",
+        "Familie"
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:33:spaghettibolognese",
+      "name": "Spaghetti Bolognese",
+      "category": "Pasta",
+      "menuNumber": "33",
+      "page": 3,
+      "classification": "SELLABLE_PRODUCT",
+      "disposition": "MAPPED_TO_TARGET",
+      "variants": [
+        "Alm."
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:34:pastaalfredomedkylling",
+      "name": "Pasta Alfredo med Kylling",
+      "category": "Pasta",
+      "menuNumber": "34",
+      "page": 3,
+      "classification": "SELLABLE_PRODUCT",
+      "disposition": "MAPPED_TO_TARGET",
+      "variants": [
+        "Alm."
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:35:pastaaigamberi",
+      "name": "Pasta Ai Gamberi",
+      "category": "Pasta",
+      "menuNumber": "35",
+      "page": 3,
+      "classification": "SELLABLE_PRODUCT",
+      "disposition": "MAPPED_TO_TARGET",
+      "variants": [
+        "Alm."
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:?:klassiskitalienskkdsovs",
+      "name": "Klassisk italiensk kødsovs",
+      "category": "Pasta",
+      "menuNumber": null,
+      "page": 3,
+      "classification": "INGREDIENTS",
+      "disposition": "DROPPED:INGREDIENT_PHRASE_AS_PRODUCT",
+      "variants": [
+        "Alm."
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:?:klassisk",
+      "name": "Klassisk",
+      "category": "Pasta",
+      "menuNumber": null,
+      "page": 4,
+      "classification": "SELLABLE_PRODUCT",
+      "disposition": "MAPPED_TO_TARGET",
+      "variants": [
+        "Alm."
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:39:hjemmelavetcafeteriaburger",
+      "name": "Hjemmelavet Cafeteriaburger",
+      "category": "Sides",
+      "menuNumber": "39",
+      "page": 5,
+      "classification": "SELLABLE_PRODUCT",
+      "disposition": "MAPPED_TO_TARGET",
+      "variants": [
+        "Alm."
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:40:baconburger",
+      "name": "Baconburger",
+      "category": "Sides",
+      "menuNumber": "40",
+      "page": 5,
+      "classification": "SELLABLE_PRODUCT",
+      "disposition": "MAPPED_TO_TARGET",
+      "variants": [
+        "Alm."
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:41:cheeseburger",
+      "name": "Cheeseburger",
+      "category": "Sides",
+      "menuNumber": "41",
+      "page": 5,
+      "classification": "SELLABLE_PRODUCT",
+      "disposition": "MAPPED_TO_TARGET",
+      "variants": [
+        "Alm."
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:42:fiskefiletmpommesfrites",
+      "name": "Fiskefilet m. pommes frites",
+      "category": "Sides",
+      "menuNumber": "42",
+      "page": 5,
+      "classification": "SELLABLE_PRODUCT",
+      "disposition": "MAPPED_TO_TARGET",
+      "variants": [
+        "Alm."
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:43:12grillkylingmpommesfrites",
+      "name": "½ Grillkyling m. pommes frites",
+      "category": "Sides",
+      "menuNumber": "43",
+      "page": 5,
+      "classification": "SELLABLE_PRODUCT",
+      "disposition": "MAPPED_TO_TARGET",
+      "variants": [
+        "Alm."
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:44:kebabmixmpommesfrites",
+      "name": "Kebabmix m. pommes frites",
+      "category": "Sides",
+      "menuNumber": "44",
+      "page": 5,
+      "classification": "SELLABLE_PRODUCT",
+      "disposition": "MAPPED_TO_TARGET",
+      "variants": [
+        "Alm."
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:45:plsemixmpommesfrites",
+      "name": "Pølsemix m. pommes frites",
+      "category": "Sides",
+      "menuNumber": "45",
+      "page": 5,
+      "classification": "SELLABLE_PRODUCT",
+      "disposition": "MAPPED_TO_TARGET",
+      "variants": [
+        "Alm."
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:46:kebabmenu",
+      "name": "Kebabmenu",
+      "category": "Sides",
+      "menuNumber": "46",
+      "page": 5,
+      "classification": "SELLABLE_PRODUCT",
+      "disposition": "MAPPED_TO_TARGET",
+      "variants": [
+        "Alm."
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:47:nuggets10stkmpommesfrites",
+      "name": "Nuggets (10stk.) m. pommes frites",
+      "category": "Sides",
+      "menuNumber": "47",
+      "page": 5,
+      "classification": "SELLABLE_PRODUCT",
+      "disposition": "MAPPED_TO_TARGET",
+      "variants": [
+        "Alm."
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:48:pommes",
+      "name": "Pommes",
+      "category": "Sides",
+      "menuNumber": "48",
+      "page": 5,
+      "classification": "SELLABLE_PRODUCT",
+      "disposition": "MAPPED_TO_TARGET",
+      "variants": [
+        "Lille",
+        "Stor"
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:49:ekstratilbehr",
+      "name": "Ekstra tilbehør",
+      "category": "Sides",
+      "menuNumber": "49",
+      "page": 5,
+      "classification": "META",
+      "disposition": "DROPPED:OCR_META_AS_PRODUCT",
+      "variants": [
+        "Alm."
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:50:clubsandwich",
+      "name": "Club Sandwich",
+      "category": "Sandwich - hjemmelavet inkl. pommes frites",
+      "menuNumber": "50",
+      "page": 5,
+      "classification": "SELLABLE_PRODUCT",
+      "disposition": "MAPPED_TO_TARGET",
+      "variants": [
+        "Alm."
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:51:tunsandwich",
+      "name": "Tun Sandwich",
+      "category": "Sandwich - hjemmelavet inkl. pommes frites",
+      "menuNumber": "51",
+      "page": 5,
+      "classification": "SELLABLE_PRODUCT",
+      "disposition": "MAPPED_TO_TARGET",
+      "variants": [
+        "Alm."
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:52:falafelsandwichhummus",
+      "name": "Falafel Sandwich hummus",
+      "category": "Sandwich - hjemmelavet inkl. pommes frites",
+      "menuNumber": "52",
+      "page": 5,
+      "classification": "SELLABLE_PRODUCT",
+      "disposition": "MAPPED_TO_TARGET",
+      "variants": [
+        "Alm."
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:53:nachos",
+      "name": "Nachos",
+      "category": "Nachos",
+      "menuNumber": "53",
+      "page": 5,
+      "classification": "CATEGORY_HEADER",
+      "disposition": "DROPPED:OCR_CATEGORY_HEADING_AS_PRODUCT",
+      "variants": [
+        "Alm."
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:54:nachosmedkylling",
+      "name": "Nachos med kylling",
+      "category": "Nachos",
+      "menuNumber": "54",
+      "page": 5,
+      "classification": "SELLABLE_PRODUCT",
+      "disposition": "MAPPED_TO_TARGET",
+      "variants": [
+        "Alm."
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:62:friedricemedgrntsagerogg",
+      "name": "Fried rice med grøntsager og æg",
+      "category": "INDISK",
+      "menuNumber": "62",
+      "page": 7,
+      "classification": "SELLABLE_PRODUCT",
+      "disposition": "MAPPED_TO_TARGET",
+      "variants": [
+        "Alm."
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:63:naanbrd",
+      "name": "Naanbrød",
+      "category": "INDISK",
+      "menuNumber": "63",
+      "page": 7,
+      "classification": "SELLABLE_PRODUCT",
+      "disposition": "MAPPED_TO_TARGET",
+      "variants": [
+        "Alm."
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:55:samosamedgrntsager",
+      "name": "Samosa med grøntsager",
+      "category": "INDISK / Forretter",
+      "menuNumber": "55",
+      "page": 7,
+      "classification": "SELLABLE_PRODUCT",
+      "disposition": "MAPPED_TO_TARGET",
+      "variants": [
+        "Alm."
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:56:indianrolesmedoksefyldog",
+      "name": "Indian Roles med oksefyld og",
+      "category": "INDISK / Forretter",
+      "menuNumber": "56",
+      "page": 7,
+      "classification": "SELLABLE_PRODUCT",
+      "disposition": "MAPPED_TO_TARGET",
+      "variants": [
+        "Alm."
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:57:butterchicken",
+      "name": "Butter chicken",
+      "category": "INDISK / Hovedretter",
+      "menuNumber": "57",
+      "page": 7,
+      "classification": "SELLABLE_PRODUCT",
+      "disposition": "MAPPED_TO_TARGET",
+      "variants": [
+        "Alm."
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:58:chickentikkamasala",
+      "name": "Chicken Tikka-Masala",
+      "category": "INDISK / Hovedretter",
+      "menuNumber": "58",
+      "page": 7,
+      "classification": "SELLABLE_PRODUCT",
+      "disposition": "MAPPED_TO_TARGET",
+      "variants": [
+        "Alm."
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:59:friedrice",
+      "name": "Fried rice",
+      "category": "INDISK / Hovedretter",
+      "menuNumber": "59",
+      "page": 7,
+      "classification": "SELLABLE_PRODUCT",
+      "disposition": "MAPPED_TO_TARGET",
+      "variants": [
+        "Alm."
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:60:friednoodles",
+      "name": "Fried noodles",
+      "category": "INDISK / Hovedretter",
+      "menuNumber": "60",
+      "page": 7,
+      "classification": "SELLABLE_PRODUCT",
+      "disposition": "MAPPED_TO_TARGET",
+      "variants": [
+        "Alm."
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:61:kotturotti",
+      "name": "Kottu rotti",
+      "category": "INDISK / Hovedretter",
+      "menuNumber": "61",
+      "page": 7,
+      "classification": "SELLABLE_PRODUCT",
+      "disposition": "MAPPED_TO_TARGET",
+      "variants": [
+        "Alm."
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:64:sodavand",
+      "name": "Sodavand",
+      "category": "DRIKKEVARER",
+      "menuNumber": "64",
+      "page": 6,
+      "classification": "CATEGORY_HEADER",
+      "disposition": "DROPPED:OCR_CATEGORY_HEADING_AS_PRODUCT",
+      "variants": [
+        "Alm."
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:65:l",
+      "name": "Øl",
+      "category": "DRIKKEVARER",
+      "menuNumber": "65",
+      "page": 6,
+      "classification": "SELLABLE_PRODUCT",
+      "disposition": "MAPPED_TO_TARGET",
+      "variants": [
+        "Alm."
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:66:husetsvinglas",
+      "name": "Husets vin glas",
+      "category": "DRIKKEVARER",
+      "menuNumber": "66",
+      "page": 6,
+      "classification": "SELLABLE_PRODUCT",
+      "disposition": "MAPPED_TO_TARGET",
+      "variants": [
+        "Alm."
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:67:husetsvinflaske",
+      "name": "Husets vin - flaske",
+      "category": "DRIKKEVARER",
+      "menuNumber": "67",
+      "page": 6,
+      "classification": "SELLABLE_PRODUCT",
+      "disposition": "MAPPED_TO_TARGET",
+      "variants": [
+        "Alm."
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:68:kildevand",
+      "name": "Kildevand",
+      "category": "DRIKKEVARER",
+      "menuNumber": "68",
+      "page": 6,
+      "classification": "SELLABLE_PRODUCT",
+      "disposition": "MAPPED_TO_TARGET",
+      "variants": [
+        "Alm."
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:69:juice",
+      "name": "Juice",
+      "category": "DRIKKEVARER",
+      "menuNumber": "69",
+      "page": 6,
+      "classification": "SELLABLE_PRODUCT",
+      "disposition": "MAPPED_TO_TARGET",
+      "variants": [
+        "Alm."
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:70:kaffete",
+      "name": "Kaffe/Te",
+      "category": "DRIKKEVARER",
+      "menuNumber": "70",
+      "page": 6,
+      "classification": "SELLABLE_PRODUCT",
+      "disposition": "MAPPED_TO_TARGET",
+      "variants": [
+        "Alm."
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:?:gorgonzola",
+      "name": "Gorgonzola -",
+      "category": "UNCATEGORIZED",
+      "menuNumber": null,
+      "page": 2,
+      "classification": "SELLABLE_PRODUCT",
+      "disposition": "MAPPED_TO_TARGET",
+      "variants": [
+        "Alm."
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:?:josutomat",
+      "name": "Josu Tomat",
+      "category": "UNCATEGORIZED",
+      "menuNumber": null,
+      "page": 3,
+      "classification": "INGREDIENTS",
+      "disposition": "DROPPED:OCR_GARBAGE_TOPPING_NAME",
+      "variants": [
+        "Alm."
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:?:seethatomat",
+      "name": "Seetha Tomat",
+      "category": "UNCATEGORIZED",
+      "menuNumber": null,
+      "page": 3,
+      "classification": "INGREDIENTS",
+      "disposition": "DROPPED:OCR_GARBAGE_TOPPING_NAME",
+      "variants": [
+        "Alm."
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:?:salatpizza",
+      "name": "Salatpizza",
+      "category": "UNCATEGORIZED",
+      "menuNumber": null,
+      "page": 3,
+      "classification": "SELLABLE_PRODUCT",
+      "disposition": "MAPPED_TO_TARGET",
+      "variants": [
+        "Alm."
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:?:vegetarpizza",
+      "name": "Vegetarpizza",
+      "category": "UNCATEGORIZED",
+      "menuNumber": null,
+      "page": 3,
+      "classification": "SELLABLE_PRODUCT",
+      "disposition": "MAPPED_TO_TARGET",
+      "variants": [
+        "Alm."
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:?:bambino",
+      "name": "Bambino",
+      "category": "UNCATEGORIZED",
+      "menuNumber": null,
+      "page": 3,
+      "classification": "SELLABLE_PRODUCT",
+      "disposition": "MAPPED_TO_TARGET",
+      "variants": [
+        "Alm."
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:?:brianbosssyltet",
+      "name": "Brianboss syltet",
+      "category": "UNCATEGORIZED",
+      "menuNumber": null,
+      "page": 4,
+      "classification": "SELLABLE_PRODUCT",
+      "disposition": "MAPPED_TO_TARGET",
+      "variants": [
+        "Alm."
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:?:calzone",
+      "name": "Calzone",
+      "category": "UNCATEGORIZED",
+      "menuNumber": null,
+      "page": 4,
+      "classification": "SELLABLE_PRODUCT",
+      "disposition": "MAPPED_TO_TARGET",
+      "variants": [
+        "Alm."
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:?:jegacalzone",
+      "name": "Jega Calzone-",
+      "category": "UNCATEGORIZED",
+      "menuNumber": null,
+      "page": 4,
+      "classification": "SELLABLE_PRODUCT",
+      "disposition": "MAPPED_TO_TARGET",
+      "variants": [
+        "Alm."
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:?:ufoseetha",
+      "name": "Ufo - Seetha",
+      "category": "UNCATEGORIZED",
+      "menuNumber": null,
+      "page": 4,
+      "classification": "SELLABLE_PRODUCT",
+      "disposition": "MAPPED_TO_TARGET",
+      "variants": [
+        "Alm."
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:?:ufooglog",
+      "name": "Ufo og log",
+      "category": "UNCATEGORIZED",
+      "menuNumber": null,
+      "page": 4,
+      "classification": "SELLABLE_PRODUCT",
+      "disposition": "MAPPED_TO_TARGET",
+      "variants": [
+        "Alm."
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:?:storlille",
+      "name": "Stor Lille",
+      "category": "UNCATEGORIZED",
+      "menuNumber": null,
+      "page": 5,
+      "classification": "CHOICE",
+      "disposition": "DROPPED:OCR_VARIANT_LABEL_AS_PRODUCT",
+      "variants": [
+        "Alm."
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:?:veronislokalekanrummeoptil",
+      "name": "VERONI's lokale kan rumme op til",
+      "category": "UNCATEGORIZED",
+      "menuNumber": null,
+      "page": 6,
+      "classification": "OTHER_NON_PRODUCT",
+      "disposition": "DROPPED:OCR_MARKETING_PROSE_AS_PRODUCT",
+      "variants": [
+        "Alm."
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:?:restaurant",
+      "name": "Restaurant",
+      "category": "UNCATEGORIZED",
+      "menuNumber": null,
+      "page": 6,
+      "classification": "OTHER_NON_PRODUCT",
+      "disposition": "DROPPED:OCR_MARKETING_PROSE_AS_PRODUCT",
+      "variants": [
+        "Alm."
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:?:indiskforretter",
+      "name": "INDISK Forretter",
+      "category": "UNCATEGORIZED",
+      "menuNumber": null,
+      "page": 7,
+      "classification": "CATEGORY_HEADER",
+      "disposition": "DROPPED:OCR_CATEGORY_HEADING_AS_PRODUCT",
+      "variants": [
+        "Alm."
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:?:hovedretter",
+      "name": "Hovedretter",
+      "category": "UNCATEGORIZED",
+      "menuNumber": null,
+      "page": 7,
+      "classification": "CATEGORY_HEADER",
+      "disposition": "DROPPED:OCR_CATEGORY_HEADING_AS_PRODUCT",
+      "variants": [
+        "Alm."
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:?:noahoglog",
+      "name": "Noah og log",
+      "category": "Pizza",
+      "menuNumber": null,
+      "page": 4,
+      "classification": "SELLABLE_PRODUCT",
+      "disposition": "MAPPED_TO_TARGET",
+      "variants": [
+        "Alm."
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:?:hotchickensyltet",
+      "name": "Hotchicken syltet",
+      "category": "Pizza",
+      "menuNumber": null,
+      "page": 4,
+      "classification": "SELLABLE_PRODUCT",
+      "disposition": "MAPPED_TO_TARGET",
+      "variants": [
+        "Alm."
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:36:durumrulle",
+      "name": "Dürüm rulle",
+      "category": "Burgers",
+      "menuNumber": "36",
+      "page": 5,
+      "classification": "SELLABLE_PRODUCT",
+      "disposition": "MAPPED_TO_TARGET",
+      "variants": [
+        "Alm."
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:37:hjemmelavetpitabrd",
+      "name": "Hjemmelavet pitabrød",
+      "category": "Burgers",
+      "menuNumber": "37",
+      "page": 5,
+      "classification": "SELLABLE_PRODUCT",
+      "disposition": "MAPPED_TO_TARGET",
+      "variants": [
+        "Alm."
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:38:hjemmelavethvidlgsbrd",
+      "name": "Hjemmelavet hvidløgsbrød",
+      "category": "Burgers",
+      "menuNumber": "38",
+      "page": 5,
+      "classification": "SELLABLE_PRODUCT",
+      "disposition": "MAPPED_TO_TARGET",
+      "variants": [
+        "Alm."
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:menuer:src:?:klassiskitalienskkdsovs",
+      "name": "Klassisk italiensk kødsovs Menu",
+      "category": "Menuer",
+      "menuNumber": null,
+      "page": 3,
+      "classification": "OTHER_NON_PRODUCT",
+      "disposition": "DROPPED:OCR_GARBAGE_MENU_CLONE",
+      "variants": [
+        "Alm."
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:menuer:src:39:hjemmelavetcafeteriaburger",
+      "name": "Hjemmelavet Cafeteriaburger Menu",
+      "category": "Menuer",
+      "menuNumber": null,
+      "page": 5,
+      "classification": "SELLABLE_PRODUCT",
+      "disposition": "MAPPED_TO_TARGET",
+      "variants": [
+        "Alm."
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:menuer:src:40:baconburger",
+      "name": "Baconburger Menu",
+      "category": "Menuer",
+      "menuNumber": null,
+      "page": 5,
+      "classification": "SELLABLE_PRODUCT",
+      "disposition": "MAPPED_TO_TARGET",
+      "variants": [
+        "Alm."
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:menuer:src:41:cheeseburger",
+      "name": "Cheeseburger Menu",
+      "category": "Menuer",
+      "menuNumber": null,
+      "page": 5,
+      "classification": "SELLABLE_PRODUCT",
+      "disposition": "MAPPED_TO_TARGET",
+      "variants": [
+        "Alm."
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:menuer:src:42:fiskefiletmpommesfrites",
+      "name": "Fiskefilet m. pommes frites Menu",
+      "category": "Menuer",
+      "menuNumber": null,
+      "page": 5,
+      "classification": "SELLABLE_PRODUCT",
+      "disposition": "MAPPED_TO_TARGET",
+      "variants": [
+        "Alm."
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:menuer:src:43:12grillkylingmpommesfrites",
+      "name": "½ Grillkyling m. pommes frites Menu",
+      "category": "Menuer",
+      "menuNumber": null,
+      "page": 5,
+      "classification": "SELLABLE_PRODUCT",
+      "disposition": "MAPPED_TO_TARGET",
+      "variants": [
+        "Alm."
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:menuer:src:?:gorgonzola",
+      "name": "Gorgonzola - Menu",
+      "category": "Menuer",
+      "menuNumber": null,
+      "page": 2,
+      "classification": "SELLABLE_PRODUCT",
+      "disposition": "MAPPED_TO_TARGET",
+      "variants": [
+        "Alm."
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:menuer:src:?:josutomat",
+      "name": "Josu Tomat Menu",
+      "category": "Menuer",
+      "menuNumber": null,
+      "page": 3,
+      "classification": "OTHER_NON_PRODUCT",
+      "disposition": "DROPPED:OCR_GARBAGE_MENU_CLONE",
+      "variants": [
+        "Alm."
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:menuer:src:?:seethatomat",
+      "name": "Seetha Tomat Menu",
+      "category": "Menuer",
+      "menuNumber": null,
+      "page": 3,
+      "classification": "OTHER_NON_PRODUCT",
+      "disposition": "DROPPED:OCR_GARBAGE_MENU_CLONE",
+      "variants": [
+        "Alm."
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:menuer:src:?:salatpizza",
+      "name": "Salatpizza Menu",
+      "category": "Menuer",
+      "menuNumber": null,
+      "page": 3,
+      "classification": "SELLABLE_PRODUCT",
+      "disposition": "MAPPED_TO_TARGET",
+      "variants": [
+        "Alm."
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:menuer:src:?:brianbosssyltet",
+      "name": "Brianboss syltet Menu",
+      "category": "Menuer",
+      "menuNumber": null,
+      "page": 4,
+      "classification": "SELLABLE_PRODUCT",
+      "disposition": "MAPPED_TO_TARGET",
+      "variants": [
+        "Alm."
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:menuer:src:?:calzone",
+      "name": "Calzone Menu",
+      "category": "Menuer",
+      "menuNumber": null,
+      "page": 4,
+      "classification": "SELLABLE_PRODUCT",
+      "disposition": "MAPPED_TO_TARGET",
+      "variants": [
+        "Alm."
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:menuer:src:?:jegacalzone",
+      "name": "Jega Calzone- Menu",
+      "category": "Menuer",
+      "menuNumber": null,
+      "page": 4,
+      "classification": "SELLABLE_PRODUCT",
+      "disposition": "MAPPED_TO_TARGET",
+      "variants": [
+        "Alm."
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:menuer:src:?:ufoseetha",
+      "name": "Ufo - Seetha Menu",
+      "category": "Menuer",
+      "menuNumber": null,
+      "page": 4,
+      "classification": "SELLABLE_PRODUCT",
+      "disposition": "MAPPED_TO_TARGET",
+      "variants": [
+        "Alm."
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:menuer:src:?:ufooglog",
+      "name": "Ufo og log Menu",
+      "category": "Menuer",
+      "menuNumber": null,
+      "page": 4,
+      "classification": "SELLABLE_PRODUCT",
+      "disposition": "MAPPED_TO_TARGET",
+      "variants": [
+        "Alm."
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:menuer:src:?:storlille",
+      "name": "Stor Lille Menu",
+      "category": "Menuer",
+      "menuNumber": null,
+      "page": 5,
+      "classification": "OTHER_NON_PRODUCT",
+      "disposition": "DROPPED:OCR_GARBAGE_MENU_CLONE",
+      "variants": [
+        "Alm."
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:menuer:src:?:indiskforretter",
+      "name": "INDISK Forretter Menu",
+      "category": "Menuer",
+      "menuNumber": null,
+      "page": 7,
+      "classification": "OTHER_NON_PRODUCT",
+      "disposition": "DROPPED:OCR_GARBAGE_MENU_CLONE",
+      "variants": [
+        "Alm."
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:menuer:src:?:hovedretter",
+      "name": "Hovedretter Menu",
+      "category": "Menuer",
+      "menuNumber": null,
+      "page": 7,
+      "classification": "OTHER_NON_PRODUCT",
+      "disposition": "DROPPED:OCR_GARBAGE_MENU_CLONE",
+      "variants": [
+        "Alm."
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:menuer:src:?:noahoglog",
+      "name": "Noah og log Menu",
+      "category": "Menuer",
+      "menuNumber": null,
+      "page": 4,
+      "classification": "SELLABLE_PRODUCT",
+      "disposition": "MAPPED_TO_TARGET",
+      "variants": [
+        "Alm."
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:menuer:src:?:hotchickensyltet",
+      "name": "Hotchicken syltet Menu",
+      "category": "Menuer",
+      "menuNumber": null,
+      "page": 4,
+      "classification": "SELLABLE_PRODUCT",
+      "disposition": "MAPPED_TO_TARGET",
+      "variants": [
+        "Alm."
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:menuer:src:36:durumrulle",
+      "name": "Dürüm rulle Menu",
+      "category": "Menuer",
+      "menuNumber": null,
+      "page": 5,
+      "classification": "SELLABLE_PRODUCT",
+      "disposition": "MAPPED_TO_TARGET",
+      "variants": [
+        "Alm."
+      ],
+      "priceModeHints": []
+    },
+    {
+      "sourceId": "src:menuer:src:37:hjemmelavetpitabrd",
+      "name": "Hjemmelavet pitabrød Menu",
+      "category": "Menuer",
+      "menuNumber": null,
+      "page": 5,
+      "classification": "SELLABLE_PRODUCT",
+      "disposition": "MAPPED_TO_TARGET",
+      "variants": [
+        "Alm."
+      ],
+      "priceModeHints": []
+    }
+  ],
+  "dropped": [
+    {
+      "rawExtractedEntity": "log",
+      "sourceId": "src:9:log",
+      "sourceLocation": "PIZZA",
+      "classification": "TOPPING_TOKEN_AS_PRODUCT",
+      "reasonDropped": "TOPPING_TOKEN_AS_PRODUCT"
+    },
+    {
+      "rawExtractedEntity": "Valgfri dyppelse",
+      "sourceId": "src:10:valgfridyppelse",
+      "sourceLocation": "PIZZA",
+      "classification": "OCR_META_AS_PRODUCT",
+      "reasonDropped": "OCR_META_AS_PRODUCT"
+    },
+    {
+      "rawExtractedEntity": "Klassisk italiensk kødsovs",
+      "sourceId": "src:?:klassiskitalienskkdsovs",
+      "sourceLocation": "Pasta",
+      "classification": "INGREDIENT_PHRASE_AS_PRODUCT",
+      "reasonDropped": "INGREDIENT_PHRASE_AS_PRODUCT"
+    },
+    {
+      "rawExtractedEntity": "Ekstra tilbehør",
+      "sourceId": "src:49:ekstratilbehr",
+      "sourceLocation": "Sides",
+      "classification": "OCR_META_AS_PRODUCT",
+      "reasonDropped": "OCR_META_AS_PRODUCT"
+    },
+    {
+      "rawExtractedEntity": "Nachos",
+      "sourceId": "src:53:nachos",
+      "sourceLocation": "Nachos",
+      "classification": "OCR_CATEGORY_HEADING_AS_PRODUCT",
+      "reasonDropped": "OCR_CATEGORY_HEADING_AS_PRODUCT"
+    },
+    {
+      "rawExtractedEntity": "Sodavand",
+      "sourceId": "src:64:sodavand",
+      "sourceLocation": "DRIKKEVARER",
+      "classification": "OCR_CATEGORY_HEADING_AS_PRODUCT",
+      "reasonDropped": "OCR_CATEGORY_HEADING_AS_PRODUCT"
+    },
+    {
+      "rawExtractedEntity": "Josu Tomat",
+      "sourceId": "src:?:josutomat",
+      "sourceLocation": "UNCATEGORIZED",
+      "classification": "OCR_GARBAGE_TOPPING_NAME",
+      "reasonDropped": "OCR_GARBAGE_TOPPING_NAME"
+    },
+    {
+      "rawExtractedEntity": "Seetha Tomat",
+      "sourceId": "src:?:seethatomat",
+      "sourceLocation": "UNCATEGORIZED",
+      "classification": "OCR_GARBAGE_TOPPING_NAME",
+      "reasonDropped": "OCR_GARBAGE_TOPPING_NAME"
+    },
+    {
+      "rawExtractedEntity": "Stor Lille",
+      "sourceId": "src:?:storlille",
+      "sourceLocation": "UNCATEGORIZED",
+      "classification": "OCR_VARIANT_LABEL_AS_PRODUCT",
+      "reasonDropped": "OCR_VARIANT_LABEL_AS_PRODUCT"
+    },
+    {
+      "rawExtractedEntity": "VERONI's lokale kan rumme op til",
+      "sourceId": "src:?:veronislokalekanrummeoptil",
+      "sourceLocation": "UNCATEGORIZED",
+      "classification": "OCR_MARKETING_PROSE_AS_PRODUCT",
+      "reasonDropped": "OCR_MARKETING_PROSE_AS_PRODUCT"
+    },
+    {
+      "rawExtractedEntity": "Restaurant",
+      "sourceId": "src:?:restaurant",
+      "sourceLocation": "UNCATEGORIZED",
+      "classification": "OCR_MARKETING_PROSE_AS_PRODUCT",
+      "reasonDropped": "OCR_MARKETING_PROSE_AS_PRODUCT"
+    },
+    {
+      "rawExtractedEntity": "INDISK Forretter",
+      "sourceId": "src:?:indiskforretter",
+      "sourceLocation": "UNCATEGORIZED",
+      "classification": "OCR_CATEGORY_HEADING_AS_PRODUCT",
+      "reasonDropped": "OCR_CATEGORY_HEADING_AS_PRODUCT"
+    },
+    {
+      "rawExtractedEntity": "Hovedretter",
+      "sourceId": "src:?:hovedretter",
+      "sourceLocation": "UNCATEGORIZED",
+      "classification": "OCR_CATEGORY_HEADING_AS_PRODUCT",
+      "reasonDropped": "OCR_CATEGORY_HEADING_AS_PRODUCT"
+    },
+    {
+      "rawExtractedEntity": "Klassisk italiensk kødsovs Menu",
+      "sourceId": "src:menuer:src:?:klassiskitalienskkdsovs",
+      "sourceLocation": "Menuer",
+      "classification": "OCR_GARBAGE_MENU_CLONE",
+      "reasonDropped": "OCR_GARBAGE_MENU_CLONE"
+    },
+    {
+      "rawExtractedEntity": "Josu Tomat Menu",
+      "sourceId": "src:menuer:src:?:josutomat",
+      "sourceLocation": "Menuer",
+      "classification": "OCR_GARBAGE_MENU_CLONE",
+      "reasonDropped": "OCR_GARBAGE_MENU_CLONE"
+    },
+    {
+      "rawExtractedEntity": "Seetha Tomat Menu",
+      "sourceId": "src:menuer:src:?:seethatomat",
+      "sourceLocation": "Menuer",
+      "classification": "OCR_GARBAGE_MENU_CLONE",
+      "reasonDropped": "OCR_GARBAGE_MENU_CLONE"
+    },
+    {
+      "rawExtractedEntity": "Stor Lille Menu",
+      "sourceId": "src:menuer:src:?:storlille",
+      "sourceLocation": "Menuer",
+      "classification": "OCR_GARBAGE_MENU_CLONE",
+      "reasonDropped": "OCR_GARBAGE_MENU_CLONE"
+    },
+    {
+      "rawExtractedEntity": "INDISK Forretter Menu",
+      "sourceId": "src:menuer:src:?:indiskforretter",
+      "sourceLocation": "Menuer",
+      "classification": "OCR_GARBAGE_MENU_CLONE",
+      "reasonDropped": "OCR_GARBAGE_MENU_CLONE"
+    },
+    {
+      "rawExtractedEntity": "Hovedretter Menu",
+      "sourceId": "src:menuer:src:?:hovedretter",
+      "sourceLocation": "Menuer",
+      "classification": "OCR_GARBAGE_MENU_CLONE",
+      "reasonDropped": "OCR_GARBAGE_MENU_CLONE"
+    }
+  ],
+  "unexplained": []
+}

@@ -155,6 +155,8 @@ describe("addition likelihood", () => {
     const dir = mkdtempSync(join(tmpdir(), "addlik-"));
     dirs.push(dir);
     const store = new DecisionStore(join(dir, "d.sqlite"));
+    const prevSeed = process.env.PORTAL_SEED_DEFAULT_TILBEHOR_HOSTS;
+    process.env.PORTAL_SEED_DEFAULT_TILBEHOR_HOSTS = "veronipizza.dk";
     try {
       upsertVeroniTilbehorBusinessFact({
         store,
@@ -226,6 +228,8 @@ describe("addition likelihood", () => {
       });
       expect(resolved.additions.length).toBeGreaterThan(2);
     } finally {
+      if (prevSeed === undefined) delete process.env.PORTAL_SEED_DEFAULT_TILBEHOR_HOSTS;
+      else process.env.PORTAL_SEED_DEFAULT_TILBEHOR_HOSTS = prevSeed;
       store.close();
     }
   });

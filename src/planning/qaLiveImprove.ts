@@ -25,14 +25,10 @@ import {
 } from "../domain/menuCardQuality.js";
 import {
   grillTilbehorLooksWrong,
-  inferGrillDescription,
   isGrillCategory,
   isBurgerProductName,
-  preferGrillDipAdditions,
-  preferBurgerEkstraAdditions,
   productWantsGrillDips,
   grillIngredientsInsufficient,
-  resolveGrillIngredients,
 } from "../domain/grillCardFill.js";
 import {
   looksLikeCategoryHeaderName,
@@ -43,7 +39,6 @@ import {
   type ReconcileFieldDelta,
   type ReconcileReasonCode,
 } from "./menuReconcile.js";
-import { proposePizzaToppingsFromDescription } from "../learning/pizzaToppings.js";
 import type { IngredientLikelihoodPolicy } from "../learning/ingredientLikelihood.js";
 import {
   filterAdditionsWithTrace,
@@ -279,22 +274,26 @@ export function isLiveFieldDefective(
 }
 
 /**
- * Merge live baseline with optional source enrich + polish.
- * Prefers live when it is already better; only fills gaps / fixes defects.
+ * QA merge: TargetMenu (sourcePayload from MenuIntelligenceEngine) is the
+ * intelligence candidate. Live is baseline for never-worse comparison.
+ * Does NOT invent ingredients/additions/descriptions — only hygiene + selection.
  */
 export function buildQaTargetPayload(input: {
   live: LiveProductSnapshot;
   sourcePayload: PlannedProductPayload;
   liveCategoryName?: string;
   destinationCategories: DestinationCategory[];
-  /** Peer ingredient/beskrivelse likelihood — peer-first, domain prior fallback. */
+  /** @deprecated Intelligence already applied — ignored. */
   ingredientLikelihood?: IngredientLikelihoodPolicy | null;
-  /** Category probability — dip/meat Tilbehør gates on QA targets. */
+  /** @deprecated Intelligence already applied — ignored. */
   probabilityPolicy?: ProbabilityPolicyMap | null;
 }): PlannedProductPayload {
+  void input.ingredientLikelihood;
+  void input.probabilityPolicy;
   const live = input.live;
   const source = input.sourcePayload;
   const catName = input.liveCategoryName ?? "";
+  const ctx = { productName: live.name, categoryName: catName };
 
   const liveRecovered = recoverProductLabelsForReconcile({
     name: live.name,
@@ -303,180 +302,81 @@ export function buildQaTargetPayload(input: {
     ...(catName ? { categoryName: catName } : {}),
   });
 
+  // Name: prefer live unless defective; then TargetMenu / recovered.
   let name = live.name.trim();
   if (
     looksLikeCategoryHeaderName(name) ||
     looksLikeToppingAsProductName(name) ||
-    !name
+    !name ||
+    dishNameHasIngredientDump(name)
   ) {
     const recovered = liveRecovered.name.trim();
     const recoveredOk =
       recovered &&
       !looksLikeCategoryHeaderName(recovered) &&
       !looksLikeToppingAsProductName(recovered);
+    const src = formatProductName(source.name);
     name =
       (recoveredOk ? recovered : "") ||
-      formatProductName(source.name) ||
-      name;
-    // Last resort: keep header rather than write a topping as the title
-    if (looksLikeToppingAsProductName(name) && recoveredOk) {
-      name = recovered;
-    }
+      (src && !looksLikeToppingAsProductName(src) ? src : "") ||
+      formatProductName(name) ||
+      live.name.trim();
   } else {
     name = formatProductName(name);
   }
-  // Strip ingredient dumps from titles (Ufo Glori kodsovs, spaghetti…)
-  if (dishNameHasIngredientDump(name) || dishNameHasIngredientDump(live.name)) {
-    const cleaned = cleanDishDisplayName(live.name);
-    name = cleaned.name || name;
-  } else {
-    const cleaned = cleanDishDisplayName(name);
-    if (cleaned.movedToDescription.length > 0) {
-      name = cleaned.name || name;
-    }
-  }
 
+  // Ingredients: never-worse — keep richer valid live; else take TargetMenu.
   let ingredients = polishIngredientList(live.ingredients ?? [], name);
   const sourceIngredients = polishIngredientList(source.ingredients, name);
-  if (ingredients.length === 0 && sourceIngredients.length > 0) {
-    ingredients = sourceIngredients;
-  }
-  if (ingredients.length === 0) {
-    const proposal = proposePizzaToppingsFromDescription({
-      name,
-      categoryName: catName,
-      description: live.description ?? source.description,
-      existingIngredients: [],
-    });
-    if (proposal?.ingredients?.length) {
-      ingredients = polishIngredientList(proposal.ingredients, name);
-    }
-  }
-  // Grill / fries / burgers: peer-first fill, then domain prior (e.g. only "Bacon").
-  let peerGrillDescription: string | null = null;
-  if (
-    ingredients.length === 0 ||
-    grillIngredientsInsufficient(ingredients, name)
-  ) {
-    const resolved = resolveGrillIngredients({
-      name,
-      categoryName: catName,
-      description: live.description ?? source.description,
-      ...(input.ingredientLikelihood != null
-        ? { ingredientPolicy: input.ingredientLikelihood }
-        : {}),
-    });
-    if (resolved.ingredients.length > ingredients.length) {
-      ingredients = polishIngredientList(resolved.ingredients, name);
-      if (
-        resolved.source === "PEER_SUBTYPE" ||
-        resolved.source === "PEER_KIND"
-      ) {
-        peerGrillDescription = resolved.description;
-      }
-    }
+  const liveIngScore = fieldQualityScore("ingredients", ingredients, ctx);
+  const srcIngScore = fieldQualityScore("ingredients", sourceIngredients, ctx);
+  if (srcIngScore > liveIngScore || ingredients.length === 0) {
+    ingredients = sourceIngredients.length ? sourceIngredients : ingredients;
   }
 
-  let description = (live.description ?? "").trim();
-  description = stripPriceLeakFromDescription(
-    stripTrailingPriceNoise(description),
-  );
-  description = polishDescriptionText(description, name);
-  if (
-    peerGrillDescription &&
-    (!description ||
-      description.length < 12 ||
-      grillIngredientsInsufficient(description.split(/\s*,\s*/), name))
-  ) {
-    description = peerGrillDescription;
-  }
-  const grillDesc = inferGrillDescription({
+  // Description: never-worse hygiene; prefer TargetMenu when live defective.
+  let description = polishDescriptionText(
+    stripPriceLeakFromDescription(
+      stripTrailingPriceNoise((live.description ?? "").trim()),
+    ),
     name,
-    categoryName: catName,
-    description: live.description ?? "",
-    ingredients,
-  });
-  if (grillDesc) {
-    description = grillDesc;
-  }
+  );
   const sourceDesc = polishDescriptionText(
     stripPriceLeakFromDescription(
       stripTrailingPriceNoise(source.description || ""),
     ),
     name,
   );
-  const liveDescScore = fieldQualityScore(
-    "description",
-    live.description ?? "",
-    { productName: name, categoryName: catName },
-  );
-  const polishedDescScore = fieldQualityScore("description", description, {
+  const liveDescScore = fieldQualityScore("description", description, {
+    ...ctx,
     productName: name,
-    categoryName: catName,
   });
-  // Always prefer polished description when live had grammar/glue defects
-  if (liveDescScore <= 2 && polishedDescScore > liveDescScore) {
-    // keep polished `description`
-  } else if (liveDescScore <= 1) {
-    if (fieldQualityScore("description", sourceDesc) > liveDescScore) {
-      description = sourceDesc;
-    } else if (ingredients.length > 0) {
-      description = formatDescriptionFromIngredients(ingredients);
-    }
-  } else if (
-    description.length < 8 &&
-    ingredients.length > 0 &&
-    liveDescScore < 4
-  ) {
-    description = formatDescriptionFromIngredients(ingredients);
-  } else if (ingredients.length > 0) {
-    // Prefer description rebuilt from clean ingredients when live desc still glued
-    const fromIng = formatDescriptionFromIngredients(ingredients);
-    if (
-      /[A-Za-zÆØÅæøå]{3,}og[A-Za-zÆØÅæøå]{3,}/i.test(live.description ?? "") ||
-      /\s+og\s*,\s*/i.test(live.description ?? "")
-    ) {
-      description = fromIng || description;
-    }
+  const srcDescScore = fieldQualityScore("description", sourceDesc, {
+    ...ctx,
+    productName: name,
+  });
+  if (srcDescScore > liveDescScore || liveDescScore <= 1) {
+    description = sourceDesc || description;
   }
 
-  // Sanitize Tilbehør: never on drinks; never dish names / meta / junk; meat 2× veg
+  // Additions: TargetMenu candidate vs live — strip only, never invent.
   const liveAdds = polishAdditions(live.additions ?? [], name, catName);
   const sourceAdds = polishAdditions(source.additions, name, catName);
-  const addByKey = new Map(
-    liveAdds.map((a) => [a.name.trim().toLowerCase(), a]),
-  );
-  for (const a of sourceAdds) {
-    const k = a.name.trim().toLowerCase();
-    if (!addByKey.has(k)) addByKey.set(k, a);
-  }
-  // Re-sanitize union (clears drinks; reprices flat lists)
-  let additions = polishAdditions([...addByKey.values()], name, catName);
-  // Grill fries / pommes plates: replace empty or pizza-dump Tilbehør with dips
-  additions = preferGrillDipAdditions(additions, {
-    name,
-    categoryName: catName,
-    description,
-    variants: (live.variants ?? []).map((v) => ({ name: v.name })),
+  const liveAddScore = fieldQualityScore("additions", liveAdds, {
+    ...ctx,
+    productName: name,
   });
-  additions = polishAdditions(additions, name, catName);
-  // Kind probability / hard priors: no dips on plain burgers/sandwiches/pizza
-  additions = filterAdditionsWithTrace({
-    name,
-    ...(catName ? { categoryNames: [catName] } : {}),
-    ...(description ? { description } : {}),
-    additions,
-    policy: input.probabilityPolicy ?? null,
-  }).after;
-  additions = polishAdditions(additions, name, catName);
-  // After dip/forbidden strip, refill plain-burger ekstra (never leave empty)
-  additions = preferBurgerEkstraAdditions(additions, {
-    name,
-    categoryName: catName,
-    description,
+  const srcAddScore = fieldQualityScore("additions", sourceAdds, {
+    ...ctx,
+    productName: name,
   });
+  let additions =
+    srcAddScore > liveAddScore || liveAdds.length === 0
+      ? sourceAdds
+      : liveAdds;
   additions = polishAdditions(additions, name, catName);
 
+  // Variants: strip Menu; prefer polished live unless defective.
   const liveVars = polishVariants(
     (live.variants ?? []).map((v) => ({
       name: v.name,
@@ -491,12 +391,12 @@ export function buildQaTargetPayload(input: {
     liveHadForbiddenMenu ||
     (live.variants ?? []).some((v) => REVIEW_STUB_RE.test(v.name)) ||
     (live.variants ?? []).length === 0;
-  // Prefer polished live (Menu already stripped); fall back to source when live was empty/stub.
-  const variants = liveVarDefective && liveVars.length === 0
-    ? sourceVars
-    : liveVars.length
-      ? liveVars
-      : sourceVars;
+  const variants =
+    liveVarDefective && liveVars.length === 0
+      ? sourceVars
+      : liveVars.length
+        ? liveVars
+        : sourceVars;
 
   let basePriceOre = live.basePriceOre ?? 0;
   if (basePriceOre <= 0 && source.basePriceOre > 0) {
@@ -533,12 +433,6 @@ export function buildQaTargetPayload(input: {
       !looksLikeCategoryHeaderName(src)
     ) {
       outName = src;
-    } else if (
-      looksLikeCategoryHeaderName(live.name.trim()) &&
-      !looksLikeToppingAsProductName(live.name)
-    ) {
-      // Prefer keeping a section header over writing a topping as the title
-      outName = live.name.trim();
     }
   }
 

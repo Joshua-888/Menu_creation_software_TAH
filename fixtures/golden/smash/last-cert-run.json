@@ -1,0 +1,10 @@
+{
+  "runId": "cert_smash_2026-09-16T09-02-20-712Z",
+  "commitSha": "e9837bc4515d2acafa77c9b4b8abdee481f6ed07",
+  "generatedAt": "2026-09-16T09:03:57.530Z",
+  "statusAccounting": {
+    "ready": 10,
+    "review": 0,
+    "blocked": 0
+  }
+}

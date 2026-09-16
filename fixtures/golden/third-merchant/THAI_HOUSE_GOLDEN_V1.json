@@ -1,0 +1,229 @@
+{
+  "fixtureId": "THAI_HOUSE_GOLDEN_V1",
+  "runId": "cert_third_2026-09-16T09-01-42-742Z",
+  "products": [
+    {
+      "name": "Foraarsruller 45 kr",
+      "category": "INDISK / Forretter",
+      "ingredients": [
+        "Kylling",
+        "Grøntsager"
+      ],
+      "variants": [
+        "Alm."
+      ],
+      "additions": [],
+      "isCombo": false
+    },
+    {
+      "name": "Tom Yam Gung 65 kr",
+      "category": "INDISK / Forretter",
+      "ingredients": [
+        "Rejer",
+        "Lemongrass",
+        "Chili"
+      ],
+      "variants": [
+        "Alm."
+      ],
+      "additions": [],
+      "isCombo": false
+    },
+    {
+      "name": "Satay Kylling 59 kr",
+      "category": "INDISK / Forretter",
+      "ingredients": [
+        "Kylling",
+        "Peanut sauce"
+      ],
+      "variants": [
+        "Alm."
+      ],
+      "additions": [],
+      "isCombo": false
+    },
+    {
+      "name": "Pad Thai Kylling 95 kr",
+      "category": "INDISK / Hovedretter",
+      "ingredients": [
+        "Risnudler",
+        "Bonnespirer",
+        "Jordnodder"
+      ],
+      "variants": [
+        "Alm."
+      ],
+      "additions": [],
+      "isCombo": false
+    },
+    {
+      "name": "Pad Thai Rejer 105 kr",
+      "category": "INDISK / Hovedretter",
+      "ingredients": [
+        "Risnudler",
+        "Bonnespirer",
+        "Jordnodder"
+      ],
+      "variants": [
+        "Alm."
+      ],
+      "additions": [],
+      "isCombo": false
+    },
+    {
+      "name": "Gron Curry Kylling 99 kr",
+      "category": "INDISK / Hovedretter",
+      "ingredients": [
+        "Kokosmaelk",
+        "Basilikum"
+      ],
+      "variants": [
+        "Alm."
+      ],
+      "additions": [],
+      "isCombo": false
+    },
+    {
+      "name": "Rod Curry Oksekoed 109 kr",
+      "category": "INDISK / Hovedretter",
+      "ingredients": [
+        "Kokosmaelk",
+        "Bamboo",
+        "Basilikum"
+      ],
+      "variants": [
+        "Alm."
+      ],
+      "additions": [],
+      "isCombo": false
+    },
+    {
+      "name": "Massaman Curry 105 kr",
+      "category": "INDISK / Hovedretter",
+      "ingredients": [
+        "Kartofler",
+        "Peanut",
+        "Kokosmaelk"
+      ],
+      "variants": [
+        "Alm."
+      ],
+      "additions": [],
+      "isCombo": false
+    },
+    {
+      "name": "Basilicum Wok Kylling 95 kr",
+      "category": "INDISK / Hovedretter",
+      "ingredients": [
+        "Chili",
+        "Hvidloeg",
+        "Basilikum"
+      ],
+      "variants": [
+        "Alm."
+      ],
+      "additions": [],
+      "isCombo": false
+    },
+    {
+      "name": "Sweet and Sour Kylling 95 kr",
+      "category": "INDISK / Hovedretter",
+      "ingredients": [
+        "Ananas",
+        "Peber"
+      ],
+      "variants": [
+        "Alm."
+      ],
+      "additions": [],
+      "isCombo": false
+    },
+    {
+      "name": "Cashew Wok Kylling 99 kr",
+      "category": "INDISK / Hovedretter",
+      "ingredients": [
+        "Grøntsager",
+        "Kylling",
+        "Cashewnødder"
+      ],
+      "variants": [
+        "Alm."
+      ],
+      "additions": [],
+      "isCombo": false
+    },
+    {
+      "name": "Stegte Ris Kylling 85 kr",
+      "category": "INDISK / Hovedretter",
+      "ingredients": [
+        "Ris",
+        "Gulerod",
+        "Aerter"
+      ],
+      "variants": [
+        "Alm."
+      ],
+      "additions": [],
+      "isCombo": false
+    },
+    {
+      "name": "Stegte Ris Rejer 95 kr",
+      "category": "INDISK / Hovedretter",
+      "ingredients": [
+        "Ris",
+        "Gulerod",
+        "Aerter"
+      ],
+      "variants": [
+        "Alm."
+      ],
+      "additions": [],
+      "isCombo": false
+    },
+    {
+      "name": "Stegte Nudler Kylling 89 kr",
+      "category": "INDISK / Hovedretter",
+      "ingredients": [
+        "Nudler",
+        "Sojasauce"
+      ],
+      "variants": [
+        "Alm."
+      ],
+      "additions": [],
+      "isCombo": false
+    },
+    {
+      "name": "Pad Thai Vegetar 89 kr",
+      "category": "INDISK / Hovedretter",
+      "ingredients": [
+        "Tofu",
+        "Bonnespirer"
+      ],
+      "variants": [
+        "Alm."
+      ],
+      "additions": [],
+      "isCombo": false
+    },
+    {
+      "name": "Gron Curry Tofu 95 kr",
+      "category": "INDISK / Hovedretter",
+      "ingredients": [
+        "Kokosmaelk",
+        "Basilikum",
+        "Tofu"
+      ],
+      "variants": [
+        "Alm."
+      ],
+      "additions": [],
+      "isCombo": false
+    }
+  ],
+  "statusAccounting": {
+    "ready": 16,
+    "review": 0,
+    "blocked": 0
+  }
+}

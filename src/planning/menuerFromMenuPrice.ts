@@ -1,9 +1,10 @@
 /**
  * Hard SEMANTIC_RULE: Menu column prices become Menuer category products —
- * never Alm./Menu variants on the burger card.
+ * never Alm./Menu variants on the base card.
  *
- * Each Menuer item is priced at the Menu column total and requires
- * fries + dip + soda sub-choices (combo composition).
+ * MenuConstitutionV1: do NOT invent combo contents (fries/dip/soda) unless the
+ * source product family is burger/smash (Danish takeaway Menu convention) or
+ * another explicit evidence path. Unresolved combos stay price-only + review.
  */
 
 import type {
@@ -29,6 +30,17 @@ function basePriceOre(product: SourceProduct): number | null {
   if (opt?.sourceTotalPrice != null) return opt.sourceTotalPrice;
   const alm = product.variants.find((v) => /^alm\.?$/i.test(v.name));
   return alm?.sourceTotalPrice ?? null;
+}
+
+/** Burger/smash Menu composition is a Danish takeaway convention (not merchant-specific). */
+function burgerMenuCompositionAuthorized(
+  productName: string,
+  categoryName: string,
+): boolean {
+  return (
+    /burger|smash/i.test(productName) ||
+    /burgers?/i.test(categoryName.trim())
+  );
 }
 
 function menuerChoices(burgerSourceId: string): SourceProductChoice[] {
@@ -104,10 +116,14 @@ export function synthesizeMenuerProductsFromMenuPrices(
 
       const name = /menu\b/i.test(p.name) ? p.name : `${p.name} Menu`;
       const sourceId = `src:menuer:${p.sourceId}`;
+      const authorized = burgerMenuCompositionAuthorized(p.name, cat.name);
+
       menuerProducts.push({
         sourceId,
         name,
-        description: `Menu: ${p.name}, fries, dip & sodavand`,
+        description: authorized
+          ? `Menu: ${p.name}, fries, dip & sodavand`
+          : `Menu: ${p.name}`,
         sourceOrder: order++,
         ingredients: [],
         variants: [
@@ -119,7 +135,7 @@ export function synthesizeMenuerProductsFromMenuPrices(
           },
         ],
         addOns: [],
-        productChoices: menuerChoices(p.sourceId),
+        productChoices: authorized ? menuerChoices(p.sourceId) : [],
         isCombo: true,
         confidence: p.confidence ?? 0.75,
         ...(p.evidence ? { evidence: p.evidence } : {}),

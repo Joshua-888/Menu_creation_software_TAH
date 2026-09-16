@@ -80,17 +80,31 @@ export const BUILT_IN_SEMANTIC_RULES: BuiltInSemanticRule[] = [
     ],
   },
   {
+    id: "menu-constitution-v1",
+    title: "MenuConstitutionV1 — global invariants",
+    summary:
+      "Single versioned constitution: Menu is combo not variant; drinks never food extras; food cards must be complete; description from final ingredients; provenance required.",
+    appliesTo: "Create + QA via MenuIntelligenceEngine",
+    adjustableVia: "src/intelligence/constitution.ts (system-level — not restaurant-scoped)",
+    details: [
+      "MENU_IS_COMBO_NOT_VARIANT supersedes MENU_AS_VARIANT",
+      "DRINKS_NO_FOOD_EXTRAS is hard and independent of peer probability load",
+      "WritePlan only for QUALITY_READY products",
+    ],
+  },
+  {
     id: "menu-never-variant",
     title: "Menu is never a variant — Menuer is a category",
     summary:
       "A combo meal (burger + pommes + soda) must be its own product under a Menuer category with required sub-choices. Never encode Menu as Alm./Menu size variants on Grill or other items.",
-    appliesTo: "Create + QA variant polish / structure mapping / structural fan-out",
+    appliesTo: "Create + QA via MenuIntelligenceEngine + variant polish / structure mapping",
     adjustableVia:
-      "Hard SEMANTIC_RULE (isForbiddenMenuVariantName); Menuer category policies when that category type is modeled",
+      "MenuConstitutionV1 MENU_IS_COMBO_NOT_VARIANT; isForbiddenMenuVariantName",
     details: [
       "Strip any variant named Menu / Menü on write and QA",
       "Size axis is Alm./Familie/Deep/… — not Menu",
       "PDF BASE+Menu columns must not become a Menu variant on the dish card",
+      "Legacy MENU_AS_VARIANT is SUPERSEDED — not active",
     ],
   },
   {
@@ -142,7 +156,8 @@ export const BUILT_IN_SEMANTIC_RULES: BuiltInSemanticRule[] = [
       "peer-probability-policy.json + PORTAL_APPLY_PEER_PROBABILITY*; operator guidance",
     details: [
       "Artifact: runs/decisions/peer-probability-policy.json",
-      "Veroni applies by default; other hosts need opt-in env",
+      "Opt-in via PORTAL_APPLY_PEER_PROBABILITY=1 or PORTAL_APPLY_PEER_PROBABILITY_HOSTS (no restaurant default)",
+      "Hard constitution rules (drinks/Tilbehør) apply regardless of artifact load",
     ],
   },
   {
