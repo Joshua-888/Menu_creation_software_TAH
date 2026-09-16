@@ -31,5 +31,10 @@ fixtures/smash-photo-ocr-pre.json
 fixtures/smash-photo-preprocessed.png
 fixtures/smash-photo.b64.txt
 fixtures/smash-pages-debug.json
+fixtures/smash-menu-photo.jpeg
+fixtures/smash-photo-extract.json
+fixtures/smashburger-menu.pdf
 scripts/debug-smash-*.ts
+scripts/submit-smash-create.ts
+scripts/submit-smash-qa.ts
 
