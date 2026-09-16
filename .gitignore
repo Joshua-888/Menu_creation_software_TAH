@@ -37,4 +37,5 @@ fixtures/smashburger-menu.pdf
 scripts/debug-smash-*.ts
 scripts/submit-smash-create.ts
 scripts/submit-smash-qa.ts
+scripts/smash-controlled-live-preflight.mts
 

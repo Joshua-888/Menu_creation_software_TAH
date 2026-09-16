@@ -11,6 +11,17 @@ import { existsSync, readdirSync } from "node:fs";
 const port = process.env.PORT?.trim() || "3000";
 const host = process.env.HOST?.trim() || "0.0.0.0";
 
+// Deployment provenance for /api/version (no secrets).
+if (!process.env.BUILD_TIME?.trim()) {
+  process.env.BUILD_TIME = new Date().toISOString();
+}
+if (
+  !process.env.GIT_COMMIT_SHA?.trim() &&
+  process.env.RAILWAY_GIT_COMMIT_SHA?.trim()
+) {
+  process.env.GIT_COMMIT_SHA = process.env.RAILWAY_GIT_COMMIT_SHA.trim();
+}
+
 // Never use the volume browser cache — it was installed without OS libs and
 // still breaks even after Chromium binaries exist under /data/ms-playwright.
 if (process.env.PLAYWRIGHT_BROWSERS_PATH?.startsWith("/data/")) {
