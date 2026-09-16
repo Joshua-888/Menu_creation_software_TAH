@@ -63,16 +63,15 @@ export function NewJobForm({
       ) : (
         <>
           <div className="field">
-            <label htmlFor="file">Menu PDF</label>
+            <label htmlFor="file">Menu PDF or photo</label>
             <input
               id="file"
               name="file"
               type="file"
-              accept=".pdf,application/pdf"
+              accept=".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/*"
             />
             <span className="muted">
-              End-to-end create runs require a PDF (max 25MB). Optional source
-              URL can be stored alongside it.
+              PDF preferred. Clear menu photos (JPEG/PNG) are OCR’d (max 25MB).
             </span>
           </div>
           <div className="field">

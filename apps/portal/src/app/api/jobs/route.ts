@@ -80,13 +80,17 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "File too large (max 25MB)" }, { status: 400 });
     }
     const mime = file.type || guessMime(file.name);
+    const lower = file.name.toLowerCase();
     const isPdf =
-      mime === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
-    if (!isPdf) {
+      mime === "application/pdf" || lower.endsWith(".pdf");
+    const isImage =
+      mime.startsWith("image/") ||
+      /\.(png|jpe?g|webp)$/i.test(lower);
+    if (!isPdf && !isImage) {
       return NextResponse.json(
         {
           error:
-            "MVP extraction requires a PDF. Standalone image uploads are not runnable yet — convert the menu to PDF first.",
+            "Upload a menu PDF or a clear photo (JPEG/PNG/WebP).",
         },
         { status: 400 },
       );

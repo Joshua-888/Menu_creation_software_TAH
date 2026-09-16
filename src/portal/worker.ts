@@ -215,19 +215,29 @@ export async function runMigrationJob(
       f.mimeType === "application/pdf" ||
       f.originalName.toLowerCase().endsWith(".pdf"),
   );
-  if (!isQaJob && !pdf) {
+  const image = files.find((f) => {
+    const n = f.originalName.toLowerCase();
+    return (
+      f.mimeType.startsWith("image/") ||
+      /\.(png|jpe?g|webp)$/i.test(n)
+    );
+  });
+  if (!isQaJob && !pdf && !image) {
     if (job.sourceUrl) {
       store.updateJobStatus(jobId, "SOURCE_URL_PENDING", {
         errorMessage:
-          "No PDF uploaded. URL fetch adapter is queued for a later milestone.",
+          "No menu file uploaded. Upload a PDF or clear photo to run end-to-end.",
       });
       return;
     }
     store.updateJobStatus(jobId, "FAILED", {
-      errorMessage: "No PDF file attached to job",
+      errorMessage: "No PDF or menu photo attached to job",
     });
     return;
   }
+
+  const sourceUpload = pdf ?? image!;
+  const sourceKind = pdf ? ("pdf" as const) : ("image" as const);
 
   const runStub = store.createJobRun(jobId, "", "QUEUED");
   const outDir = jobRunDir(jobId, runStub.id);
@@ -289,8 +299,8 @@ export async function runMigrationJob(
     } else {
       const adapter = new PdfSourceAdapter({ restaurantName: job.merchantName });
       const extraction = await adapter.extractDetailed({
-        kind: "pdf",
-        filePath: pdf!.storedPath,
+        kind: sourceKind,
+        filePath: sourceUpload.storedPath,
       });
 
       writeJson(outDir, "source-menu.json", extraction.sourceMenu);
@@ -302,17 +312,19 @@ export async function runMigrationJob(
       });
       metrics.pageCount = extraction.pageCount;
       metrics.uniqueProducts = extraction.uniqueProducts;
-      sourceLabel = pdf!.originalName;
+      sourceLabel = sourceUpload.originalName;
       adapterVersion = adapter.extractorVersion;
 
       if (
-        extraction.uniqueProducts === 0 ||
-        (extraction.accounting.summary.extracted ?? 0) === 0
+        extraction.sourceMenu.categories.reduce(
+          (n, c) => n + c.products.length,
+          0,
+        ) === 0
       ) {
         throw new Error(
           `PDF extraction found no usable products across ${extraction.pageCount} page(s) ` +
             `(candidates=${extraction.accounting.summary.candidatesDetected}, extracted=${extraction.accounting.summary.extracted}). ` +
-            `Image-only / low-quality scans often need a text PDF or a clearer photo. Retry Create with a better file.`,
+            `Image-only / low-quality scans often need a clearer photo or text PDF. Retry Create with a better file.`,
         );
       }
 

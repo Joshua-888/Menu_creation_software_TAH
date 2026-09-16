@@ -76,6 +76,8 @@ export type SourceCandidate = {
   confidence: number;
   evidence: SourceEvidence;
   rawLineBundle: string;
+  /** Left-to-right / top-to-bottom position when the card has no printed numbers. */
+  readingOrder?: number;
 };
 
 export type SourceAccountingEntry = {

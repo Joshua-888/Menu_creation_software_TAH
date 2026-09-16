@@ -30,9 +30,20 @@ function normName(s: string): string {
     .replace(/[^a-z0-9]+/g, "");
 }
 
-function stableSourceId(menuNumber: string, name: string | undefined): string {
+function stableSourceId(
+  menuNumber: string | undefined,
+  name: string | undefined,
+): string {
   const nm = name ? normName(name).slice(0, 40) : "unnamed";
-  return `src:${menuNumber}:${nm}`;
+  const num = menuNumber?.trim() || "?";
+  return `src:${num}:${nm}`;
+}
+
+function isUnnumberedProductCandidate(c: SourceCandidate): boolean {
+  if (c.menuNumber?.trim()) return false;
+  if (looksLikeBadProductName(c.name)) return false;
+  const prices = stripMenuNumberFalsePrices(c.rawPrices, c.menuNumber);
+  return prices.length > 0 || !!(c.ingredientText ?? c.description);
 }
 
 function menuNumberSortKey(n: string): [number, string] {
@@ -54,6 +65,7 @@ function looksLikeBadProductName(n?: string): boolean {
     return true;
   }
   if (/,$/.test(t) && t.split(/\s+/).length <= 3) return true;
+  if (/fries\s+inkl|re\s+fries|inkl\.\s*di\b/i.test(t)) return true;
   return false;
 }
 
@@ -387,19 +399,27 @@ export function reconcileCandidatesToSourceMenu(input: {
 }): ReconcileResult {
   const entries: SourceAccountingEntry[] = [];
   const byMenu = new Map<string, SourceCandidate[]>();
+  const byUnnumberedName = new Map<string, SourceCandidate[]>();
 
   for (const c of input.candidates) {
     if (!c.menuNumber) {
-      entries.push({
-        candidateId: c.candidateId,
-        sourceLocation: `page:${c.pageNumber}`,
-        detectedItem: c.name ?? "(no menu number)",
-        classification: "orphan_row",
-        disposition: "NON_PRODUCT",
-        reason: "row without validated menu-number anchor",
-        pageNumber: c.pageNumber,
-        ...(c.name ? { name: c.name } : {}),
-      });
+      if (isUnnumberedProductCandidate(c)) {
+        const key = normName(c.name ?? "");
+        const list = byUnnumberedName.get(key) ?? [];
+        list.push(c);
+        byUnnumberedName.set(key, list);
+      } else {
+        entries.push({
+          candidateId: c.candidateId,
+          sourceLocation: `page:${c.pageNumber}`,
+          detectedItem: c.name ?? "(no menu number)",
+          classification: "orphan_row",
+          disposition: "NON_PRODUCT",
+          reason: "row without validated menu-number anchor",
+          pageNumber: c.pageNumber,
+          ...(c.name ? { name: c.name } : {}),
+        });
+      }
       continue;
     }
     const key = c.menuNumber;
@@ -411,7 +431,10 @@ export function reconcileCandidatesToSourceMenu(input: {
   const extracted: SourceCandidate[] = [];
   let duplicateOccurrences = 0;
 
-  for (const [menuNumber, group] of byMenu) {
+  const reconcileGroup = (
+    menuNumber: string | undefined,
+    group: SourceCandidate[],
+  ) => {
     const sorted = group.slice().sort((a, b) => a.pageNumber - b.pageNumber);
     let primary = sorted[0]!;
     for (let i = 1; i < sorted.length; i++) {
@@ -419,21 +442,41 @@ export function reconcileCandidatesToSourceMenu(input: {
     }
     const dupes = sorted.filter((c) => c.candidateId !== primary.candidateId);
     const merged = dupes.length ? mergeEvidence(primary, dupes) : primary;
+    if (looksLikeBadProductName(merged.name)) {
+      entries.push({
+        candidateId: primary.candidateId,
+        sourceLocation: `page:${primary.pageNumber}`,
+        detectedItem: `${menuNumber ?? "?"} ${merged.name ?? ""}`.trim(),
+        classification: "orphan_row",
+        disposition: "NON_PRODUCT",
+        reason: "OCR/layout row does not look like a product title",
+        pageNumber: primary.pageNumber,
+        ...(menuNumber ? { menuNumber } : {}),
+        ...(merged.name ? { name: merged.name } : {}),
+      });
+      return;
+    }
     extracted.push(merged);
 
     const sourceId = stableSourceId(menuNumber, merged.name);
     entries.push({
       candidateId: primary.candidateId,
       sourceLocation: `page:${primary.pageNumber}`,
-      detectedItem: `${menuNumber} ${primary.name ?? "(unnamed)"}`.trim(),
+      detectedItem: menuNumber
+        ? `${menuNumber} ${primary.name ?? "(unnamed)"}`.trim()
+        : (primary.name ?? "(unnamed)"),
       classification: "product_candidate",
       sourceId,
       disposition: "EXTRACTED",
       reason: dupes.length
-        ? `primary extract; ${dupes.length} overlapping occurrence(s) reconciled by menuNumber`
-        : "unique menuNumber extract",
+        ? menuNumber
+          ? `primary extract; ${dupes.length} overlapping occurrence(s) reconciled by menuNumber`
+          : `primary extract; ${dupes.length} overlapping occurrence(s) reconciled by name`
+        : menuNumber
+          ? "unique menuNumber extract"
+          : "unnumbered product extract (decade numbering at domain)",
       pageNumber: primary.pageNumber,
-      menuNumber,
+      ...(menuNumber ? { menuNumber } : {}),
       ...(primary.name ? { name: primary.name } : {}),
     });
 
@@ -442,16 +485,25 @@ export function reconcileCandidatesToSourceMenu(input: {
       entries.push({
         candidateId: d.candidateId,
         sourceLocation: `page:${d.pageNumber}`,
-        detectedItem: `${d.menuNumber} ${d.name ?? "(unnamed)"}`.trim(),
+        detectedItem: `${d.menuNumber ?? "?"} ${d.name ?? "(unnamed)"}`.trim(),
         classification: "product_candidate",
         sourceId,
         disposition: "DUPLICATE_SOURCE_EVIDENCE",
-        reason: `reconciled into ${sourceId} via menuNumber ${menuNumber}`,
+        reason: menuNumber
+          ? `reconciled into ${sourceId} via menuNumber ${menuNumber}`
+          : `reconciled into ${sourceId} via product name`,
         pageNumber: d.pageNumber,
-        menuNumber,
+        ...(menuNumber ? { menuNumber } : {}),
         ...(d.name ? { name: d.name } : {}),
       });
     }
+  };
+
+  for (const [menuNumber, group] of byMenu) {
+    reconcileGroup(menuNumber, group);
+  }
+  for (const [, group] of byUnnumberedName) {
+    reconcileGroup(undefined, group);
   }
 
   for (const page of input.pages) {
@@ -471,10 +523,33 @@ export function reconcileCandidatesToSourceMenu(input: {
     }
   }
 
+  const readingOrderKey = (c: SourceCandidate): number => {
+    if (typeof c.readingOrder === "number") return c.readingOrder;
+    const page = input.pages.find((p) => p.pageNumber === c.pageNumber);
+    const flat = (page?.rawText ?? c.evidence?.rawText ?? "").toLowerCase();
+    const name = (c.name ?? "").toLowerCase().trim();
+    if (!name || !flat) return 999_999;
+    const direct = flat.indexOf(name);
+    return direct >= 0 ? direct : 999_999;
+  };
+
   extracted.sort((a, b) => {
-    const [an, as] = menuNumberSortKey(a.menuNumber ?? "");
-    const [bn, bs] = menuNumberSortKey(b.menuNumber ?? "");
-    return an - bn || as.localeCompare(bs);
+    if (a.pageNumber !== b.pageNumber) {
+      return a.pageNumber - b.pageNumber;
+    }
+    const aNum = a.menuNumber?.trim();
+    const bNum = b.menuNumber?.trim();
+    if (aNum && bNum) {
+      const [an, as] = menuNumberSortKey(aNum);
+      const [bn, bs] = menuNumberSortKey(bNum);
+      return an - bn || as.localeCompare(bs);
+    }
+    if (aNum !== bNum) {
+      return aNum ? -1 : 1;
+    }
+    const ro = readingOrderKey(a) - readingOrderKey(b);
+    if (ro !== 0) return ro;
+    return a.candidateId.localeCompare(b.candidateId);
   });
 
   const categoryMap = new Map<string, SourceProduct[]>();
@@ -487,7 +562,7 @@ export function reconcileCandidatesToSourceMenu(input: {
       catName = "UNLABELLED_PAGE5_36_38";
     }
 
-    const sourceId = stableSourceId(c.menuNumber!, c.name);
+    const sourceId = stableSourceId(c.menuNumber, c.name);
     const pricing = buildPricing(c);
     const recoveredIng = recoverIngredientTextFromEvidence({
       ...(c.ingredientText ? { ingredientText: c.ingredientText } : {}),
@@ -513,7 +588,9 @@ export function reconcileCandidatesToSourceMenu(input: {
     const product: SourceProduct = {
       sourceId,
       name: repairScandinavianOcrName(c.name ?? ""),
-      sourceMenuNumber: c.menuNumber,
+      ...(c.menuNumber?.trim()
+        ? { sourceMenuNumber: c.menuNumber.trim() }
+        : {}),
       sourceOrder: order++,
       ingredients,
       variants: pricing.variants,

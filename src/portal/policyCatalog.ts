@@ -55,6 +55,18 @@ export const BUILT_IN_SEMANTIC_RULES: BuiltInSemanticRule[] = [
     ],
   },
   {
+    id: "synthetic-menu-number-decades",
+    title: "Synthetic menu numbers — decade blocks per category",
+    summary:
+      "When the card (or a category) has no printed item numbers, assign in reading order: 1,2,3… within the first category, then the next category starts at the next tenth (10,11… then 20,21…). Preserves any numbers printed on the card.",
+    appliesTo: "PDF/photo extract → domain assignMenuNumbers → Create",
+    adjustableVia: "Hard SEMANTIC_RULE in domain/numbering.ts",
+    details: [
+      "Category order follows sourceOrder from extraction (left-to-right reading order on the page)",
+      "Mixed categories with some printed numbers: unnumbered categories still jump to the next decade after the highest number seen",
+    ],
+  },
+  {
     id: "menu-never-variant",
     title: "Menu is never a variant — Menuer is a category",
     summary:
