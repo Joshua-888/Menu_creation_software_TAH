@@ -4,7 +4,7 @@
  */
 
 import { readFileSync } from "node:fs";
-import { createWorker } from "tesseract.js";
+import { createWorker, PSM } from "tesseract.js";
 import { createCanvas, loadImage } from "@napi-rs/canvas";
 import { rebuildLines } from "../pdf/ingest.js";
 import { repairScandinavianOcrName } from "../pdf/scandinavianRepair.js";
@@ -56,7 +56,7 @@ export async function ingestMenuImage(filePath: string): Promise<{
 
   const worker = await createWorker("dan+eng");
   await worker.setParameters({
-    tessedit_pageseg_mode: "6",
+    tessedit_pageseg_mode: PSM.SINGLE_BLOCK,
   });
   const {
     data: { words },
