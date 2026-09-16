@@ -13,6 +13,7 @@ import {
 import { looksLikeGarbageName } from "../domain/textNormalize.js";
 import { classifyPhrase, isInvalidProductNameEntity } from "./semanticClassifier.js";
 import { inferProductFamily, isFoodFamily } from "./peerCohorts.js";
+import { isProductNameReceiptSafe } from "./categoryQualifiedProductName.js";
 import type {
   MenuCoherenceCheck,
   MenuQualityContractResult,
@@ -56,6 +57,20 @@ function evaluateProduct(
       "PRODUCT_NAME_VALID",
       nameValid,
       nameValid ? undefined : `invalid name "${name}" (${nameCls.entityType})`,
+    ),
+  );
+
+  const receiptSafe = isProductNameReceiptSafe({
+    productName: name,
+    categoryName,
+  });
+  checks.push(
+    check(
+      "PRODUCT_NAME_RECEIPT_SAFE",
+      receiptSafe,
+      receiptSafe
+        ? undefined
+        : `name "${name}" under "${categoryName}" is ambiguous on receipts without category`,
     ),
   );
 
@@ -244,6 +259,7 @@ function evaluateProduct(
   // Hard blockers vs review
   const hardFailIds = new Set([
     "PRODUCT_NAME_VALID",
+    "PRODUCT_NAME_RECEIPT_SAFE",
     "NO_MENU_VARIANT",
     "NO_META_AS_INGREDIENT",
     "NO_OCR_GARBAGE",

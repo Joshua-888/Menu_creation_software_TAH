@@ -69,7 +69,20 @@ export function runMenuIntelligence(
       name: card.name,
       category: card.categoryName,
       fields: {
-        name: { value: card.name, source: "SOURCE" },
+        name: {
+          value: card.name,
+          source:
+            (card.provenance.find((p) => p.field === "name")?.origin ===
+            "SEMANTIC_RULE"
+              ? "SEMANTIC_RULE"
+              : "SOURCE") as string,
+          policy:
+            (
+              card.policyTrace.categoryQualifiedProductName as
+                | { policyId?: string }
+                | undefined
+            )?.policyId ?? null,
+        },
         ingredients: card.ingredients.map((v) => ({
           value: v,
           origin: card.policyTrace.ingredientOrigin,

@@ -21,6 +21,15 @@ export const MENU_CONSTITUTION = {
         "Menu",
       ],
     },
+    CATEGORY_QUALIFIED_PRODUCT_NAME: {
+      id: "CATEGORY_QUALIFIED_PRODUCT_NAME_V1",
+      rule: "GLOBAL: For semantic families SALAD/PITA/DURUM/ROLL/PIZZA_SANDWICH/SANDWICH/BAGEL, filling-only product names must be receipt-qualified as \"<Product type> m. <name>\" so kitchen receipts remain unambiguous without category context. Already self-describing names are preserved. Idempotent. Scope GLOBAL — never merchant-specific.",
+      examples: [
+        "Salater + Tun → Salat m. Tun",
+        "Pita + Kebab → Pita m. Kebab",
+        "Græsk Salat → unchanged",
+      ],
+    },
     CATEGORY: {
       id: "CATEGORY",
       rule: "Category must semantically fit products. Prefer explicit source branding (e.g. Smash Burgers). Do not place burgers under Grill merely from a generic cooking-method mapping when product-family evidence supports Burgers.",
@@ -92,6 +101,7 @@ export const ACTIVE_CONSTITUTION_POLICIES = [
   "DRINKS_NO_FOOD_EXTRAS",
   "FOOD_COMPLETENESS",
   "PRODUCT_NAME_VALID",
+  "CATEGORY_QUALIFIED_PRODUCT_NAME_V1",
   "INGREDIENT_PROVENANCE",
 ] as const;
 

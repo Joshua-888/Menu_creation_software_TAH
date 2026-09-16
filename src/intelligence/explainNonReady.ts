@@ -26,6 +26,7 @@ export type ExactNonReadyIssue = {
 
 const FIELD_BY_CHECK: Record<string, string> = {
   PRODUCT_NAME_VALID: "name",
+  PRODUCT_NAME_RECEIPT_SAFE: "name",
   CATEGORY_SEMANTIC_FIT: "category",
   DESCRIPTION_PROFESSIONAL: "description",
   INGREDIENTS_COMPLETE: "ingredients",
@@ -47,6 +48,8 @@ const FIELD_BY_CHECK: Record<string, string> = {
 
 const REQUIRED_BY_CHECK: Record<string, string> = {
   PRODUCT_NAME_VALID: "Valid dish title (not topping/category/garbage)",
+  PRODUCT_NAME_RECEIPT_SAFE:
+    "Name must identify the physical product type without category context (receipt-safe)",
   CATEGORY_SEMANTIC_FIT: "Category must match product family semantics",
   DESCRIPTION_PROFESSIONAL:
     "Non-empty professional description without price leakage",
@@ -115,6 +118,8 @@ function whyNotAutoResolved(check: QualityCheckResult): string {
     case "PRODUCT_NAME_VALID":
     case "NO_OCR_GARBAGE":
       return "Name fails classifier/garbage rules; cannot rename dish without source evidence";
+    case "PRODUCT_NAME_RECEIPT_SAFE":
+      return "CATEGORY_QUALIFIED_PRODUCT_NAME_V1 did not apply or name remains ambiguous without category on receipts";
     case "NO_MENU_VARIANT":
       return "Menu-as-variant forbidden by MenuConstitutionV1; exact combo contents unavailable so cannot invent Menu contents";
     case "CATEGORY_SEMANTIC_FIT":

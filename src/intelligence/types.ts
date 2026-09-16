@@ -35,7 +35,8 @@ export type FieldOrigin =
   | "PEER_INFERENCE"
   | "DOMAIN_PRIOR"
   | "DERIVED"
-  | "SYSTEM_DEFAULT";
+  | "SYSTEM_DEFAULT"
+  | "SEMANTIC_RULE";
 
 export type FieldProvenance = {
   field: string;
@@ -91,6 +92,7 @@ export type MenuQualityStatus =
 
 export type QualityCheckId =
   | "PRODUCT_NAME_VALID"
+  | "PRODUCT_NAME_RECEIPT_SAFE"
   | "CATEGORY_SEMANTIC_FIT"
   | "DESCRIPTION_PROFESSIONAL"
   | "INGREDIENTS_COMPLETE"

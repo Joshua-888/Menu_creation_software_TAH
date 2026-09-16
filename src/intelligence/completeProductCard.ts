@@ -30,6 +30,7 @@ import {
   isInvalidIngredientEntity,
 } from "./semanticClassifier.js";
 import { inferProductFamily, isFoodFamily } from "./peerCohorts.js";
+import { applyCategoryQualifiedProductName } from "./categoryQualifiedProductName.js";
 import type {
   CompletedProductCard,
   FieldProvenance,
@@ -293,7 +294,12 @@ export function completeProductCard(input: {
   existingAdditions?: Array<{ name: string; priceOre?: number }>;
   preserveLiveRichness?: boolean;
 }): CompletedProductCard {
-  const name = formatProductName(input.product.name);
+  const sourceName = formatProductName(input.product.name);
+  const qualified = applyCategoryQualifiedProductName({
+    productName: sourceName,
+    categoryName: input.categoryName,
+  });
+  const name = qualified.name;
   const family = inferProductFamily({
     name,
     categoryName: input.categoryName,
@@ -302,7 +308,18 @@ export function completeProductCard(input: {
       : {}),
   });
   const provenanceList: FieldProvenance[] = [
-    provenance("name", name, "SOURCE", 0.95),
+    provenance(
+      "name",
+      name,
+      qualified.trace.changed ? "SEMANTIC_RULE" : "SOURCE",
+      qualified.trace.changed ? 0.92 : 0.95,
+      qualified.trace.changed
+        ? {
+            reason: `${qualified.trace.policyId}:${qualified.trace.reason}`,
+            sourceRef: qualified.trace.originalName,
+          }
+        : undefined,
+    ),
     provenance("category", input.categoryName, "SOURCE", 0.9),
   ];
 
@@ -532,6 +549,7 @@ export function completeProductCard(input: {
       ingredientOrigin,
       menuAsVariant: "SUPERSEDED→MENU_IS_COMBO_NOT_VARIANT",
       drinksNoFoodExtras: family === "DRINK",
+      categoryQualifiedProductName: qualified.trace,
     },
   };
 }

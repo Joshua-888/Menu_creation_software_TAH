@@ -80,6 +80,22 @@ export const BUILT_IN_SEMANTIC_RULES: BuiltInSemanticRule[] = [
     ],
   },
   {
+    id: "category-qualified-product-name-v1",
+    title: "CATEGORY_QUALIFIED_PRODUCT_NAME_V1 — receipt-safe names",
+    summary:
+      "GLOBAL: Underspecified filling-only names in Salat/Pita/Durum/Rulle/Pizza Sandwich/Sandwich/Bagel families become \"<type> m. <name>\" so kitchen receipts stay unambiguous without category context.",
+    appliesTo: "Create + QA via completeProductCard / MenuIntelligenceEngine",
+    adjustableVia:
+      "SEMANTIC_RULE CATEGORY_QUALIFIED_PRODUCT_NAME_V1 in intelligence/categoryQualifiedProductName.ts + MenuConstitutionV1",
+    details: [
+      "Families: SALAD, PITA, DURUM, ROLL, PIZZA_SANDWICH, SANDWICH, BAGEL",
+      "Already self-describing names (Græsk Salat, Club Sandwich, Pita m. Kebab) unchanged",
+      "Idempotent — never Salat m. Salat m. Tun",
+      "Does not apply to Pizza/Burger/Drinks (no Pizza m. Margherita)",
+      "QualityContract PRODUCT_NAME_RECEIPT_SAFE enforces post-completion",
+    ],
+  },
+  {
     id: "menu-constitution-v1",
     title: "MenuConstitutionV1 — global invariants",
     summary:

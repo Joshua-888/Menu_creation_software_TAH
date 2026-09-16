@@ -3,6 +3,13 @@
  */
 
 export {
+  applyCategoryQualifiedProductName,
+  isProductNameReceiptSafe,
+  resolveReceiptNamingFamily,
+  CATEGORY_QUALIFIED_PRODUCT_NAME_POLICY_ID,
+  RECEIPT_NAMING_FAMILIES,
+} from "./categoryQualifiedProductName.js";
+export {
   MENU_CONSTITUTION,
   MENU_CONSTITUTION_VERSION,
   MENU_AS_VARIANT_SUPERSESSION,
