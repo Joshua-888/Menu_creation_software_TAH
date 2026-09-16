@@ -4,7 +4,7 @@ import {
   looksLikeCategoryHeaderName,
   recoverDishNameFromDescription,
   recoverProductLabelsForReconcile,
-  diffProductReconcile,
+  type ProductReconcileDiff,
 } from "../../src/planning/menuReconcile.js";
 import {
   buildDryRunWritePlan,
@@ -194,7 +194,7 @@ describe("dryRun FOUND reconcile vs create", () => {
   });
 
   it("QA path emits UPDATE for header-like FOUND names", () => {
-    const reconcileDiffs: ReturnType<typeof diffProductReconcile>[] = [];
+    const reconcileDiffs: ProductReconcileDiff[] = [];
     const plan = buildDryRunWritePlan({
       runId: "t2",
       restaurant: "veronipizza.dk",
@@ -231,7 +231,7 @@ describe("dryRun FOUND reconcile vs create", () => {
   });
 
   it("QA path UPDATEs defects but skips when live is already good", () => {
-    const reconcileDiffs: ReturnType<typeof diffProductReconcile>[] = [];
+    const reconcileDiffs: ProductReconcileDiff[] = [];
     const plan = buildDryRunWritePlan({
       runId: "t3",
       restaurant: "veronipizza.dk",
@@ -281,7 +281,7 @@ describe("dryRun FOUND reconcile vs create", () => {
     ).toBe(true);
 
     // Live already good → no overwrite from thinner source
-    const skipDiffs: ReturnType<typeof diffProductReconcile>[] = [];
+    const skipDiffs: ProductReconcileDiff[] = [];
     const skipPlan = buildDryRunWritePlan({
       runId: "t3b",
       restaurant: "veronipizza.dk",

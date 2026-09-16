@@ -15,7 +15,7 @@ export function parseMenuNumberFromAnchor(raw: string): string | null {
   const trimmed = raw.trim();
   if (isPriceCommaToken(trimmed)) return null;
 
-  let s = trimmed.replace(/[.,:]+$/g, "");
+  const s = trimmed.replace(/[.,:]+$/g, "");
   if (PRICE_OCR_GARBAGE.test(s)) return null;
 
   if (ROMANISH_ELEVEN.test(s)) return "11";

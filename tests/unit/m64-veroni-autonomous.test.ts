@@ -304,7 +304,7 @@ describe("M6.4 Veroni autonomous decision pass", () => {
     for (const c of cases) {
       c.status = "HUMAN_REVIEW_REQUIRED";
     }
-    const outcomes: DecisionOutcome[] = cases.map((c) => ({
+    const _outcomes: DecisionOutcome[] = cases.map((c) => ({
       decisionCaseId: c.decisionCaseId,
       status: "HUMAN_REVIEW_REQUIRED",
       resolution: null,
@@ -322,6 +322,7 @@ describe("M6.4 Veroni autonomous decision pass", () => {
       reasoner: null,
       policyMatches: [],
     }));
+    void _outcomes;
     // Without batching key shared — ADDITION_SET with different menu numbers stay separate
     // unless same batch group. Prove Menu-style grouping: identical slash/group keys collapse.
     const slashCases = ["60a", "60b"].map((id, i) => {

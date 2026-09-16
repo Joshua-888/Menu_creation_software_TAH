@@ -251,7 +251,7 @@ function updatePriceModeFromLine(
 
 function variantNamesForProduct(
   state: SectionState,
-  productName: string,
+  _productName: string,
 ): { names: string[]; consumeLocal: boolean; mode: PriceColumnMode } {
   // Attach Lille/Stor when both seen — next product only (typically Pommes)
   if (

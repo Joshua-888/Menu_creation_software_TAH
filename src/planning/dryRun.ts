@@ -595,7 +595,7 @@ export function buildDryRunWritePlan(input: {
           liveSnapshotCategoryName(live, input.destination.categories) ||
           category.name;
         // Live-first quality merge: never overwrite good live with worse source/PDF.
-        let intended = buildQaTargetPayload({
+        const intended = buildQaTargetPayload({
           live,
           sourcePayload,
           liveCategoryName,

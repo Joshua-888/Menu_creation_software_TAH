@@ -22,7 +22,7 @@ import {
   isStructureWriteConfirmed,
   assertStructureWriteConfirmed,
 } from "../../src/portal/structureWriteGate.js";
-import type { CanonicalMenu } from "../../src/domain/schema/canonical.js";
+import type { CanonicalMenu, CanonicalProduct } from "../../src/domain/schema/canonical.js";
 import { readFileSync } from "node:fs";
 
 const dirs: string[] = [];
@@ -94,7 +94,7 @@ describe("peer menu structure learning", () => {
       ],
     };
     const mappedNoSize = mapProductChoicesToWriteFields(
-      pitaLike as unknown as import("../../src/domain/schema/canonical.js").CanonicalProduct,
+      pitaLike as unknown as CanonicalProduct,
       pattern,
     );
     expect(mappedNoSize.variants.map((v) => v.name)).toEqual([
@@ -110,7 +110,7 @@ describe("peer menu structure learning", () => {
       ],
     };
     const mappedStripMenu = mapProductChoicesToWriteFields(
-      withMenu as unknown as import("../../src/domain/schema/canonical.js").CanonicalProduct,
+      withMenu as unknown as CanonicalProduct,
       pattern,
     );
     expect(mappedStripMenu.variants.some((v) => /menu/i.test(v.name))).toBe(

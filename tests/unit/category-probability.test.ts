@@ -4,7 +4,6 @@ import {
   distillProbabilityPolicy,
   filterAdditionsForProduct,
   estimateKindProbabilities,
-  PROB_THRESHOLDS,
 } from "../../src/learning/categoryLikelihood.js";
 import type { PeerMenuSnapshot } from "../../src/learning/peerMenuStructure.js";
 

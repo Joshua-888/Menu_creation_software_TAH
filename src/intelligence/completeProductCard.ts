@@ -2,7 +2,7 @@
  * One professional product-card completion engine used by Create and QA.
  */
 
-import type { CanonicalProduct } from "../domain/schema/canonical.js";
+import type { CanonicalProduct, CanonicalMenu } from "../domain/schema/canonical.js";
 import {
   resolveGrillIngredients,
   grillIngredientsInsufficient,
@@ -558,11 +558,11 @@ export function completeProductCard(input: {
  * Apply completeProductCard across an entire canonical menu (shared Create+QA).
  */
 export function completeCanonicalMenuCards(input: {
-  menu: import("../domain/schema/canonical.js").CanonicalMenu;
+  menu: CanonicalMenu;
   ingredientLikelihood?: IngredientLikelihoodPolicy | null;
   preserveLiveRichness?: boolean;
 }): {
-  menu: import("../domain/schema/canonical.js").CanonicalMenu;
+  menu: CanonicalMenu;
   traces: CompletedProductCard[];
 } {
   const traces: CompletedProductCard[] = [];

@@ -91,7 +91,7 @@ describe("M6.3 price + additions learning", () => {
     expect(interp.basePriceMinor).toBe(9500);
     expect(interp.almSurchargeMinor).toBe(0);
     expect(interp.familieSurchargeMinor).toBe(9000);
-    let m = menuWith([{ n: "1", name: "Margherita" }]);
+    const m = menuWith([{ n: "1", name: "Margherita" }]);
     const r = applyAlmFamilieSemantics({
       menu: m,
       menuNumber: "1",

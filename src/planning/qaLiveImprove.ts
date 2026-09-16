@@ -8,7 +8,6 @@
 import type { PlannedProductPayload } from "../runner/writePlan.js";
 import {
   assessLabelQuality,
-  formatDescriptionFromIngredients,
   formatProductName,
   stripTrailingPriceNoise,
 } from "../domain/textNormalize.js";
@@ -19,7 +18,6 @@ import {
   ingredientListHasDefects,
   additionListHasDefects,
   polishDescriptionText,
-  cleanDishDisplayName,
   isForbiddenTilbehorName,
   looksLikeToppingAsProductName,
 } from "../domain/menuCardQuality.js";
@@ -40,10 +38,7 @@ import {
   type ReconcileReasonCode,
 } from "./menuReconcile.js";
 import type { IngredientLikelihoodPolicy } from "../learning/ingredientLikelihood.js";
-import {
-  filterAdditionsWithTrace,
-  type ProbabilityPolicyMap,
-} from "../learning/categoryLikelihood.js";
+import type { ProbabilityPolicyMap } from "../learning/categoryLikelihood.js";
 import {
   isForbiddenMenuVariantName,
   stripForbiddenMenuVariants,

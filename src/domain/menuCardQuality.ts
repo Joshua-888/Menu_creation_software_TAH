@@ -309,7 +309,7 @@ export function isInvalidFoodComponent(
  * Also splits "X og Y" already-spaced pairs when both are foods.
  */
 export function splitGluedFoodToken(raw: string): string[] {
-  let s = raw.trim().replace(/\s+/g, " ");
+  const s = raw.trim().replace(/\s+/g, " ");
   if (!s) return [];
 
   // Explicit known glues

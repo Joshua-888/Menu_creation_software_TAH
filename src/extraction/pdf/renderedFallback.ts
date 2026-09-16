@@ -328,10 +328,10 @@ async function enrichFromRegionOcr(
   }
   if (!name || !name.trim() || looksLikeOcrGarbageName(name)) {
     // Strip leading menu number from OCR line (OCR may garble 65 → 6s etc.)
-    let rest = ocr.text
+    const rest = ocr.text
       .replace(/^\s*\d\S{0,2}\.?\s*/i, "")
       .replace(/\b\d{2,3}\s*[,°]?/g, " ")
-      .replace(/[|\"']/g, " ")
+      .replace(/[|"']/g, " ")
       .replace(/\s+/g, " ")
       .trim();
     // Short drink token: OCR "ol" / "Øl" (\\b is unsafe before non-ASCII)

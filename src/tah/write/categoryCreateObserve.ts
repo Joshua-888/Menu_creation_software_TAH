@@ -1,4 +1,4 @@
-import type { Page, Request, Response } from "playwright";
+import type { Page, Request } from "playwright";
 import {
   assertSubmitControlInteractable,
   dismissKnownCookieBanner,

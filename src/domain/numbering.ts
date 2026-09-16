@@ -47,25 +47,6 @@ function hasSourceMenuNumber(product: SourceProduct): boolean {
   return raw !== undefined && raw.length > 0;
 }
 
-function flattenProducts(menu: SourceMenu): Array<{
-  product: SourceProduct;
-  categorySourceId: string;
-}> {
-  const rows: Array<{ product: SourceProduct; categorySourceId: string }> = [];
-  const categories = [...menu.categories].sort(
-    (a, b) => a.sourceOrder - b.sourceOrder,
-  );
-  for (const category of categories) {
-    const products = [...category.products].sort(
-      (a, b) => a.sourceOrder - b.sourceOrder,
-    );
-    for (const product of products) {
-      rows.push({ product, categorySourceId: category.sourceId });
-    }
-  }
-  return rows;
-}
-
 function bumpHighest(
   current: number | null,
   assigned: string,

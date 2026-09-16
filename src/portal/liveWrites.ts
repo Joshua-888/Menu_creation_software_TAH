@@ -11,7 +11,6 @@ import {
   formatLiveWriteHostAllowlist,
   isHostAllowlistedForLiveWrites,
   LIVE_WRITE_HOSTS_ALLOW_ALL,
-  normalizeDestinationHost,
   parseLiveWriteHostAllowlist,
 } from "../tah/write/hostAllowlist.js";
 

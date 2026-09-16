@@ -165,23 +165,6 @@ function decideFromRate(n: number, pSmooth: number): ProbCell["decision"] {
   return "UNCERTAIN";
 }
 
-function emptyFeatures(kind: ProductKind): Record<FeatureKey, ProbCell> {
-  const mk = (feature: FeatureKey): ProbCell => ({
-    kind,
-    feature,
-    n: 0,
-    k: 0,
-    pHat: 0,
-    pSmooth: 0.5,
-    decision: "UNCERTAIN",
-  });
-  return {
-    dip: mk("dip"),
-    meat_addition: mk("meat_addition"),
-    any_addition: mk("any_addition"),
-  };
-}
-
 /**
  * Estimate P(feature|kind) from peer snapshots (pooled across restaurants).
  */

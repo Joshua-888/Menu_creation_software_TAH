@@ -3,7 +3,7 @@
  * Only called when evaluatePortalLiveWriteGate().canLiveExecute is true.
  */
 import { join } from "node:path";
-import { chromium } from "playwright";
+import { chromium, type Page } from "playwright";
 import type { CanonicalMenu } from "../domain/schema/canonical.js";
 import {
   buildDryRunWritePlan,
@@ -121,7 +121,7 @@ function loadStructureFingerprint(root = repoRoot()): {
 }
 
 async function adminLogin(
-  page: import("playwright").Page,
+  page: Page,
   baseUrl: string,
 ): Promise<void> {
   const email = process.env.TAH_ADMIN_EMAIL;
@@ -138,7 +138,7 @@ async function adminLogin(
 
 export async function loadRealDestinationSnapshot(input: {
   baseUrl: string;
-  page: import("playwright").Page;
+  page: Page;
   /** When true, readProduct each row for QA reconcile depth. */
   deep?: boolean;
 }): Promise<DryRunDestinationSnapshot> {

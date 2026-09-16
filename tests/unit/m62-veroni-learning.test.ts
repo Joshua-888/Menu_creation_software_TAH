@@ -21,10 +21,6 @@ import {
   DOMAIN_RULE_ENGINE_VERSION,
 } from "../../src/domain/versions.js";
 import { makeDecisionCase } from "./helpers/decisionFixtures.js";
-import {
-  DECISION_ENGINE_VERSION,
-  DECISION_SCHEMA_VERSION,
-} from "../../src/decisions/versions.js";
 
 const dirs: string[] = [];
 function openStore(): DecisionStore {

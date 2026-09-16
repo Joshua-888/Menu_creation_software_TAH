@@ -31,6 +31,7 @@ import {
 import { classifyChoiceSemantics } from "../../src/review/consolidate.js";
 import { applyRenderedPageFallback } from "../../src/extraction/pdf/renderedFallback.js";
 import { M2B_ADAPTER_CAPABILITIES } from "../../src/tah/contracts/evidence.js";
+import type { CanonicalMenu } from "../../src/domain/schema/canonical.js";
 
 /**
  * Heavy Veroni PDF/OCR extraction suite.
@@ -364,7 +365,7 @@ describe("M5R2 price normalize + mapping regression", () => {
         ],
         extractionVersion: "test",
         domainRulesVersion: "test",
-      } as unknown as import("../../src/domain/schema/canonical.js").CanonicalMenu,
+      } as unknown as CanonicalMenu,
       categoryMappings: [
         {
           sourceCategoryId: "cat:pasta",

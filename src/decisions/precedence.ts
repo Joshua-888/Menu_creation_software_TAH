@@ -6,7 +6,6 @@ import { randomUUID } from "node:crypto";
 import type {
   AdditionDefinition,
   AdditionSetFact,
-  ConflictReasonCode,
   FactConflict,
   PriceFact,
 } from "./facts.js";

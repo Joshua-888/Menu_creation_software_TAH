@@ -161,8 +161,8 @@ export function joinTitleFragments(lines: string[]): string[] {
   while (i < lines.length) {
     const a = lines[i]!.trim();
     const b = lines[i + 1]?.trim();
-    const aSingle = /^[A-ZÆØÅ][A-Za-zÆØÅæøå'’\-]+$/.test(a);
-    const bFirst = b?.match(/^([A-ZÆØÅ][A-Za-zÆØÅæøå'’\-]+)/)?.[1];
+    const aSingle = /^[A-ZÆØÅ][A-Za-zÆØÅæøå'’-]+$/.test(a);
+    const bFirst = b?.match(/^([A-ZÆØÅ][A-Za-zÆØÅæøå'’-]+)/)?.[1];
     if (
       b &&
       aSingle &&

@@ -42,10 +42,6 @@ describe("M6 decision learning", () => {
     const registry = new DecisionPolicyRegistry(store);
     const engine = new DecisionEngine(store, registry);
 
-    const opts = [
-      { id: "variant", label: "Menu as variant", effect: "variant" },
-      { id: "review", label: "Review", effect: "review" },
-    ];
     const base = {
       decisionType: "PRODUCT_CHOICE",
       restaurantKey: "reuse.dk",
