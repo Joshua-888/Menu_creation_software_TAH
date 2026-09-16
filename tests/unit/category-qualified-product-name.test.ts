@@ -69,9 +69,7 @@ describe("CATEGORY_QUALIFIED_PRODUCT_NAME_V1", () => {
       expect(r.name).toBe("Salat m. Tun");
       expect(r.trace.family).toBe("SALAD");
       expect(r.trace.changed).toBe(true);
-      expect(r.trace.reason).toBe(
-        "PRODUCT_NAME_NOT_RECEIPT_SAFE_WITHOUT_CATEGORY",
-      );
+      expect(r.trace.reason).toBe("RECEIPT_CONTEXT_REQUIRED");
     });
 
     it("Salat + Kylling → Salat m. Kylling", () => {

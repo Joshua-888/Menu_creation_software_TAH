@@ -34,6 +34,7 @@ export type CategoryQualifiedNameTrace = {
   finalName: string;
   changed: boolean;
   reason:
+    | "RECEIPT_CONTEXT_REQUIRED"
     | "PRODUCT_NAME_NOT_RECEIPT_SAFE_WITHOUT_CATEGORY"
     | "ALREADY_RECEIPT_SAFE"
     | "CATEGORY_FAMILY_NOT_APPLICABLE"
@@ -228,7 +229,7 @@ export function applyCategoryQualifiedProductName(input: {
       ...baseTrace,
       finalName,
       changed: true,
-      reason: "PRODUCT_NAME_NOT_RECEIPT_SAFE_WITHOUT_CATEGORY",
+      reason: "RECEIPT_CONTEXT_REQUIRED",
     },
   };
 }
