@@ -15,6 +15,11 @@ import type {
   WritePlanOperation,
 } from "./writePlan.js";
 import { assertWritePlanImmutable } from "./writePlan.js";
+import {
+  fieldAwareDiffNames,
+  verifyProductFields,
+  type ProductVerificationReport,
+} from "./fieldAwareVerify.js";
 
 export type DestinationProduct = {
   databaseId: string;
@@ -133,57 +138,23 @@ export function canTransitionOp(
   return order[to]! === order[from]! + 1;
 }
 
+/**
+ * Field-aware exactness: SEMANTIC_MISMATCH fields only.
+ * Representation-equivalent description / name / ingredients do NOT fail.
+ */
 export function compareProductExact(
   expected: PlannedProductPayload,
   actual: DestinationProduct,
 ): string[] {
-  const diffs: string[] = [];
-  if (actual.menuNumber !== expected.menuNumber) diffs.push("menuNumber");
-  if (actual.name !== expected.name) diffs.push("name");
-  if (actual.description !== expected.description) diffs.push("description");
-  if (actual.basePriceOre !== expected.basePriceOre) diffs.push("basePrice");
-  const expCats = [...expected.categoryIds].sort().join(",");
-  const actCats = [...actual.categoryIds].sort().join(",");
-  if (expCats !== actCats) diffs.push("categories");
-  if (actual.variants.length !== expected.variants.length) {
-    diffs.push("variantCount");
-  } else {
-    for (let i = 0; i < expected.variants.length; i++) {
-      if (actual.variants[i]?.name !== expected.variants[i]!.name) {
-        diffs.push(`variantName${i}`);
-      }
-      if (actual.variants[i]?.priceOre !== expected.variants[i]!.surchargeOre) {
-        diffs.push(`variantPrice${i}`);
-      }
-    }
-  }
-  if (actual.ingredients.length !== expected.ingredients.length) {
-    diffs.push("ingredientCount");
-  } else {
-    for (let i = 0; i < expected.ingredients.length; i++) {
-      if (actual.ingredients[i]?.name !== expected.ingredients[i]) {
-        diffs.push(`ingredient${i}`);
-      }
-    }
-  }
-  if (actual.additions.length !== expected.additions.length) {
-    diffs.push("additionCount");
-  } else {
-    for (let i = 0; i < expected.additions.length; i++) {
-      if (actual.additions[i]?.name !== expected.additions[i]!.name) {
-        diffs.push(`additionName${i}`);
-      }
-      if (actual.additions[i]?.priceOre !== expected.additions[i]!.priceOre) {
-        diffs.push(`additionPrice${i}`);
-      }
-    }
-  }
-  if (expected.intendedHidden) {
-    if (actual.listStatus !== "Skjult") diffs.push("visibility");
-  } else if (actual.listStatus === "Skjult") {
-    diffs.push("visibility");
-  }
-  return diffs;
+  return fieldAwareDiffNames(compareProductFieldAware(expected, actual));
+}
+
+/** Full auditable field-aware verification report. */
+export function compareProductFieldAware(
+  expected: PlannedProductPayload,
+  actual: DestinationProduct,
+): ProductVerificationReport {
+  return verifyProductFields({ expected, actual });
 }
 
 /**
@@ -638,40 +609,7 @@ async function processUpdateOp(input: {
   });
 
   const actual = await destination.readProduct(databaseId);
-  const diffs: string[] = [];
-  if (actual.name.trim() !== expected.name.trim()) diffs.push("name");
-  if (actual.description.trim() !== expected.description.trim()) {
-    diffs.push("description");
-  }
-  if (actual.basePriceOre !== expected.basePriceOre) diffs.push("basePrice");
-  const actualIngs = actual.ingredients.map((i) => i.name.trim().toLowerCase()).sort();
-  const expectedIngs = expected.ingredients.map((i) => i.trim().toLowerCase()).sort();
-  if (JSON.stringify(actualIngs) !== JSON.stringify(expectedIngs)) {
-    diffs.push("ingredients");
-  }
-  const actualVars = actual.variants
-    .map((v) => `${v.name.trim().toLowerCase()}:${v.priceOre}`)
-    .sort()
-    .join("|");
-  const expectedVars = expected.variants
-    .map((v) => `${v.name.trim().toLowerCase()}:${v.surchargeOre}`)
-    .sort()
-    .join("|");
-  if (actualVars !== expectedVars) diffs.push("variants");
-  const actualAdds = actual.additions
-    .map((a) => `${a.name.trim().toLowerCase()}:${a.priceOre}`)
-    .sort()
-    .join("|");
-  const expectedAdds = expected.additions
-    .map((a) => `${a.name.trim().toLowerCase()}:${a.priceOre}`)
-    .sort()
-    .join("|");
-  if (actualAdds !== expectedAdds) diffs.push("additions");
-  if (expected.intendedHidden) {
-    if (actual.listStatus !== "Skjult") diffs.push("visibility");
-  } else if (actual.listStatus === "Skjult") {
-    diffs.push("visibility");
-  }
+  const diffs = compareProductExact(expected, actual);
   if (diffs.length) {
     store.upsertOperation({
       ...rec,

@@ -1,6 +1,7 @@
 export {
   canTransitionOp,
   compareProductExact,
+  compareProductFieldAware,
   resolveCreateResume,
   executeMigrationPlan,
   matchDestinationByEvidence,
@@ -11,6 +12,26 @@ export {
   type ExecutorGate,
   type ExecuteResult,
 } from "./executor.js";
+export {
+  verifyProductFields,
+  compareIngredientDescription,
+  parseIngredientDescriptionTokens,
+  type FieldComparisonResultKind,
+  type FieldComparisonMode,
+  type FieldVerificationReport,
+  type ProductVerificationReport,
+} from "./fieldAwareVerify.js";
+export {
+  CATEGORY_CREATE_IS_PUBLIC_MUTATION,
+  CATEGORY_VISIBILITY_CONTROL_EXISTS,
+  auditCategoryExposureCapabilities,
+  buildMinimizedCategoryExposureSteps,
+  proposeEmptyCategoryCompensation,
+  emptyMenuCreationMetrics,
+  type CategoryExposureCapabilityAudit,
+  type MinimizedExposurePlanStep,
+  type MenuCreationMetrics,
+} from "./categoryExposure.js";
 export {
   createTahPlaywrightDestinationPort,
   type TahDestinationPortOptions,

@@ -68,7 +68,7 @@ export function buildRecoveryPlan(input: {
     generatedAt: new Date().toISOString(),
     executeAutomatically: false,
     customerFacingCategoryWarning:
-      "TAH category creation is customer-facing even while products are staged hidden. Review persisted categories before continuing or compensating.",
+      "CATEGORY_CREATE_IS_PUBLIC_MUTATION=true: TAH has no hidden/draft categories. Prefer dependency-minimizing execution (create category only immediately before its hidden products). Empty newly-created incident categories may be proposed for compensation delete — never auto-delete.",
     destinationSnapshot: {
       categoryCount: input.destinationSnapshot.categories?.length ?? 0,
       productCount: input.destinationSnapshot.products?.length ?? 0,
