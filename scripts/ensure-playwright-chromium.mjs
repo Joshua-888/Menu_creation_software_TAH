@@ -1,27 +1,23 @@
 /**
  * Ensure Playwright Chromium exists for portal Create/QA live destination loads.
- * Runs during Railway builds (RAILPACK has no baked /ms-playwright).
- * No-ops locally unless ENSURE_PLAYWRIGHT=1.
+ * Always installs when missing (local no-ops if already cached).
+ * Set SKIP_PLAYWRIGHT_ENSURE=1 to force skip.
  */
 import { existsSync, readdirSync } from "node:fs";
 import { execSync } from "node:child_process";
+import { homedir } from "node:os";
 
-const onRailway = Boolean(
-  process.env.RAILWAY_ENVIRONMENT ||
-    process.env.RAILWAY_PROJECT_ID ||
-    process.env.RAILWAY_GIT_COMMIT_SHA,
-);
-if (!onRailway && process.env.ENSURE_PLAYWRIGHT !== "1") {
-  console.log("[ensure-playwright] skip (not Railway; set ENSURE_PLAYWRIGHT=1 to force)");
+if (process.env.SKIP_PLAYWRIGHT_ENSURE === "1") {
+  console.log("[ensure-playwright] skip (SKIP_PLAYWRIGHT_ENSURE=1)");
   process.exit(0);
 }
 
-// Prefer image path when present; otherwise Playwright default cache.
-if (!process.env.PLAYWRIGHT_BROWSERS_PATH && existsSync("/ms-playwright")) {
-  process.env.PLAYWRIGHT_BROWSERS_PATH = "/ms-playwright";
-}
+// Prefer image path when present; never use the broken /data volume cache.
 if (process.env.PLAYWRIGHT_BROWSERS_PATH?.startsWith("/data/")) {
   delete process.env.PLAYWRIGHT_BROWSERS_PATH;
+}
+if (!process.env.PLAYWRIGHT_BROWSERS_PATH && existsSync("/ms-playwright")) {
+  process.env.PLAYWRIGHT_BROWSERS_PATH = "/ms-playwright";
 }
 
 function chromiumInstalled(root) {
@@ -36,11 +32,12 @@ function chromiumInstalled(root) {
 const roots = [
   process.env.PLAYWRIGHT_BROWSERS_PATH,
   "/ms-playwright",
-  `${process.env.HOME || "/root"}/.cache/ms-playwright`,
+  `${homedir()}/.cache/ms-playwright`,
+  "/root/.cache/ms-playwright",
 ].filter(Boolean);
 
 if (roots.some((r) => chromiumInstalled(r))) {
-  console.log("[ensure-playwright] Chromium already present");
+  console.log(`[ensure-playwright] Chromium already present (${roots.find((r) => chromiumInstalled(r))})`);
   process.exit(0);
 }
 
