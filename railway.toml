@@ -1,6 +1,7 @@
 # Railway — TakeAwayHero Menu Operator Portal
-# Prefer Railpack until Docker Metal builds are stable (recent DOCKERFILE deploys
-# fail at schedule). portal:start still brings HTTP up before Chromium download.
+# Railpack (DOCKERFILE Metal builds were unstable). Chromium is installed during
+# portal:build via scripts/ensure-playwright-chromium.mjs so Create ARTIFACTS
+# does not wait on a cold playwright download. portal-start still self-heals.
 [build]
 builder = "RAILPACK"
 

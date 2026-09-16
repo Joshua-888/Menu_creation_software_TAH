@@ -38,7 +38,7 @@
     "m76:pipeline": "tsx scripts/m76-learning-pipeline.ts",
     "m76:policy-report": "tsx scripts/m76-policy-report.ts",
     "portal:dev": "next dev apps/portal -p 3000",
-    "portal:build": "node scripts/write-deploy-meta.mjs && next build apps/portal",
+    "portal:build": "node scripts/write-deploy-meta.mjs && next build apps/portal && node scripts/ensure-playwright-chromium.mjs",
     "portal:start": "node scripts/portal-start.mjs",
     "build": "npm run portal:build",
     "start": "npm run portal:start",

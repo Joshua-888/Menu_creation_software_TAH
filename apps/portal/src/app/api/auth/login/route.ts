@@ -9,8 +9,26 @@ import {
 
 export const runtime = "nodejs";
 
+async function readLoginBody(
+  req: Request,
+): Promise<{ email?: string; password?: string }> {
+  const contentType = req.headers.get("content-type") ?? "";
+  if (contentType.includes("application/x-www-form-urlencoded")) {
+    const form = await req.formData();
+    return {
+      email: String(form.get("email") ?? ""),
+      password: String(form.get("password") ?? ""),
+    };
+  }
+  try {
+    return (await req.json()) as { email?: string; password?: string };
+  } catch {
+    return {};
+  }
+}
+
 export async function POST(req: Request) {
-  const body = (await req.json()) as { email?: string; password?: string };
+  const body = await readLoginBody(req);
   const email = body.email?.trim() ?? "";
   const password = body.password ?? "";
   if (!email || !password) {

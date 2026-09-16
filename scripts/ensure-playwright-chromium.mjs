@@ -1,0 +1,60 @@
+/**
+ * Ensure Playwright Chromium exists for portal Create/QA live destination loads.
+ * Runs during Railway builds (RAILPACK has no baked /ms-playwright).
+ * No-ops locally unless ENSURE_PLAYWRIGHT=1.
+ */
+import { existsSync, readdirSync } from "node:fs";
+import { execSync } from "node:child_process";
+
+const onRailway = Boolean(
+  process.env.RAILWAY_ENVIRONMENT ||
+    process.env.RAILWAY_PROJECT_ID ||
+    process.env.RAILWAY_GIT_COMMIT_SHA,
+);
+if (!onRailway && process.env.ENSURE_PLAYWRIGHT !== "1") {
+  console.log("[ensure-playwright] skip (not Railway; set ENSURE_PLAYWRIGHT=1 to force)");
+  process.exit(0);
+}
+
+// Prefer image path when present; otherwise Playwright default cache.
+if (!process.env.PLAYWRIGHT_BROWSERS_PATH && existsSync("/ms-playwright")) {
+  process.env.PLAYWRIGHT_BROWSERS_PATH = "/ms-playwright";
+}
+if (process.env.PLAYWRIGHT_BROWSERS_PATH?.startsWith("/data/")) {
+  delete process.env.PLAYWRIGHT_BROWSERS_PATH;
+}
+
+function chromiumInstalled(root) {
+  if (!root || !existsSync(root)) return false;
+  try {
+    return readdirSync(root).some((n) => /chromium/i.test(n));
+  } catch {
+    return false;
+  }
+}
+
+const roots = [
+  process.env.PLAYWRIGHT_BROWSERS_PATH,
+  "/ms-playwright",
+  `${process.env.HOME || "/root"}/.cache/ms-playwright`,
+].filter(Boolean);
+
+if (roots.some((r) => chromiumInstalled(r))) {
+  console.log("[ensure-playwright] Chromium already present");
+  process.exit(0);
+}
+
+console.log("[ensure-playwright] Installing Chromium for Create/QA…");
+try {
+  execSync("npx playwright install --with-deps chromium", {
+    stdio: "inherit",
+    env: process.env,
+  });
+} catch {
+  console.warn("[ensure-playwright] --with-deps failed; retrying chromium-only…");
+  execSync("npx playwright install chromium", {
+    stdio: "inherit",
+    env: process.env,
+  });
+}
+console.log("[ensure-playwright] Chromium ready");

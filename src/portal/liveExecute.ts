@@ -22,6 +22,7 @@ import {
 import { RunStore } from "../runs/sqliteStore.js";
 import { M2B_ADAPTER_CAPABILITIES } from "../tah/contracts/evidence.js";
 import { TahAdminAdapterV1 } from "../tah/adapters/v1/adapter.js";
+import { dismissKnownCookieBanner } from "../tah/write/submitInteractability.js";
 import {
   isDestinationHostAllowlistedForLiveWrites,
   normalizeDestinationHost,
@@ -38,6 +39,67 @@ import { resolvePortalDecisionDbPath } from "../learning/tilbehorOverride.js";
 import { DecisionStore } from "../decisions/store.js";
 import type { ProductPolicyTrace } from "../planning/index.js";
 import { repoRoot } from "./paths.js";
+
+/** Create must wait out background portal-start Chromium installs on Railpack. */
+const CHROMIUM_READY_TIMEOUT_MS = 180_000;
+const SNAPSHOT_TIMEOUT_MS = 240_000;
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function withTimeout<T>(
+  promise: Promise<T>,
+  ms: number,
+  label: string,
+): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(
+          () => reject(new Error(`${label} timed out after ${ms}ms`)),
+          ms,
+        );
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
+function isChromiumMissingError(err: unknown): boolean {
+  const msg = err instanceof Error ? err.message : String(err);
+  return /Executable doesn't exist|browserType\.launch|Please run npx playwright install/i.test(
+    msg,
+  );
+}
+
+/**
+ * Wait for Chromium while portal-start installs it in the background.
+ * Create/QA must not hang forever or fail instantly during that window.
+ */
+async function launchChromiumWhenReady(): Promise<
+  Awaited<ReturnType<typeof chromium.launch>>
+> {
+  const started = Date.now();
+  let lastErr: unknown;
+  while (Date.now() - started < CHROMIUM_READY_TIMEOUT_MS) {
+    try {
+      return await chromium.launch({ headless: true });
+    } catch (err) {
+      lastErr = err;
+      if (!isChromiumMissingError(err)) throw err;
+      await sleep(2_500);
+    }
+  }
+  const detail =
+    lastErr instanceof Error ? lastErr.message : String(lastErr ?? "unknown");
+  throw new Error(
+    `Playwright Chromium not ready after ${CHROMIUM_READY_TIMEOUT_MS}ms. ${detail}`,
+  );
+}
 
 function emptyDestinationSnapshot(host: string): DryRunDestinationSnapshot {
   return {
@@ -81,16 +143,24 @@ export async function loadDestinationSnapshotForDryRun(input: {
     return { destination: empty, source: "empty" };
   }
   const baseUrl = `https://${host}`;
-  const browser = await chromium.launch({ headless: true });
-  const page = await browser.newPage();
+  let browser: Awaited<ReturnType<typeof chromium.launch>> | undefined;
   try {
-    await adminLogin(page, baseUrl);
-    const destination = await loadRealDestinationSnapshot({
-      baseUrl,
-      page,
-      deep: input.deep === true,
-    });
-    return { destination, source: "live" };
+    browser = await launchChromiumWhenReady();
+    const page = await browser.newPage();
+    page.setDefaultTimeout(60_000);
+    return await withTimeout(
+      (async () => {
+        await adminLogin(page, baseUrl);
+        const destination = await loadRealDestinationSnapshot({
+          baseUrl,
+          page,
+          deep: input.deep === true,
+        });
+        return { destination, source: "live" as const };
+      })(),
+      SNAPSHOT_TIMEOUT_MS,
+      "Create live destination snapshot",
+    );
   } catch (err) {
     return {
       destination: empty,
@@ -98,7 +168,7 @@ export async function loadDestinationSnapshotForDryRun(input: {
       error: err instanceof Error ? err.message : String(err),
     };
   } finally {
-    await browser.close();
+    await browser?.close().catch(() => undefined);
   }
 }
 
@@ -129,11 +199,34 @@ async function adminLogin(
   if (!email || !password) {
     throw new Error("live execute requires TAH_ADMIN_EMAIL and TAH_ADMIN_PASSWORD");
   }
-  await page.goto(`${baseUrl}/login`, { waitUntil: "domcontentloaded" });
-  await page.locator('input[type="email"]').first().fill(email);
+  await page.goto(`${baseUrl}/login`, {
+    waitUntil: "domcontentloaded",
+    timeout: 60_000,
+  });
+  await dismissKnownCookieBanner(page);
+  await page.locator('input[type="email"]').first().fill(email, {
+    timeout: 30_000,
+  });
   await page.locator('input[type="password"]').first().fill(password);
+  await dismissKnownCookieBanner(page);
   await page.getByRole("button", { name: /^login$/i }).click();
-  await page.waitForTimeout(1500);
+  await Promise.race([
+    page.waitForURL(/\/admin(\/|$)/i, { timeout: 45_000 }),
+    page
+      .locator('input[type="password"]')
+      .first()
+      .waitFor({ state: "hidden", timeout: 45_000 }),
+  ]).catch(() => undefined);
+  await dismissKnownCookieBanner(page);
+  const url = page.url();
+  const passwordVisible =
+    (await page.locator('input[type="password"]').count()) > 0 &&
+    (await page.locator('input[type="password"]').first().isVisible().catch(() => false));
+  if (/\/login/i.test(url) && passwordVisible) {
+    throw new Error(
+      `admin login failed for ${normalizeDestinationHost(baseUrl)} (still on /login)`,
+    );
+  }
 }
 
 export async function loadRealDestinationSnapshot(input: {
@@ -242,8 +335,9 @@ export async function executePortalLiveWrites(input: {
     });
   }
 
-  const browser = await chromium.launch({ headless: true });
+  const browser = await launchChromiumWhenReady();
   const page = await browser.newPage();
+  page.setDefaultTimeout(60_000);
   try {
     await adminLogin(page, baseUrl);
     const destination = await loadRealDestinationSnapshot({

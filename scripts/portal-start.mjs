@@ -44,12 +44,15 @@ function chromiumInstalled(root) {
 
 function ensureChromiumAsync() {
   const browserRoot = process.env.PLAYWRIGHT_BROWSERS_PATH;
-  if (chromiumInstalled(browserRoot)) {
-    console.log(`[portal-start] Playwright browsers at ${browserRoot}`);
+  const homeCache = `${process.env.HOME || "/root"}/.cache/ms-playwright`;
+  if (chromiumInstalled(browserRoot) || chromiumInstalled(homeCache)) {
+    console.log(
+      `[portal-start] Playwright browsers ready (${browserRoot || homeCache})`,
+    );
     return;
   }
   console.log(
-    "[portal-start] Chromium missing — installing in background (HTTP already up)…",
+    "[portal-start] Chromium missing — installing in background (HTTP already up; Create waits up to 3m)…",
   );
   // Detach: do not block Next.js readiness / Railway healthcheck.
   const installer = spawn(
