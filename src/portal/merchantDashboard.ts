@@ -25,12 +25,16 @@ export function statusTone(
   if (
     status === "FAILED" ||
     status === "COMPLETED_WITH_ERRORS" ||
+    status === "PARTIAL_WRITE" ||
+    status === "RECOVERY_REQUIRED" ||
+    status === "LIVE_EXECUTION_FAILED" ||
     status === "CANCELLED"
   ) {
     return "danger";
   }
   if (
     status === "AWAITING_REVIEW" ||
+    status === "AWAITING_OPERATOR_APPROVAL" ||
     status === "SOURCE_URL_PENDING" ||
     status === "READY_DRY_RUN"
   ) {
@@ -53,14 +57,24 @@ export function statusLabel(status: JobStatus): string {
       return "Artifacts";
     case "AWAITING_REVIEW":
       return "Needs review";
+    case "AWAITING_OPERATOR_APPROVAL":
+      return "Needs approval";
     case "READY_DRY_RUN":
       return "Dry-run ready";
     case "WRITING":
       return "Writing";
+    case "LIVE_EXECUTING":
+      return "Creating menu";
     case "COMPLETED":
       return "Completed";
     case "COMPLETED_WITH_ERRORS":
       return "Completed with errors";
+    case "PARTIAL_WRITE":
+      return "Partial write";
+    case "RECOVERY_REQUIRED":
+      return "Recovery required";
+    case "LIVE_EXECUTION_FAILED":
+      return "Live execution failed";
     case "SOURCE_URL_PENDING":
       return "Waiting for PDF";
     case "FAILED":

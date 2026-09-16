@@ -31,6 +31,14 @@ function oreToKrString(ore: number): string {
   return String(Math.round(ore / 100));
 }
 
+function normalizeReadbackName(value: string): string {
+  return value
+    .normalize("NFKC")
+    .trim()
+    .replace(/\s+/g, " ")
+    .toLocaleLowerCase("da-DK");
+}
+
 export type TahDestinationPortOptions = {
   page: Page;
   baseUrl: string;
@@ -252,7 +260,9 @@ export function createTahPlaywrightDestinationPort(
           const rowAfterErr = listedAfterErr.find(
             (p) =>
               p.databaseId &&
-              (p.menuNumber || "").trim() === payload.menuNumber.trim(),
+              ((p.menuNumber || "").trim() === payload.menuNumber.trim() ||
+                normalizeReadbackName(p.name) ===
+                  normalizeReadbackName(payload.name)),
           );
           if (rowAfterErr?.databaseId) {
             sourceIdMap.set(payload.sourceId, rowAfterErr.databaseId);
@@ -270,12 +280,16 @@ export function createTahPlaywrightDestinationPort(
         await page.waitForTimeout(1200);
         // Lightweight read-back: list rows only (avoid full edit-form crawl).
         let foundId: string | null = null;
+        let lastListLength = 0;
         for (let attempt = 0; attempt < 3 && !foundId; attempt++) {
           const listed = await adapter.listProducts();
+          lastListLength = listed.length;
           const row = listed.find(
             (p) =>
               p.databaseId &&
-              (p.menuNumber || "").trim() === payload.menuNumber.trim(),
+              ((p.menuNumber || "").trim() === payload.menuNumber.trim() ||
+                normalizeReadbackName(p.name) ===
+                  normalizeReadbackName(payload.name)),
           );
           if (row?.databaseId) foundId = row.databaseId;
           else await page.waitForTimeout(800);
@@ -283,7 +297,9 @@ export function createTahPlaywrightDestinationPort(
         if (!foundId) {
           return {
             outcome: "FAILED" as const,
-            error: "createHiddenProduct read-back missing product",
+            error:
+              `createHiddenProduct read-back missing product ` +
+              `(menuNumber=${payload.menuNumber}, normalizedName=${normalizeReadbackName(payload.name)}, listLength=${lastListLength})`,
           };
         }
         sourceIdMap.set(payload.sourceId, foundId);

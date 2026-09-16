@@ -13,9 +13,11 @@ import {
 import {
   createMigrationWritePlan,
   createTahPlaywrightDestinationPort,
+  buildRecoveryPlan,
   executeMigrationPlan,
   type ExecuteResult,
   type MigrationWritePlan,
+  type RecoveryPlan,
 } from "../runner/index.js";
 import { RunStore } from "../runs/sqliteStore.js";
 import { M2B_ADAPTER_CAPABILITIES } from "../tah/contracts/evidence.js";
@@ -219,6 +221,7 @@ export async function executePortalLiveWrites(input: {
   livePlan: MigrationWritePlan;
   result: ExecuteResult;
   destination: DryRunDestinationSnapshot;
+  recoveryPlan: RecoveryPlan;
 }> {
   const host = normalizeDestinationHost(input.destinationHost);
   const baseUrl = `https://${host}`;
@@ -306,26 +309,35 @@ export async function executePortalLiveWrites(input: {
       });
 
       const store = new RunStore(input.runsDbPath);
-      const destinationPort = createTahPlaywrightDestinationPort({
-        page,
-        baseUrl,
-        expectedHost: host,
-        restaurantKey: input.restaurant,
-        ...(decisionStore ? { decisionStore } : {}),
-      });
-      const result = await executeMigrationPlan({
-        plan: livePlan,
-        store,
-        destination: destinationPort,
-        gate: {
-          hostOk: true,
-          contractMatch: true,
-          host,
+      try {
+        const destinationPort = createTahPlaywrightDestinationPort({
+          page,
+          baseUrl,
           expectedHost: host,
-        },
-      });
-      store.close();
-      return { livePlan, result, destination };
+          restaurantKey: input.restaurant,
+          ...(decisionStore ? { decisionStore } : {}),
+        });
+        const result = await executeMigrationPlan({
+          plan: livePlan,
+          store,
+          destination: destinationPort,
+          workflow: input.workflow ?? "CREATE_MENU",
+          gate: {
+            hostOk: true,
+            contractMatch: true,
+            host,
+            expectedHost: host,
+          },
+        });
+        const recoveryPlan = buildRecoveryPlan({
+          plan: livePlan,
+          operationRecords: store.listOperations(livePlan.runId),
+          destinationSnapshot: destination,
+        });
+        return { livePlan, result, destination, recoveryPlan };
+      } finally {
+        store.close();
+      }
     } finally {
       decisionStore?.close();
     }

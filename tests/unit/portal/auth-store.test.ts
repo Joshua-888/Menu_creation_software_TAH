@@ -132,7 +132,7 @@ describe("portal store + review", () => {
     );
     expect(result.resolvedIds).toHaveLength(2);
     expect(result.remaining).toBe(0);
-    expect(store.getJob(job.id)?.status).toBe("READY_DRY_RUN");
+    expect(store.getJob(job.id)?.status).toBe("AWAITING_OPERATOR_APPROVAL");
   });
 
   it("rejects forged review resolutions and inactive sessions", () => {

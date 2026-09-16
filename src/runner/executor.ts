@@ -89,6 +89,20 @@ export type ExecuteResult = {
   blocked: number;
   failed: number;
   duplicatesCreated: number;
+  categoriesVerified: number;
+  productsVerified: number;
+  categoriesFailed: number;
+  productsFailed: number;
+  expectedProducts: number;
+  failedRequired: number;
+  createMenuSuccess: boolean;
+  menuVerified: boolean;
+  recoveryRequired: boolean;
+  status:
+    | "COMPLETED"
+    | "COMPLETED_WITH_ERRORS"
+    | "PARTIAL_WRITE"
+    | "LIVE_EXECUTION_FAILED";
 };
 
 const WRITE_STATES: MigrationEntityState[] = [
@@ -316,6 +330,7 @@ export async function executeMigrationPlan(input: {
   store: RunStore;
   destination: DestinationPort;
   gate: ExecutorGate;
+  workflow?: "CREATE_MENU" | "QA_RECONCILE";
   /** Max CREATE attempts for a single op when proven absent. */
   maxCreateAttempts?: number;
 }): Promise<ExecuteResult> {
@@ -481,10 +496,47 @@ export async function executeMigrationPlan(input: {
     });
   }
 
+  const operationRecords = store.listOperations(plan.runId);
+  const requiredCreates = operationRecords.filter((r) => r.action === "CREATE");
+  const categoriesVerified = requiredCreates.filter(
+    (r) => r.entityType === "category" && r.state === "VERIFIED",
+  ).length;
+  const productsVerified = requiredCreates.filter(
+    (r) => r.entityType === "product" && r.state === "VERIFIED",
+  ).length;
+  const categoriesFailed = requiredCreates.filter(
+    (r) => r.entityType === "category" && r.state !== "VERIFIED",
+  ).length;
+  const productsFailed = requiredCreates.filter(
+    (r) => r.entityType === "product" && r.state !== "VERIFIED",
+  ).length;
+  const expectedProducts = requiredCreates.filter(
+    (r) => r.entityType === "product",
+  ).length;
+  const failedRequired = categoriesFailed + productsFailed;
+  const createWorkflow =
+    input.workflow === "CREATE_MENU" ||
+    (input.workflow == null && expectedProducts > 0);
+  const createMenuSuccess =
+    createWorkflow &&
+    expectedProducts > 0 &&
+    productsVerified === expectedProducts &&
+    failedRequired === 0;
+  const recoveryRequired = createWorkflow && !createMenuSuccess;
+  const status: ExecuteResult["status"] = createWorkflow
+    ? createMenuSuccess
+      ? "COMPLETED"
+      : categoriesVerified + productsVerified > 0
+        ? "PARTIAL_WRITE"
+        : "LIVE_EXECUTION_FAILED"
+    : failed + blocked > 0
+      ? "COMPLETED_WITH_ERRORS"
+      : "COMPLETED";
+
   store.upsertRun({
     ...(store.getRun(plan.runId) as NonNullable<ReturnType<RunStore["getRun"]>>),
     endedAt: now(),
-    status: failed + blocked > 0 ? "COMPLETED_WITH_ERRORS" : "COMPLETED",
+    status,
   });
 
   return {
@@ -495,6 +547,16 @@ export async function executeMigrationPlan(input: {
     blocked,
     failed,
     duplicatesCreated,
+    categoriesVerified,
+    productsVerified,
+    categoriesFailed,
+    productsFailed,
+    expectedProducts,
+    failedRequired,
+    createMenuSuccess,
+    menuVerified: createMenuSuccess,
+    recoveryRequired,
+    status,
   };
 }
 
@@ -849,6 +911,9 @@ async function processCreateOp(input: {
         updatedAt: now(),
       };
       if (createResult.outcome === "FAILED") {
+        const readbackError = /read-back missing product/i.test(
+          createResult.error ?? "",
+        );
         const afterFail = await destination.findByIdentity(identity);
         if (afterFail.outcome === "FOUND") {
           databaseId = afterFail.product.databaseId;
@@ -867,7 +932,9 @@ async function processCreateOp(input: {
           store.upsertOperation({
             ...rec,
             state: "WRITE_FAILED",
-            lastErrorCategory: "ADMIN_WRITE_ERROR",
+            lastErrorCategory: readbackError
+              ? "READBACK_ERROR"
+              : "ADMIN_WRITE_ERROR",
             lastErrorMessage: createResult.error ?? "create failed",
             updatedAt: now(),
           });
@@ -877,6 +944,7 @@ async function processCreateOp(input: {
           store.upsertOperation({
             ...rec,
             state: "PENDING_WRITE",
+            lastErrorCategory: readbackError ? "READBACK_ERROR" : null,
             lastErrorMessage: createResult.error ?? "create failed",
             updatedAt: now(),
           });

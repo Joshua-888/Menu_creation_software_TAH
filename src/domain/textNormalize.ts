@@ -119,6 +119,14 @@ export function looksLikeGarbageName(name: string): boolean {
   if (/^[Il1]{1,3}\d+,?\s*$/i.test(n)) return true; // I15, II5,
   if (/^[\W\d_]+$/.test(n)) return true;
   if (n.length <= 2 && !/^[A-Za-zÆØÅæøå]+$/.test(n)) return true;
+  const words = n.split(/\s+/).filter(Boolean);
+  const lowercaseConsonantNoise = words.some(
+    (word) =>
+      word.length >= 3 &&
+      word === word.toLocaleLowerCase("da-DK") &&
+      /^[bcdfghjklmnpqrstvwxz]+$/i.test(word),
+  );
+  if (words.length > 1 && lowercaseConsonantNoise) return true;
   return false;
 }
 

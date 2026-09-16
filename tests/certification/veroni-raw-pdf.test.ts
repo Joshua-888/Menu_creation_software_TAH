@@ -63,7 +63,6 @@ describe("Veroni RAW PDF certification (production path)", () => {
           result.stats.statusAccounting.review +
           result.stats.statusAccounting.blocked,
       ).toBe(result.stats.statusAccounting.productCount);
-      expect(result.stats.statusAccounting.blocked).toBe(0);
       if (goldenV2.statusAccounting) {
         expect(result.stats.statusAccounting.ready).toBe(
           goldenV2.statusAccounting.ready,
@@ -71,9 +70,21 @@ describe("Veroni RAW PDF certification (production path)", () => {
         expect(result.stats.statusAccounting.review).toBe(
           goldenV2.statusAccounting.review,
         );
+        expect(result.stats.statusAccounting.blocked).toBe(
+          goldenV2.statusAccounting.blocked,
+        );
       }
-      // Unresolved non-burger Menu combos stay REVIEW — menu is not fully READY
-      if ((result.stats.statusAccounting.review ?? 0) > 0) {
+      if ((result.stats.statusAccounting.blocked ?? 0) > 0) {
+        expect(result.stats.menuStatus).toBe("MENU_QUALITY_BLOCKED");
+        expect(
+          result.intelligence.quality.products.some((product) =>
+            product.checks.some(
+              (check) => check.id === "PRICE_SUPPORTED" && !check.pass,
+            ),
+          ),
+        ).toBe(true);
+      } else if ((result.stats.statusAccounting.review ?? 0) > 0) {
+        // Unresolved non-burger Menu combos stay REVIEW.
         expect(result.stats.menuStatus).toBe("MENU_QUALITY_REVIEW");
       }
 

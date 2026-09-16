@@ -622,7 +622,13 @@ export class PortalStore {
       );
       created.push(row);
     }
-    this.updateJobStatus(jobId, questions.length ? "AWAITING_REVIEW" : "READY_DRY_RUN", {
+    const workflow = this.getJob(jobId)?.workflow;
+    const nextStatus: JobStatus = questions.length
+      ? "AWAITING_REVIEW"
+      : workflow === "CREATE_MENU"
+        ? "AWAITING_OPERATOR_APPROVAL"
+        : "READY_DRY_RUN";
+    this.updateJobStatus(jobId, nextStatus, {
       remainingQuestions: questions.length,
     });
     return created;
@@ -750,7 +756,12 @@ export class PortalStore {
     }
 
     const remaining = this.listOpenQuestions(q.jobId).length;
-    const nextStatus = remaining ? "AWAITING_REVIEW" : "READY_DRY_RUN";
+    const workflow = this.getJob(q.jobId)?.workflow;
+    const nextStatus: JobStatus = remaining
+      ? "AWAITING_REVIEW"
+      : workflow === "CREATE_MENU"
+        ? "AWAITING_OPERATOR_APPROVAL"
+        : "READY_DRY_RUN";
     this.updateJobStatus(q.jobId, nextStatus, {
       remainingQuestions: remaining,
     });

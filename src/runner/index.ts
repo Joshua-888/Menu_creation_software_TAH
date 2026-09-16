@@ -16,6 +16,12 @@ export {
   type TahDestinationPortOptions,
 } from "./tahDestinationPort.js";
 export {
+  buildRecoveryPlan,
+  type RecoveryAction,
+  type RecoveryOperationState,
+  type RecoveryPlan,
+} from "./recoveryPlan.js";
+export {
   freezeWritePlan,
   assertWritePlanImmutable,
   createMigrationWritePlan,

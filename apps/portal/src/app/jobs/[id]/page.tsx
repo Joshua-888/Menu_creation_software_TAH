@@ -14,6 +14,7 @@ import { PolicyApplicationPanel } from "../../../components/PolicyApplicationPan
 import { PageHeader } from "../../../components/PageHeader";
 import { DeleteJobButton } from "../../../components/DeleteJobButton";
 import { QaFindingsPanel } from "../../../components/QaFindingsPanel";
+import { ApproveCreateMenuButton } from "../../../components/ApproveCreateMenuButton";
 
 export default async function JobDetailPage({
   params,
@@ -47,6 +48,19 @@ export default async function JobDetailPage({
     string,
     unknown
   > | null;
+  const targetMenu = readJobArtifact(id, "target-menu.json") as {
+    categories?: Array<{ name?: string; products?: unknown[] }>;
+  } | null;
+  const sourceMenu = readJobArtifact(id, "source-menu.json") as {
+    categories?: Array<{ products?: unknown[] }>;
+    productCount?: number;
+  } | null;
+  const approval = readJobArtifact(
+    id,
+    "awaiting-operator-approval.json",
+  ) as {
+    writePlan?: { categoryCreates?: number; productCreates?: number };
+  } | null;
   const policyApplication = readJobArtifact(
     id,
     "policy-application.json",
@@ -55,6 +69,33 @@ export default async function JobDetailPage({
   const liveGate = evaluatePortalLiveWriteGate({
     destinationHost: job.destinationHost,
   });
+  const sourceProducts =
+    sourceMenu?.productCount ??
+    sourceMenu?.categories?.reduce(
+      (count, category) => count + (category.products?.length ?? 0),
+      0,
+    ) ??
+    metrics?.uniqueProducts ??
+    null;
+  const targetProducts =
+    targetMenu?.categories?.reduce(
+      (count, category) => count + (category.products?.length ?? 0),
+      0,
+    ) ?? null;
+  const liveCount = (key: string): number | null =>
+    typeof liveResult?.[key] === "number"
+      ? (liveResult[key] as number)
+      : null;
+  const categoriesExecuted =
+    liveCount("categoriesVerified") == null
+      ? null
+      : (liveCount("categoriesVerified") ?? 0) +
+        (liveCount("categoriesFailed") ?? 0);
+  const productsExecuted =
+    liveCount("productsVerified") == null
+      ? null
+      : (liveCount("productsVerified") ?? 0) +
+        (liveCount("productsFailed") ?? 0);
 
   return (
     <AppShell employeeName={emp.name}>
@@ -81,15 +122,27 @@ export default async function JobDetailPage({
         </div>
       ) : null}
 
+      {job.status === "AWAITING_OPERATOR_APPROVAL" ? (
+        <div className="panel">
+          <h2>Operator approval required</h2>
+          <p>
+            Review the TargetMenu below before creating anything. Products are
+            staged hidden by default. TAH category creation is customer-facing
+            immediately.
+          </p>
+          <ApproveCreateMenuButton jobId={job.id} />
+        </div>
+      ) : null}
+
       {liveGate.canLiveExecute ? (
         <div className="panel">
           <h2>Live writes enabled</h2>
           <p className="muted">
             Admin credentials configured and host allowlisted. When the last
-            review question is cleared, the worker schedules live execute from
-            existing dry-run artifacts (storefront-visible by default). Kill
-            switch: <code>PORTAL_LIVE_WRITES=0</code>. Keep hidden with{" "}
-            <code>PORTAL_CREATE_HIDDEN=1</code>.
+            review question is cleared, Create waits for explicit operator
+            approval. Products are hidden by default. Publish explicitly with{" "}
+            <code>PORTAL_STOREFRONT_PUBLISH=1</code>. Kill switch:{" "}
+            <code>PORTAL_LIVE_WRITES=0</code>.
           </p>
           {liveResult ? (
             <pre
@@ -133,8 +186,8 @@ export default async function JobDetailPage({
             <span className="muted">Pages</span>
           </div>
           <div className="metric">
-            <strong>{metrics?.uniqueProducts ?? "—"}</strong>
-            <span className="muted">Products</span>
+            <strong>{sourceProducts ?? "—"}</strong>
+            <span className="muted">Source products</span>
           </div>
           <div className="metric">
             <strong>
@@ -143,11 +196,59 @@ export default async function JobDetailPage({
             <span className="muted">Open questions</span>
           </div>
           <div className="metric">
-            <strong>{metrics?.dryRunCreates ?? "—"}</strong>
-            <span className="muted">Dry-run creates</span>
+            <strong>{targetProducts ?? "—"}</strong>
+            <span className="muted">Target products</span>
+          </div>
+          <div className="metric">
+            <strong>{approval?.writePlan?.categoryCreates ?? "—"}</strong>
+            <span className="muted">Planned categories</span>
+          </div>
+          <div className="metric">
+            <strong>{approval?.writePlan?.productCreates ?? "—"}</strong>
+            <span className="muted">Planned products</span>
+          </div>
+          <div className="metric">
+            <strong>{categoriesExecuted ?? "—"}</strong>
+            <span className="muted">Categories executed</span>
+          </div>
+          <div className="metric">
+            <strong>{liveCount("categoriesVerified") ?? "—"}</strong>
+            <span className="muted">Categories verified</span>
+          </div>
+          <div className="metric">
+            <strong>{productsExecuted ?? "—"}</strong>
+            <span className="muted">Products executed</span>
+          </div>
+          <div className="metric">
+            <strong>{liveCount("productsVerified") ?? "—"}</strong>
+            <span className="muted">Products verified</span>
+          </div>
+          <div className="metric">
+            <strong>
+              {typeof liveResult?.menuVerified === "boolean"
+                ? liveResult.menuVerified
+                  ? "YES"
+                  : "NO"
+                : "—"}
+            </strong>
+            <span className="muted">Menu verified</span>
           </div>
         </div>
       </div>
+
+      {targetMenu ? (
+        <div className="panel">
+          <h2>TargetMenu preview</h2>
+          <p className="muted">
+            Source products: {sourceProducts ?? "—"} · Target products:{" "}
+            {targetProducts ?? "—"} · Categories:{" "}
+            {targetMenu.categories?.length ?? 0}
+          </p>
+          <pre style={{ whiteSpace: "pre-wrap", fontSize: "0.85rem", margin: 0 }}>
+            {JSON.stringify(targetMenu, null, 2)}
+          </pre>
+        </div>
+      ) : null}
 
       {policyApplication ? (
         <PolicyApplicationPanel report={policyApplication} />

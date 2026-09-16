@@ -223,16 +223,22 @@ function toPayload(
   };
 }
 
-/** Products are storefront-visible by default; set PORTAL_CREATE_HIDDEN=1 to keep Skjult. */
+/**
+ * CREATE_MENU stages products hidden by default. Publishing requires an explicit
+ * opt-in because TAH has no atomic menu-level publish transaction.
+ */
 export function shouldCreateProductsHidden(
   env: NodeJS.ProcessEnv = process.env,
 ): boolean {
-  return (
-    env.PORTAL_CREATE_HIDDEN === "1" ||
-    env.PORTAL_CREATE_HIDDEN === "true" ||
-    env.PORTAL_STOREFRONT_PUBLISH === "0" ||
-    env.PORTAL_STOREFRONT_PUBLISH === "false"
-  );
+  if (
+    env.PORTAL_CREATE_HIDDEN === "0" ||
+    env.PORTAL_CREATE_HIDDEN === "false" ||
+    env.PORTAL_STOREFRONT_PUBLISH === "1" ||
+    env.PORTAL_STOREFRONT_PUBLISH === "true"
+  ) {
+    return false;
+  }
+  return true;
 }
 
 /**

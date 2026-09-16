@@ -32,6 +32,10 @@ export {
   qualityContractBlocksWrite,
 } from "./qualityContract.js";
 export { runMenuIntelligence } from "./menuIntelligenceEngine.js";
+export {
+  diagnoseSourceProductCoverage,
+  type SourceCoverageDiagnostic,
+} from "./sourceCoverage.js";
 export { applyApprovedFactsToMenu } from "./applyApprovedFacts.js";
 export {
   listPolicyLifecycle,

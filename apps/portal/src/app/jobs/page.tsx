@@ -24,9 +24,15 @@ export default async function JobsPage() {
   const completed = merchants.filter((m) => m.latestStatus === "COMPLETED").length;
   const inFlight = merchants.filter(
     (m) =>
-      !["COMPLETED", "COMPLETED_WITH_ERRORS", "FAILED", "CANCELLED"].includes(
-        m.latestStatus,
-      ),
+      ![
+        "COMPLETED",
+        "COMPLETED_WITH_ERRORS",
+        "PARTIAL_WRITE",
+        "RECOVERY_REQUIRED",
+        "LIVE_EXECUTION_FAILED",
+        "FAILED",
+        "CANCELLED",
+      ].includes(m.latestStatus),
   ).length;
 
   return (

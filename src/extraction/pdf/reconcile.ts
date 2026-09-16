@@ -394,8 +394,28 @@ export function reconcileCandidatesToSourceMenu(input: {
   const entries: SourceAccountingEntry[] = [];
   const byMenu = new Map<string, SourceCandidate[]>();
   const byUnnumberedName = new Map<string, SourceCandidate[]>();
+  const candidates = input.candidates.map((candidate) => {
+    const name = candidate.name?.trim() ?? "";
+    const trailingPrice = name.match(/\s+(\d{2,3})\s*kr\.?\s*$/i);
+    if (!trailingPrice) return candidate;
+    const kroner = Number(trailingPrice[1]);
+    const priceStart = trailingPrice.index ?? name.length;
+    return {
+      ...candidate,
+      name: name.slice(0, priceStart).trim(),
+      rawPrices: candidate.rawPrices.includes(kroner)
+        ? candidate.rawPrices
+        : [...candidate.rawPrices, kroner],
+      rawVariantPrices: candidate.rawVariantPrices.includes(kroner)
+        ? candidate.rawVariantPrices
+        : [...candidate.rawVariantPrices, kroner],
+      ...(candidate.priceMode === "none"
+        ? { priceMode: "single" as const }
+        : {}),
+    };
+  });
 
-  for (const c of input.candidates) {
+  for (const c of candidates) {
     if (!c.menuNumber) {
       if (isUnnumberedProductCandidate(c)) {
         const key = normName(c.name ?? "");
@@ -679,7 +699,7 @@ export function reconcileCandidatesToSourceMenu(input: {
     nonProduct: entries.filter((e) => e.disposition === "NON_PRODUCT").length,
   };
 
-  for (const c of input.candidates) {
+  for (const c of candidates) {
     if (!entries.some((e) => e.candidateId === c.candidateId)) {
       entries.push({
         candidateId: c.candidateId,

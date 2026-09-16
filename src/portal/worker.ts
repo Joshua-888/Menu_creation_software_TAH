@@ -27,6 +27,11 @@ import {
 import { canonicalMenuFromLiveDestination } from "../planning/qaLiveImprove.js";
 import type { DryRunDestinationSnapshot } from "../planning/dryRun.js";
 import {
+  buildRecoveryPlan,
+  type MigrationWritePlan,
+} from "../runner/index.js";
+import { RunStore } from "../runs/sqliteStore.js";
+import {
   loadAdditionLikelihood,
   loadIngredientLikelihood,
   loadPeerSnapshots,
@@ -44,6 +49,7 @@ import { upsertCategoryIngredientAdditionFacts } from "../learning/categoryIngre
 import { normalizeSourceCategoriesByKind } from "../learning/categoryKindNaming.js";
 import { assertCreateCardQuality } from "../domain/menuCardQuality.js";
 import {
+  diagnoseSourceProductCoverage,
   runMenuIntelligence,
   MENU_CONSTITUTION_VERSION,
 } from "../intelligence/index.js";
@@ -318,6 +324,18 @@ export async function runMigrationJob(
       });
       metrics.pageCount = extraction.pageCount;
       metrics.uniqueProducts = extraction.uniqueProducts;
+      const sourceCoverage = diagnoseSourceProductCoverage({
+        accounting: extraction.accounting,
+        uniqueProducts: extraction.uniqueProducts,
+        rawText: extraction.pages.map((page) => page.rawText).join("\n"),
+        ocrRows: extraction.pages.flatMap((page) =>
+          page.lines.map((line) => line.text),
+        ),
+      });
+      writeJson(outDir, "source-coverage.json", sourceCoverage);
+      if (sourceCoverage.suspicious) {
+        throw new Error(sourceCoverage.detail);
+      }
       sourceLabel = sourceUpload.originalName;
       adapterVersion = adapter.extractorVersion;
 
@@ -537,6 +555,7 @@ export async function runMigrationJob(
       );
     }
     const destination = destLoad.destination;
+    writeJson(outDir, "dry-destination-snapshot.json", destination);
     writeJson(outDir, "destination-snapshot-meta.json", {
       source: destLoad.source,
       host: destination.host,
@@ -797,62 +816,50 @@ export async function runMigrationJob(
 
     decisionStore.close();
 
-    let finalStatus: JobStatus =
+    const finalStatus: JobStatus =
       created.length > 0
         ? "AWAITING_REVIEW"
-        : !cardGate.ok
-          ? "READY_DRY_RUN"
+        : job.workflow === "CREATE_MENU" && cardGate.ok
+          ? "AWAITING_OPERATOR_APPROVAL"
           : "READY_DRY_RUN";
-
-    // MenuQualityContract blocks live writes for BOTH Create and QA.
-    const willAutoLive =
-      liveGate.canLiveExecute &&
-      created.length === 0 &&
-      cardGate.ok;
 
     if (!cardGate.ok) {
       writeJson(outDir, "live-write-blocked-by-card-gate.json", cardGate);
     }
 
-    if (willAutoLive) {
-      try {
-        store.updateJobStatus(jobId, "WRITING");
-        const live = await executePortalLiveWrites({
-          runId: `live-${runStub.id}`,
-          restaurant: job.restaurantKey,
-          destinationHost: job.destinationHost,
-          source: sourceLabel,
-          schemaVersion: CANONICAL_MENU_SCHEMA_VERSION,
-          domainRuleVersion: DOMAIN_RULE_ENGINE_VERSION,
-          adapterVersion,
-          contractFingerprint: fingerprint.fingerprint,
-          canonical: recovered.menu,
-          runsDbPath: portalLiveRunsDbPath(portalDataDir()),
-          workflow: job.workflow,
-          ingredientLikelihood: ingredientLikelihoodEarly,
-        });
-        writeJson(outDir, "live-writeplan.json", live.livePlan);
-        writeJson(outDir, "live-destination-snapshot.json", live.destination);
-        writeJson(outDir, "live-execute-result.json", live.result);
-        finalStatus =
-          live.result.failed + live.result.blocked > 0
-            ? "COMPLETED_WITH_ERRORS"
-            : "COMPLETED";
-      } catch (liveErr) {
-        const message =
-          liveErr instanceof Error ? liveErr.message : String(liveErr);
-        writeJson(outDir, "live-execute-error.json", {
-          message,
-          at: new Date().toISOString(),
-        });
-        finalStatus = "READY_DRY_RUN";
-        store.updateJobStatus(jobId, finalStatus, {
-          remainingQuestions: 0,
-          errorMessage: `Live write failed (dry-run kept): ${message}`,
-        });
-        store.finishJobRun(runStub.id, finalStatus, metrics, message);
-        return;
-      }
+    if (finalStatus === "AWAITING_OPERATOR_APPROVAL") {
+      const targetProducts = recovered.menu.categories.reduce(
+        (count, category) => count + category.products.length,
+        0,
+      );
+      writeJson(outDir, "awaiting-operator-approval.json", {
+        jobId,
+        createdAt: new Date().toISOString(),
+        targetMenu: {
+          categoryCount: recovered.menu.categories.length,
+          productCount: targetProducts,
+          sourceProductCount: metrics.uniqueProducts ?? null,
+        },
+        writePlan: {
+          ...summarizeDryRun(plan),
+          categoryCreates: plan.operations.filter(
+            (operation) =>
+              operation.entityType === "category" &&
+              operation.action === "CREATE",
+          ).length,
+          productCreates: plan.operations.filter(
+            (operation) =>
+              operation.entityType === "product" &&
+              operation.action === "CREATE",
+          ).length,
+        },
+        staging: {
+          productsHiddenByDefault: true,
+          categoryCreateCustomerFacing: true,
+          warning:
+            "TAH category creation is customer-facing; products remain hidden unless storefront publishing was explicitly enabled.",
+        },
+      });
     }
 
     store.updateJobStatus(jobId, finalStatus, {
@@ -887,13 +894,38 @@ export function scheduleMigrationJob(jobId: string): void {
 }
 
 /**
- * After review clears, run gated live writes from existing canonical artifacts
- * (does not re-extract / re-seed review questions).
+ * Explicit operator-approval path: run gated live writes from existing target
+ * artifacts (does not re-extract / re-seed review questions).
  */
-export function schedulePostReviewLiveIfReady(jobId: string): void {
-  void runPostReviewLiveIfReady(jobId).catch((err) => {
-    console.error(`[portal-worker] post-review live ${jobId} failed:`, err);
+export function schedulePostReviewLiveIfReady(jobId: string): boolean {
+  const store = getPortalStore();
+  const job = store.getJob(jobId);
+  if (!job || job.status !== "AWAITING_OPERATOR_APPROVAL") return false;
+  if (store.listOpenQuestions(jobId).length > 0) return false;
+  const liveGate = evaluatePortalLiveWriteGate({
+    destinationHost: job.destinationHost,
   });
+  if (!liveGate.canLiveExecute) return false;
+  store.updateJobStatus(jobId, "LIVE_EXECUTING", {
+    remainingQuestions: 0,
+    errorMessage: null,
+  });
+  void runPostReviewLiveIfReady(jobId)
+    .then((result) => {
+      if (!result.ran && store.getJob(jobId)?.status === "LIVE_EXECUTING") {
+        store.updateJobStatus(jobId, "AWAITING_OPERATOR_APPROVAL", {
+          remainingQuestions: 0,
+          errorMessage: `Live execution did not start: ${result.reason ?? "unknown reason"}`,
+        });
+      }
+    })
+    .catch((err) => {
+      console.error(`[portal-worker] post-review live ${jobId} failed:`, err);
+      store.updateJobStatus(jobId, "LIVE_EXECUTION_FAILED", {
+        errorMessage: err instanceof Error ? err.message : String(err),
+      });
+    });
+  return true;
 }
 
 export async function runPostReviewLiveIfReady(jobId: string): Promise<{
@@ -903,6 +935,9 @@ export async function runPostReviewLiveIfReady(jobId: string): Promise<{
   const store = getPortalStore();
   const job = store.getJob(jobId);
   if (!job) return { ran: false, reason: "job_missing" };
+  if (job.status !== "LIVE_EXECUTING") {
+    return { ran: false, reason: "operator_approval_required" };
+  }
 
   const open = store.listOpenQuestions(jobId).length;
   if (open > 0) return { ran: false, reason: "open_questions" };
@@ -924,7 +959,10 @@ export async function runPostReviewLiveIfReady(jobId: string): Promise<{
     }
   }
 
-  const menuPath = join(run.runDir, "canonical-menu.json");
+  const targetPath = join(run.runDir, "target-menu.json");
+  const menuPath = existsSync(targetPath)
+    ? targetPath
+    : join(run.runDir, "canonical-menu.json");
   if (!existsSync(menuPath)) return { ran: false, reason: "no_canonical_menu" };
 
   let canonical: CanonicalMenu;
@@ -962,11 +1000,6 @@ export async function runPostReviewLiveIfReady(jobId: string): Promise<{
     TAH_V1_STRUCTURE_FINGERPRINT_INPUT,
   );
 
-  store.updateJobStatus(jobId, "WRITING", {
-    remainingQuestions: 0,
-    errorMessage: null,
-  });
-
   try {
     const live = await executePortalLiveWrites({
       runId: `live-postreview-${run.id}`,
@@ -984,13 +1017,24 @@ export async function runPostReviewLiveIfReady(jobId: string): Promise<{
     writeJson(run.runDir, "live-writeplan.json", live.livePlan);
     writeJson(run.runDir, "live-destination-snapshot.json", live.destination);
     writeJson(run.runDir, "live-execute-result.json", live.result);
+    if (live.result.recoveryRequired) {
+      writeJson(run.runDir, "recovery-plan.json", live.recoveryPlan);
+    }
     const finalStatus: JobStatus =
-      live.result.failed + live.result.blocked > 0
-        ? "COMPLETED_WITH_ERRORS"
-        : "COMPLETED";
+      live.result.recoveryRequired
+        ? live.result.status === "LIVE_EXECUTION_FAILED"
+          ? "LIVE_EXECUTION_FAILED"
+          : "RECOVERY_REQUIRED"
+        : live.result.status === "PARTIAL_WRITE"
+          ? "PARTIAL_WRITE"
+          : live.result.status === "LIVE_EXECUTION_FAILED"
+            ? "LIVE_EXECUTION_FAILED"
+            : live.result.status;
     store.updateJobStatus(jobId, finalStatus, {
       remainingQuestions: 0,
-      errorMessage: null,
+      errorMessage: live.result.recoveryRequired
+        ? "Live create did not verify the complete menu. Recovery plan generated; no recovery actions were executed."
+        : null,
     });
     return { ran: true };
   } catch (err) {
@@ -1000,9 +1044,46 @@ export async function runPostReviewLiveIfReady(jobId: string): Promise<{
       at: new Date().toISOString(),
       phase: "post-review",
     });
-    store.updateJobStatus(jobId, "READY_DRY_RUN", {
+    try {
+      const dryPlan = JSON.parse(
+        readFileSync(join(run.runDir, "dry-run-writeplan.json"), "utf8"),
+      ) as MigrationWritePlan;
+      const destination = JSON.parse(
+        readFileSync(
+          join(run.runDir, "dry-destination-snapshot.json"),
+          "utf8",
+        ),
+      ) as DryRunDestinationSnapshot;
+      const liveRunId = `live-postreview-${run.id}`;
+      const recoveryStore = new RunStore(
+        portalLiveRunsDbPath(portalDataDir()),
+      );
+      const operationRecords = recoveryStore.listOperations(liveRunId);
+      recoveryStore.close();
+      const recoveryPlan = buildRecoveryPlan({
+        plan: {
+          ...dryPlan,
+          runId: liveRunId,
+          dryRun: false,
+          operations: dryPlan.operations.filter(
+            (operation) => operation.action === "CREATE",
+          ),
+        },
+        operationRecords,
+        destinationSnapshot: destination,
+      });
+      writeJson(run.runDir, "recovery-plan.json", recoveryPlan);
+    } catch (recoveryErr) {
+      writeJson(run.runDir, "recovery-plan-error.json", {
+        message:
+          recoveryErr instanceof Error
+            ? recoveryErr.message
+            : String(recoveryErr),
+      });
+    }
+    store.updateJobStatus(jobId, "LIVE_EXECUTION_FAILED", {
       remainingQuestions: 0,
-      errorMessage: `Live write failed after review (dry-run kept): ${message}`,
+      errorMessage: `Live write failed after approval: ${message}`,
     });
     return { ran: false, reason: `live_error:${message}` };
   }

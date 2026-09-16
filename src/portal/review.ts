@@ -140,23 +140,74 @@ export function submitReviewAnswer(
   }
 
   const remaining = store.listOpenQuestions(question.jobId).length;
-  let scheduledPostReviewLive = false;
   if (remaining === 0) {
-    scheduledPostReviewLive = true;
-    void import("./worker.js")
-      .then((m) => m.schedulePostReviewLiveIfReady(question.jobId))
-      .catch((err) => {
-        console.warn(
-          "[portal-review] post-review live schedule failed:",
-          err instanceof Error ? err.message : err,
-        );
+    const job = store.getJob(question.jobId);
+    if (job?.workflow === "CREATE_MENU") {
+      store.updateJobStatus(question.jobId, "AWAITING_OPERATOR_APPROVAL", {
+        remainingQuestions: 0,
+        errorMessage: null,
       });
+      const latest = store.latestJobRun(question.jobId);
+      if (latest?.runDir) {
+        const targetPath = join(latest.runDir, "target-menu.json");
+        const planPath = join(latest.runDir, "dry-run-writeplan.json");
+        try {
+          const target = JSON.parse(readFileSync(targetPath, "utf8")) as {
+            categories?: Array<{ products?: unknown[] }>;
+          };
+          const plan = JSON.parse(readFileSync(planPath, "utf8")) as {
+            operations?: Array<{ entityType?: string; action?: string }>;
+          };
+          const operations = plan.operations ?? [];
+          writeFileSync(
+            join(latest.runDir, "awaiting-operator-approval.json"),
+            JSON.stringify(
+              {
+                jobId: question.jobId,
+                createdAt: new Date().toISOString(),
+                targetMenu: {
+                  categoryCount: target.categories?.length ?? 0,
+                  productCount:
+                    target.categories?.reduce(
+                      (count, category) =>
+                        count + (category.products?.length ?? 0),
+                      0,
+                    ) ?? 0,
+                },
+                writePlan: {
+                  categoryCreates: operations.filter(
+                    (op) =>
+                      op.entityType === "category" && op.action === "CREATE",
+                  ).length,
+                  productCreates: operations.filter(
+                    (op) =>
+                      op.entityType === "product" && op.action === "CREATE",
+                  ).length,
+                },
+                staging: {
+                  productsHiddenByDefault: true,
+                  categoryCreateCustomerFacing: true,
+                },
+              },
+              null,
+              2,
+            ),
+            "utf8",
+          );
+        } catch (err) {
+          console.warn(
+            "[portal-review] approval artifact write skipped:",
+            err instanceof Error ? err.message : err,
+          );
+        }
+      }
+    }
   }
   return {
     answer: result.answer,
     resolvedIds: result.resolvedIds,
     remaining,
-    scheduledPostReviewLive,
+    scheduledPostReviewLive: false,
     ...(tilbehorFactId ? { tilbehorFactId } : {}),
   };
 }

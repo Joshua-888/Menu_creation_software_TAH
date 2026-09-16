@@ -117,8 +117,24 @@ export function reconcileJobStatusFromArtifacts(
     dryRunSkips: Number(summary.SKIP ?? 0),
   };
 
+  let approvalReady = false;
+  const cardGatePath = join(run.runDir, "create-card-quality-gate.json");
+  if (job.workflow === "CREATE_MENU" && existsSync(cardGatePath)) {
+    try {
+      const gate = JSON.parse(readFileSync(cardGatePath, "utf8")) as {
+        ok?: boolean;
+      };
+      approvalReady = gate.ok === true;
+    } catch {
+      approvalReady = false;
+    }
+  }
   const finalStatus: JobStatus =
-    remaining > 0 ? "AWAITING_REVIEW" : "READY_DRY_RUN";
+    remaining > 0
+      ? "AWAITING_REVIEW"
+      : approvalReady
+        ? "AWAITING_OPERATOR_APPROVAL"
+        : "READY_DRY_RUN";
   store.updateJobStatus(jobId, finalStatus, {
     remainingQuestions: remaining,
     errorMessage: null,

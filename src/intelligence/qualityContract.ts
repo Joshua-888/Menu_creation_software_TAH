@@ -205,6 +205,24 @@ function evaluateProduct(
   checks.push(check("ADDITION_PRICE_SUPPORTED", priceSupported));
   void pricedAdds;
 
+  const sourcePriceSupported =
+    (product.basePrice != null &&
+      product.basePrice > 0 &&
+      product.basePriceOrigin !== "SYSTEM_DEFAULT") ||
+    product.variants.some(
+      (variant) =>
+        variant.sourceTotalPrice != null && variant.sourceTotalPrice > 0,
+    );
+  checks.push(
+    check(
+      "PRICE_SUPPORTED",
+      sourcePriceSupported,
+      sourcePriceSupported
+        ? undefined
+        : "PRICE_UNSUPPORTED: missing positive source-supported base price",
+    ),
+  );
+
   checks.push(
     check("NO_OCR_GARBAGE", !looksLikeGarbageName(name) && nameValid),
   );
@@ -231,6 +249,7 @@ function evaluateProduct(
     "NO_OCR_GARBAGE",
     "ADDITION_SCOPE_VALID",
     "CATEGORY_SEMANTIC_FIT",
+    "PRICE_SUPPORTED",
   ]);
   const reviewIds = new Set([
     "INGREDIENTS_COMPLETE",

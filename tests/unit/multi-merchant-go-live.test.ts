@@ -146,14 +146,14 @@ describe("dry-run live destination gate", () => {
 });
 
 describe("storefront publish default", () => {
-  it("publishes by default; PORTAL_CREATE_HIDDEN keeps Skjult", () => {
-    expect(shouldCreateProductsHidden({})).toBe(false);
+  it("stages hidden by default and requires explicit publish", () => {
+    expect(shouldCreateProductsHidden({})).toBe(true);
     expect(
-      shouldCreateProductsHidden({ PORTAL_CREATE_HIDDEN: "1" }),
-    ).toBe(true);
+      shouldCreateProductsHidden({ PORTAL_CREATE_HIDDEN: "0" }),
+    ).toBe(false);
     expect(
-      shouldCreateProductsHidden({ PORTAL_STOREFRONT_PUBLISH: "0" }),
-    ).toBe(true);
+      shouldCreateProductsHidden({ PORTAL_STOREFRONT_PUBLISH: "1" }),
+    ).toBe(false);
   });
 });
 

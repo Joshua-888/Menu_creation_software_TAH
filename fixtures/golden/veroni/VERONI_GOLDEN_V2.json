@@ -7,9 +7,9 @@
   "targetProductCount": 88,
   "statusAccounting": {
     "productCount": 88,
-    "ready": 76,
+    "ready": 75,
     "review": 12,
-    "blocked": 0,
+    "blocked": 1,
     "reconciles": true
   },
   "menuVariantCount": 0,
