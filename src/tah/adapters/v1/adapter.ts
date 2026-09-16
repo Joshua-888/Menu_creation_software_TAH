@@ -22,6 +22,10 @@ import {
   isTahCanaryCategoryName,
 } from "../../write/categoryCreateObserve.js";
 import {
+  interpretCategoryDeleteReadBack,
+  postCategoryDelete,
+} from "../../write/categoryDeleteObserve.js";
+import {
   assertPageIsAllowlistedAdmin,
 } from "../../write/formFill.js";
 import {
@@ -379,6 +383,95 @@ export class TahAdminAdapterV1 implements TahAdminAdapter {
     }
     return { destinationId: found.databaseId };
   }
+
+  /**
+   * Delete a category by exact database id.
+   * Idempotent: if already absent before submit → VERIFIED_DELETED (no blind retry).
+   * Success requires listCategories read-back proving absence.
+   */
+  async deleteCategory(input: {
+    databaseId: string;
+    allowCustomerCategory?: boolean;
+  }): Promise<{ outcome: "VERIFIED_DELETED" | "DELETE_FAILED" | "AMBIGUOUS" }> {
+    if (this.capabilities.write.deleteCategory !== "CERTIFIED") {
+      throw mutationBlocked("deleteCategory");
+    }
+    const databaseId = String(input.databaseId ?? "").trim();
+    if (!/^\d+$/.test(databaseId)) {
+      throw new Error(
+        "ADMIN_WRITE_BLOCKED: deleteCategory requires numeric databaseId",
+      );
+    }
+
+    const { page, baseUrl } = this.options;
+    await assertPageIsAllowlistedAdmin(
+      page,
+      this.options.expectedHost ?? new URL(baseUrl).hostname,
+    );
+
+    const before = await this.listCategories();
+    const target = before.find((c) => c.databaseId === databaseId);
+    if (!target) {
+      // Already absent — idempotent success without submitting delete again
+      return { outcome: "VERIFIED_DELETED" };
+    }
+    if (
+      !isTahCanaryCategoryName(target.name) &&
+      !input.allowCustomerCategory
+    ) {
+      throw new Error(
+        "ADMIN_WRITE_BLOCKED: deleteCategory refuses non-canary categories unless allowCustomerCategory: true",
+      );
+    }
+
+    const unrelatedBefore = before.filter((c) => c.databaseId !== databaseId);
+    let responseStatus = 0;
+    try {
+      const posted = await postCategoryDelete({ page, baseUrl, databaseId });
+      responseStatus = posted.status;
+      if (posted.requestPath !== `/admin/categories/${databaseId}`) {
+        throw new Error(
+          `ADMIN_WRITE_BLOCKED: deleteCategory path mismatch (${posted.requestPath})`,
+        );
+      }
+    } catch (e) {
+      // Ambiguous transport — still read-back; never blind-retry
+      const afterErr = await this.listCategories();
+      const outcome = interpretCategoryDeleteReadBack({
+        databaseId,
+        categoriesAfter: afterErr,
+        responseStatus: 0,
+      });
+      if (outcome === "VERIFIED_DELETED") return { outcome };
+      throw e instanceof Error
+        ? e
+        : new Error(`ADMIN_WRITE_BLOCKED: deleteCategory failed: ${String(e)}`);
+    }
+
+    const after = await this.listCategories();
+    const outcome = interpretCategoryDeleteReadBack({
+      databaseId,
+      categoriesAfter: after,
+      responseStatus,
+    });
+    if (outcome === "VERIFIED_DELETED") {
+      const unrelatedAfter = after.filter((c) => c.databaseId !== databaseId);
+      const untouched =
+        unrelatedBefore.length === unrelatedAfter.length &&
+        unrelatedBefore.every((b) =>
+          unrelatedAfter.some(
+            (a) => a.databaseId === b.databaseId && a.name === b.name,
+          ),
+        );
+      if (!untouched) {
+        throw new Error(
+          "ADMIN_WRITE_BLOCKED: deleteCategory read-back shows unrelated category drift",
+        );
+      }
+    }
+    return { outcome };
+  }
+
   async createProduct(
     _input: CanonicalProduct,
   ): Promise<{ destinationId: string }> {

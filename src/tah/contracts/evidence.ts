@@ -36,6 +36,11 @@ export type AdapterCapabilities = {
   };
   write: {
     createCategory: CapabilityStatus;
+    /**
+     * DELETE empty category via POST /admin/categories/{id} _method=delete + list read-back.
+     * UNCERTIFIED until synthetic canary delete is live-TESTED (never use customer categories as canaries).
+     */
+    deleteCategory: CapabilityStatus;
     createProduct: CapabilityStatus;
     updateProduct: CapabilityStatus;
     /**
@@ -79,6 +84,7 @@ export const DEFAULT_ADAPTER_CAPABILITIES: AdapterCapabilities = {
   },
   write: {
     createCategory: "UNCERTIFIED",
+    deleteCategory: "UNCERTIFIED",
     createProduct: "UNCERTIFIED",
     updateProduct: "UNCERTIFIED",
     updateExistingProductForm: "UNCERTIFIED",
@@ -111,6 +117,8 @@ export const M2B_ADAPTER_CAPABILITIES: AdapterCapabilities = {
   write: {
     /** M6.7 Veroni canary __TAH_CANARY_CATEGORY_M67__ — POST /admin/categories + list read-back */
     createCategory: "CERTIFIED",
+    /** M80 Veroni canary __TAH_CANARY_CATEGORY_DELETE_M80__ — POST /admin/categories/{id} _method=delete + list absence read-back */
+    deleteCategory: "CERTIFIED",
     createProduct: "CERTIFIED",
     updateProduct: "UNCERTIFIED",
     /** M3H Veroni canary 18: Opdater + POST /admin/menu/18 + description read-back */

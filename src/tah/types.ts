@@ -78,6 +78,11 @@ export interface TahAdminAdapter {
     /** Required for non-canary (customer) category names such as Pasta. */
     allowCustomerCategory?: boolean;
   }): Promise<{ destinationId: string }>;
+  deleteCategory(input: {
+    databaseId: string;
+    /** Required when deleting a non-canary (customer / incident) category. */
+    allowCustomerCategory?: boolean;
+  }): Promise<{ outcome: "VERIFIED_DELETED" | "DELETE_FAILED" | "AMBIGUOUS" }>;
   createProduct(input: CanonicalProduct): Promise<{ destinationId: string }>;
   updateProduct(
     destinationId: string,

@@ -1,0 +1,38 @@
+{
+  "milestone": "M80_DELETE_CATEGORY",
+  "canaryName": "__TAH_CANARY_CATEGORY_DELETE_M80__",
+  "targetHost": "veronipizza.dk",
+  "status": "PASS",
+  "canaryId": "13",
+  "deleteRequest": {
+    "status": 200,
+    "finalUrl": "https://veronipizza.dk/admin/categories",
+    "requestPath": "/admin/categories/13",
+    "methodOverride": "delete"
+  },
+  "outcome": "VERIFIED_DELETED",
+  "proofs": {
+    "A_exactDatabaseIdTargeted": true,
+    "B_onlyIntendedDisappears": true,
+    "C_unrelatedUntouched": true,
+    "D_readBackConfirmsAbsence": true,
+    "E_idempotentAbsentHandled": true,
+    "F_ambiguousFailsClosed": true,
+    "G_noBlindSecondDelete": true
+  },
+  "beforeCount": 13,
+  "afterCount": 12,
+  "idempotent": {
+    "attempted": true,
+    "mode": "READ_BACK_NO_BLIND_RETRY",
+    "stillPresent": false,
+    "editNav": {
+      "status": 404,
+      "url": "https://veronipizza.dk/admin/categories/13/edit"
+    },
+    "result": "VERIFIED_DELETED"
+  },
+  "DELETE_CATEGORY_CONTRACT_PROVEN": true,
+  "DELETE_CATEGORY_REAL_HOST_PROVEN": true,
+  "note": "Evidence-only. Adapter capability deleteCategory remains ABSENT/UNCERTIFIED until implemented and promoted."
+}

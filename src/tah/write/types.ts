@@ -83,6 +83,8 @@ export const CANARY_NAMES = {
   category: "__TAH_CANARY_M3__",
   /** M6.7 createCategory certification (synthetic only) */
   categoryCreate: "__TAH_CANARY_CATEGORY_M67__",
+  /** M80 deleteCategory certification (synthetic only) */
+  categoryDelete: "__TAH_CANARY_CATEGORY_DELETE_M80__",
   product: "__TAH_CANARY_PRODUCT_M3__",
   productNonZero: "__TAH_CANARY_VARIANT_M3__",
   productMulti: "__TAH_CANARY_MULTIVARIANT_M3__",
