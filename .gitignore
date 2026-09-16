@@ -10,6 +10,7 @@ playwright/.auth/
 /runs/
 /data/
 apps/portal/.next/
+apps/portal/src/deploy-meta.json
 *.traineddata
 *.log
 .DS_Store
