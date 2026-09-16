@@ -84,12 +84,13 @@ export function normalizePeerIngredientKey(name: string): string {
 
 export function classifyBurgerSubtype(name: string): BurgerSubtype {
   const n = name.trim();
-  if (/bacon/i.test(n) && /burger/i.test(n)) return "baconburger";
-  if (/(cheese|ost)/i.test(n) && /burger/i.test(n)) return "cheeseburger";
+  if (/bacon/i.test(n) && /burger|smash/i.test(n)) return "baconburger";
+  if (/(cheese|ost)/i.test(n) && /burger|smash/i.test(n)) return "cheeseburger";
   if (/cafeteria/i.test(n) || (/hjemmelavet/i.test(n) && /burger/i.test(n))) {
     return "cafeteriaburger";
   }
-  if (/burger/i.test(n)) return "burger";
+  // Smash / named grilled sandwiches share the generic burger peer bucket
+  if (/burger|smash/i.test(n)) return "burger";
   if (/\b(pommes|frites|nuggets?)\b/i.test(n)) return "fries_plate";
   return "other";
 }

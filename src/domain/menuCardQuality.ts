@@ -8,6 +8,15 @@
  * - Tilbehør prices vary: meat ≈ 2× vegetable/dip baseline
  */
 
+import { isForbiddenMenuVariantName } from "../learning/categorySizeVariantPolicy.js";
+import type {
+  MigrationWritePlan,
+  PlannedProductPayload,
+} from "../runner/writePlan.js";
+import {
+  isBurgerProductName,
+  isGrillCategory,
+} from "./grillCardFill.js";
 import { capitalizeFirstLetter, formatProductName } from "./textNormalize.js";
 
 /** Baseline vegetable / dip Tilbehør price (10 kr). */
@@ -608,3 +617,92 @@ export function dishNameHasIngredientDump(name: string): boolean {
   if (/\b(kodsovs|kødsovs|spaghetti|syltet paprika)\b/i.test(n)) return true;
   return false;
 }
+
+export type CreateCardQualityGateResult = {
+  ok: boolean;
+  blockers: string[];
+};
+
+function looksLikeBurgerPayload(
+  payload: PlannedProductPayload,
+  categoryHint?: string,
+): boolean {
+  return (
+    isBurgerProductName(payload.name) ||
+    isGrillCategory(categoryHint) ||
+    /\b(burgers?|grill)\b/i.test(categoryHint ?? "")
+  );
+}
+
+/**
+ * Hard pre-live-write gate for Create / QA plans.
+ * Blocks storefront publish when SEMANTIC_RULEs are violated.
+ */
+export function assertCreateCardQuality(
+  plan: MigrationWritePlan,
+): CreateCardQualityGateResult {
+  const blockers: string[] = [];
+  let burgerProductCount = 0;
+
+  for (const op of plan.operations) {
+    if (op.action !== "CREATE" && op.action !== "UPDATE") continue;
+    if (op.entityType !== "product") continue;
+    const payload = op.expectedPayload;
+    if (!payload) continue;
+    const categoryHint = op.identity.categoryHint;
+
+    for (const v of payload.variants ?? []) {
+      if (isForbiddenMenuVariantName(v.name)) {
+        blockers.push(
+          `${payload.menuNumber || payload.name}: forbidden Menu variant "${v.name}"`,
+        );
+      }
+    }
+
+    if (looksLikeBurgerPayload(payload, categoryHint)) {
+      // Menuer combos are not plain burger cards
+      if (
+        /^menuer$/i.test((categoryHint ?? "").trim()) ||
+        /\bmenu\b/i.test(payload.name)
+      ) {
+        continue;
+      }
+      burgerProductCount += 1;
+      if ((payload.ingredients ?? []).length < 2) {
+        blockers.push(
+          `${payload.menuNumber || payload.name}: burger needs ≥2 ingredients`,
+        );
+      }
+      if (!(payload.description ?? "").trim()) {
+        blockers.push(
+          `${payload.menuNumber || payload.name}: burger needs Beskrivelse`,
+        );
+      }
+      if ((payload.additions ?? []).length < 1) {
+        blockers.push(
+          `${payload.menuNumber || payload.name}: burger needs Tilbehør`,
+        );
+      }
+      if (/^grill$/i.test((categoryHint ?? "").trim())) {
+        blockers.push(
+          `${payload.menuNumber || payload.name}: burger category must be Burgers, not Grill`,
+        );
+      }
+    }
+  }
+
+  const grillCategoryCreates = plan.operations.filter(
+    (op) =>
+      op.entityType === "category" &&
+      op.action === "CREATE" &&
+      /^grill$/i.test(String(op.identity.name ?? "")),
+  );
+  if (grillCategoryCreates.length && burgerProductCount >= 2) {
+    blockers.push(
+      "Category Grill created for burger/smash products — use Burgers",
+    );
+  }
+
+  return { ok: blockers.length === 0, blockers };
+}
+

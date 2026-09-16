@@ -46,7 +46,10 @@ import {
 } from "./structureMapping.js";
 import { menuNumbersWithKeepTilbehorOverride } from "../learning/tilbehorOverride.js";
 import { proposePizzaToppingsFromDescription } from "../learning/pizzaToppings.js";
-import { applyCategoryVariantFanOut } from "../learning/categorySizeVariantPolicy.js";
+import {
+  applyCategoryVariantFanOut,
+  stripForbiddenMenuVariants,
+} from "../learning/categorySizeVariantPolicy.js";
 import type { IngredientLikelihoodPolicy } from "../learning/ingredientLikelihood.js";
 import {
   grillIngredientsInsufficient,
@@ -252,6 +255,7 @@ function toPayload(
   ) {
     description = safeIngredients.join(", ");
   }
+  const safeVariants = stripForbiddenMenuVariants(mapped.variants);
   return {
     sourceId: product.sourceId,
     menuNumber:
@@ -260,7 +264,9 @@ function toPayload(
     description,
     basePriceOre: product.basePrice ?? 0,
     categoryIds,
-    variants: mapped.variants,
+    variants: safeVariants.length
+      ? safeVariants
+      : [{ name: "Alm.", surchargeOre: 0 }],
     ingredients: safeIngredients,
     additions: safeAdditions,
     // Default: appear on storefront. Kill switch: PORTAL_CREATE_HIDDEN=1

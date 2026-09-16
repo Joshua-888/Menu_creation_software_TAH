@@ -45,7 +45,7 @@ const INDIAN_RE =
   /\b(tikka|masala|curry|naan|butter\s*chicken|kottu|biryani|indisk|fried\s*rice|fried\s*noodles)\b/i;
 const NACHOS_RE = /\bnachos\b/i;
 const SANDWICH_RE =
-  /\b(sandwich|burger|pita|pitabrød|dürüm|durum|wrap|rulle|hotdog|pølse)\b/i;
+  /\b(sandwich|burger|smash|pita|pitabrød|dürüm|durum|wrap|rulle|hotdog|pølse)\b/i;
 
 export const ALL_KINDS: ProductKind[] = [
   "drinks",

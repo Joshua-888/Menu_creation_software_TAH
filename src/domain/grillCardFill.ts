@@ -129,11 +129,13 @@ const PIZZA_TOPPING_ADD_RE =
   /\b(skinke|bacon|kebab|kylling|pepperoni|champignon|ananas|parmaskinke|kødsovs|kødstrimler|rejer|tun|musling|gorgonzola|jalapeños?|pølse|ost|tomat|løg|paprika|syltet)\b/i;
 
 export function isGrillCategory(categoryName?: string): boolean {
-  return /\bgrill\b/i.test(categoryName ?? "");
+  return /\b(grill|burgers?)\b/i.test(categoryName ?? "");
 }
 
 export function isBurgerProductName(name: string): boolean {
-  return /burger|cafeteria/i.test(name);
+  return /burger|cafeteria|smash|murphy|crunch|spice\s+me|dirty\s+smash|bearnaise\s+smash|classic\s+smash/i.test(
+    name,
+  );
 }
 
 export function productWantsGrillDips(input: {
@@ -202,12 +204,20 @@ export function grillIngredientsInsufficient(
   productName: string,
 ): boolean {
   if (isBurgerProductName(productName)) {
-    if (ingredients.length < 4) return true;
+    if (ingredients.length < 3) return true;
     const blob = ingredients.join(" ").toLowerCase();
-    if (!/\boksekød\b/.test(blob) && !/\bbøf\b/.test(blob)) return true;
-    if (!/\b(ketchup|mayo|mayonnaise|remoulade|dressing)\b/.test(blob)) {
-      return true;
-    }
+    const hasMeat =
+      /\boksekød\b/.test(blob) ||
+      /\bbøf\b/.test(blob) ||
+      /\bchicken\b/.test(blob) ||
+      /\bkylling\b/.test(blob) ||
+      /\bcrispy\b/.test(blob);
+    if (!hasMeat) return true;
+    const hasSauceOrTopping =
+      /\b(ketchup|mayo|mayonnaise|remoulade|dressing|sauce|burgersauce|bearnaise|chili|honey|coleslaw|colslaw)\b/.test(
+        blob,
+      ) || ingredients.length >= 4;
+    if (!hasSauceOrTopping) return true;
     return false;
   }
   if (
@@ -385,8 +395,8 @@ export function preferBurgerEkstraAdditions(
   if (productWantsGrillDips(input)) return additions;
   const burgerLike =
     isBurgerProductName(input.name) ||
-    (/\bgrill\b/i.test(input.categoryName ?? "") &&
-      /burger|sandwich|cafeteria/i.test(
+    (/\b(grill|burgers?)\b/i.test(input.categoryName ?? "") &&
+      /burger|sandwich|cafeteria|smash|murphy|crunch|spice|dirty|bearnaise/i.test(
         `${input.name} ${input.description ?? ""}`,
       ));
   if (!burgerLike) return additions;

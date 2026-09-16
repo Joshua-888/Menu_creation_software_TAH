@@ -7,6 +7,8 @@ import type {
   SourceProductChoice,
   SourceVariant,
 } from "../../domain/schema/source.js";
+import { synthesizeMenuerProductsFromMenuPrices } from "../../planning/menuerFromMenuPrice.js";
+import { normalizeSourceCategoriesByKind } from "../../learning/categoryKindNaming.js";
 import type {
   ClassifiedPdfPage,
   OverlapLink,
@@ -266,8 +268,8 @@ function buildPricing(c: SourceCandidate): {
         { label: "BASE", sourceTotalPrice: kronerToOre(base) },
         { label: "Menu", sourceTotalPrice: kronerToOre(menu) },
       ];
-      // Keep "Menu" as a SOURCE PRICE OPTION / provisional variant — not a category.
-      // Combo/contents semantics remain human-review (MANUAL_REVIEW_REQUIRED).
+      // Hard SEMANTIC_RULE: Menu is never a product variant — only Alm. at BASE.
+      // Menu column price is preserved for Menuer category synthesis.
       return {
         variants: [
           {
@@ -276,17 +278,9 @@ function buildPricing(c: SourceCandidate): {
             sourceTotalPrice: kronerToOre(base),
             evidence: c.evidence,
           },
-          {
-            sourceId: `${idBase}::v-menu`,
-            name: "Menu",
-            sourceTotalPrice: kronerToOre(menu),
-            evidence: c.evidence,
-          },
         ],
         sourcePriceOptions,
-        review: true,
-        reason:
-          "Menu price column preserved as source option — variant vs combo semantics unclear",
+        review: false,
       };
     }
     // base_menu hint but only one price → single (do not invent Menu)
@@ -636,7 +630,9 @@ export function reconcileCandidatesToSourceMenu(input: {
     "Vegetarpizza",
     "Pasta",
     "UNLABELLED_PAGE5_36_38",
+    "Burgers",
     "GRILL",
+    "Menuer",
     "Sandwich - hjemmelavet inkl. pommes frites",
     "Nachos",
     "INDISK",
@@ -645,7 +641,7 @@ export function reconcileCandidatesToSourceMenu(input: {
     "DRIKKEVARER",
   ];
 
-  const categories: SourceCategory[] = [...categoryMap.entries()]
+  let categories: SourceCategory[] = [...categoryMap.entries()]
     .sort((a, b) => {
       const ai = sectionOrder.indexOf(a[0]);
       const bi = sectionOrder.indexOf(b[0]);
@@ -658,6 +654,17 @@ export function reconcileCandidatesToSourceMenu(input: {
       commonIngredients: [],
       products,
     }));
+
+  let sourceMenu: SourceMenu = {
+    restaurantName: input.restaurantName,
+    sourceInfo: input.sourceFile,
+    categories,
+    extractionVersion: PDF_EXTRACTOR_VERSION,
+  };
+  // Kind/peer category rename (Grill → Burgers etc.) — not restaurant hardcoding
+  sourceMenu = normalizeSourceCategoriesByKind(sourceMenu);
+  sourceMenu = synthesizeMenuerProductsFromMenuPrices(sourceMenu);
+  categories = sourceMenu.categories;
 
   const summary = {
     candidatesDetected: input.candidates.length,
@@ -690,12 +697,7 @@ export function reconcileCandidatesToSourceMenu(input: {
   }
 
   return {
-    sourceMenu: {
-      restaurantName: input.restaurantName,
-      sourceInfo: input.sourceFile,
-      categories,
-      extractionVersion: PDF_EXTRACTOR_VERSION,
-    },
+    sourceMenu,
     accounting: {
       sourceFile: input.sourceFile,
       generatedAt: new Date().toISOString(),

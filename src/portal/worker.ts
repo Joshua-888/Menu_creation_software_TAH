@@ -41,6 +41,9 @@ import {
 } from "../learning/peerAdditionPriceBenchmark.js";
 import { upsertPeerAdditionFactsForMenu } from "../learning/additionLikelihood.js";
 import { upsertCategoryIngredientAdditionFacts } from "../learning/categoryIngredientAdditions.js";
+import { normalizeSourceCategoriesByKind } from "../learning/categoryKindNaming.js";
+import { enrichCanonicalBurgerCards } from "../planning/enrichBurgerCards.js";
+import { assertCreateCardQuality } from "../domain/menuCardQuality.js";
 import { buildAndWritePolicyApplicationReport } from "../learning/policyApplicationReport.js";
 import type { StructurePatternSummary } from "../learning/peerMenuStructure.js";
 import { M2B_ADAPTER_CAPABILITIES } from "../tah/contracts/evidence.js";
@@ -333,7 +336,13 @@ export async function runMigrationJob(
         .prepare(`UPDATE job_runs SET status = ? WHERE id = ?`)
         .run("DOMAIN", runStub.id);
 
-      const domain = runDomainEngine(extraction.sourceMenu);
+      const peers = loadPeerSnapshots(repoRoot());
+      const namedSource = normalizeSourceCategoriesByKind(
+        extraction.sourceMenu,
+        peers,
+      );
+      writeJson(outDir, "source-menu.json", namedSource);
+      const domain = runDomainEngine(namedSource);
       recovered = applyPizzaToppingRecovery(domain.menu);
     }
 
@@ -399,6 +408,13 @@ export async function runMigrationJob(
     }
 
     const additionLikelihood = loadAdditionLikelihood(root);
+    const ingredientLikelihoodEarly = loadIngredientLikelihood(root);
+    recovered.menu = enrichCanonicalBurgerCards(
+      recovered.menu,
+      ingredientLikelihoodEarly,
+    );
+    writeJson(outDir, "canonical-menu-enriched.json", recovered.menu);
+
     const categoryIngredient = upsertCategoryIngredientAdditionFacts({
       store: decisionStore,
       restaurantKey: job.restaurantKey,
@@ -531,6 +547,9 @@ export async function runMigrationJob(
     });
 
     writeJson(outDir, "dry-run-writeplan.json", plan);
+
+    const cardGate = assertCreateCardQuality(plan);
+    writeJson(outDir, "create-card-quality-gate.json", cardGate);
 
     let reconcileReport = null as ReturnType<
       typeof buildMenuReconcileReport
@@ -725,9 +744,20 @@ export async function runMigrationJob(
     decisionStore.close();
 
     let finalStatus: JobStatus =
-      created.length > 0 ? "AWAITING_REVIEW" : "READY_DRY_RUN";
+      created.length > 0
+        ? "AWAITING_REVIEW"
+        : !cardGate.ok && !isQa
+          ? "READY_DRY_RUN"
+          : "READY_DRY_RUN";
 
-    const willAutoLive = liveGate.canLiveExecute && created.length === 0;
+    const willAutoLive =
+      liveGate.canLiveExecute &&
+      created.length === 0 &&
+      (isQa || cardGate.ok);
+
+    if (!cardGate.ok && !isQa) {
+      writeJson(outDir, "live-write-blocked-by-card-gate.json", cardGate);
+    }
 
     if (willAutoLive) {
       try {
@@ -771,9 +801,17 @@ export async function runMigrationJob(
 
     store.updateJobStatus(jobId, finalStatus, {
       remainingQuestions: created.length,
-      errorMessage: null,
+      errorMessage:
+        !cardGate.ok && !isQa && finalStatus === "READY_DRY_RUN"
+          ? `Create card quality gate blocked live write: ${cardGate.blockers.join("; ")}`
+          : null,
     });
-    store.finishJobRun(runStub.id, finalStatus, metrics, null);
+    store.finishJobRun(
+      runStub.id,
+      finalStatus,
+      metrics,
+      !cardGate.ok && !isQa ? cardGate.blockers.join("; ") : null,
+    );
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     writeJson(outDir, "error.json", {

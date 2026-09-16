@@ -67,6 +67,19 @@ export const BUILT_IN_SEMANTIC_RULES: BuiltInSemanticRule[] = [
     ],
   },
   {
+    id: "category-kind-naming",
+    title: "Category names follow product kind + peer modal labels",
+    summary:
+      "Generic cooking-method labels (Grill) are renamed from majority product kind using peer modal category names, with kind fallbacks (sandwich_grill → Burgers). Never restaurant-specific hardcoding.",
+    appliesTo: "Create extract → domain",
+    adjustableVia:
+      "SEMANTIC_RULE in learning/categoryKindNaming.ts; peer observe snapshots",
+    details: [
+      "OCR section headers still win when present and specific",
+      "Peer modal label preferred when ≥2 peer products share a kind+category",
+    ],
+  },
+  {
     id: "menu-never-variant",
     title: "Menu is never a variant — Menuer is a category",
     summary:
