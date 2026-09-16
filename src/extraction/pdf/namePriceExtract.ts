@@ -88,7 +88,6 @@ function evidence(
   raw: string,
 ): SourceEvidence {
   return {
-    extractorId: "name-price-extract",
     extractorVersion: "1.0.0",
     rawText: raw.slice(0, 900),
     sourceFile,
