@@ -11,22 +11,25 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const out = join(root, "apps/portal/src/deploy-meta.json");
 
 function resolveSha() {
-  const envSha = [
-    process.env.RAILWAY_GIT_COMMIT_SHA,
-    process.env.GIT_COMMIT_SHA,
-    process.env.COMMIT_SHA,
-    process.env.SOURCE_VERSION,
-  ]
-    .map((s) => s?.trim())
-    .find(Boolean);
-  if (envSha) return envSha;
+  // Git-connected Railway deploys set RAILWAY_GIT_COMMIT_SHA to the commit
+  // being built. Prefer that, then the working tree HEAD. Do not let a leftover
+  // GIT_COMMIT_SHA pin override the tree actually being packaged.
+  const railway = process.env.RAILWAY_GIT_COMMIT_SHA?.trim();
+  if (railway) return railway;
   try {
     return execSync("git rev-parse HEAD", {
       cwd: root,
       encoding: "utf8",
     }).trim();
   } catch {
-    return "unknown";
+    const fallback = [
+      process.env.GIT_COMMIT_SHA,
+      process.env.COMMIT_SHA,
+      process.env.SOURCE_VERSION,
+    ]
+      .map((s) => s?.trim())
+      .find(Boolean);
+    return fallback || "unknown";
   }
 }
 

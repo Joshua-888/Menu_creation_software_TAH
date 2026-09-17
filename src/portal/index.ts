@@ -56,6 +56,7 @@ export {
   runsDir,
   repoRoot,
 } from "./paths.js";
+export { resolveDeployCommitSha } from "./deployProvenance.js";
 
 // Worker (PDF/OCR) is intentionally NOT re-exported here — import from
 // `./worker.js` only in routes that schedule jobs, so Next does not pull

@@ -100,10 +100,15 @@ export function assertAllowlistedAdminHost(input: {
       host: actual,
     };
   }
-  if (
-    !input.pageUrl.includes("/admin/") &&
-    !input.pageUrl.includes("/login")
-  ) {
+  let pathname = "/";
+  try {
+    pathname = new URL(input.pageUrl).pathname;
+  } catch {
+    return { ok: false, reason: "invalid_url" };
+  }
+  const isAdminRoute = /^\/admin(\/|$)/i.test(pathname);
+  const isLoginRoute = /^\/login(\/|$)/i.test(pathname);
+  if (!isAdminRoute && !isLoginRoute) {
     return {
       ok: false,
       reason: `not_admin_route:${input.pageUrl}`,

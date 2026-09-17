@@ -78,6 +78,29 @@ describe("portal store + review", () => {
     expect(store.listJobs()).toHaveLength(0);
   });
 
+  it("cancels a stale ARTIFACTS job without deleting it", () => {
+    const emp = store.createEmployee({
+      email: "cancel@takeawayhero.test",
+      name: "Cancel",
+      password: "s3cret-pass",
+      role: "operator",
+    });
+    const job = store.createJob({
+      merchantName: "Bella Kebab",
+      destinationHost: "https://bellakebab.dk",
+      sourceType: "pdf_upload",
+      sourceUrl: null,
+      createdByEmployeeId: emp.id,
+    });
+    store.updateJobStatus(job.id, "ARTIFACTS");
+    expect(store.cancelJob(job.id, "stale ARTIFACTS — do not resume")).toBe(
+      true,
+    );
+    expect(store.getJob(job.id)?.status).toBe("CANCELLED");
+    store.updateJobStatus(job.id, "LIVE_EXECUTING");
+    expect(store.cancelJob(job.id, "should not cancel writes")).toBe(false);
+  });
+
   it("batch-resolves similar review questions", () => {
     const emp = store.createEmployee({
       email: "reviewer@takeawayhero.test",

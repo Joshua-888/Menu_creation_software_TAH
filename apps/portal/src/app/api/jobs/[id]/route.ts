@@ -32,6 +32,45 @@ export async function GET(
   });
 }
 
+export async function POST(
+  req: Request,
+  ctx: { params: Promise<{ id: string }> },
+) {
+  const emp = await currentEmployee();
+  if (!emp) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const { id } = await ctx.params;
+  const store = getPortalStore();
+  const job = store.getJob(id);
+  if (!job) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+  let body: { action?: string; reason?: string } = {};
+  try {
+    body = (await req.json()) as { action?: string; reason?: string };
+  } catch {
+    body = {};
+  }
+  if (body.action !== "cancel") {
+    return NextResponse.json({ error: "Unsupported action" }, { status: 400 });
+  }
+  const reason =
+    body.reason?.trim() ||
+    `Cancelled by ${emp.email} — stale job, do not resume`;
+  const ok = store.cancelJob(id, reason);
+  if (!ok) {
+    return NextResponse.json(
+      {
+        error:
+          job.status === "LIVE_EXECUTING" || job.status === "WRITING"
+            ? "Cannot cancel a job that is currently writing"
+            : "Could not cancel job",
+      },
+      { status: 409 },
+    );
+  }
+  return NextResponse.json({ cancelled: true, id, job: store.getJob(id) });
+}
+
 export async function DELETE(
   _req: Request,
   ctx: { params: Promise<{ id: string }> },

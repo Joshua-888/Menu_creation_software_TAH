@@ -50,7 +50,7 @@ const TITLE_RE =
 const SKIP_TITLE_RE =
   /^(åbningstider|drikkevarer|sides|frokost|tilbud|menu|inkluder|ekstra|dip|sodavand|vand|kildevand|harboe|mandag|tirsdag|onsdag|torsdag|fredag|lørdag|søndag|man-tors|kontakt|email|telefon|torvet|priserne|send|viva|nuggets|loaded|fries|grill|burgers?)\b/i;
 const INGREDIENTISH_RE =
-  /\b(grillet|bøf|bef|cheddar|ost|agurk|løg|sauce|jalapeño|jalapenos|champignon|chicken|crispy|pickles|karamellis|burgersauce|bearnaise|colslaw|coleslaw|honey|peberfrugt|nuggets|fries|dip|kylling|syltede?)\b/i;
+  /\b(grillet|bøf|bef|cheddar|ost|agurk|løg|sauce|jalapeño|jalapenos|champignon|chicken|crispy|pickles|karamellis|burgersauce|bearnaise|colslaw|coleslaw|honey|peberfrugt|nuggets|fries|pomfrit+er?|sodavand|ketchup|mayonnaise|dressing|dip|kylling|syltede?)\b/i;
 const PRICE_LINE_RE =
   /(?:^|\b)(?:menu\s*)?(\d{2,3})\s*[,.\-°]/gi;
 const IMAGE_PRICE_LINE_RE =
@@ -71,6 +71,7 @@ function looksLikeTitle(line: string): boolean {
   if (t.length < 3 || t.length > 42) return false;
   if (SKIP_TITLE_RE.test(t)) return false;
   if (SECTION_HEADER_RE.test(t) && t.split(/\s+/).length <= 2) return false;
+  if (looksLikeContentsLine(t)) return false;
   if (INGREDIENTISH_RE.test(t) && t.split(/\s+/).length >= 4) {
     return false;
   }
@@ -88,12 +89,31 @@ function isStrongPricedProductLine(raw: string): boolean {
 }
 
 function looksLikeProductLine(raw: string, image: boolean): boolean {
+  if (looksLikeContentsLine(raw)) return false;
   const cleaned = cleanTitle(raw, image);
   return (
     looksLikeTitle(raw) ||
     looksLikeTitle(cleaned) ||
     (image && isStrongPricedProductLine(raw))
   );
+}
+
+/** Printed combo/wrap contents — not a new dish title. */
+export function looksLikeContentsLine(line: string): boolean {
+  const s = line.trim().replace(/\s+/g, " ");
+  if (!s || /\bmenu\b/i.test(s)) return false;
+  if (pricesFromLine(s, true).length > 0 || pricesFromLine(s).length > 0) {
+    return false;
+  }
+  if (
+    /\b(og|el\.|eller|,)\b/i.test(s) &&
+    /\b(sodavand|pomfrit+er?|pommes|frites|nuggets?|ketchup|mayo|mayonnaise|dressing|kebab|salat|falafel)\b/i.test(
+      s,
+    )
+  ) {
+    return true;
+  }
+  return INGREDIENTISH_RE.test(s) && s.split(/\s+/).length >= 3;
 }
 
 function pricesFromLine(line: string, image = false): number[] {
@@ -302,6 +322,11 @@ export function ingredientTextFromLines(
     const t = line.trim();
     if (!t) continue;
     if (t.toLowerCase() === nameLower) continue;
+    if (looksLikeContentsLine(t)) {
+      const cleaned = t.replace(PRICE_LINE_RE, " ").replace(/\s+/g, " ").trim();
+      if (cleaned.length >= 4) parts.push(cleaned);
+      continue;
+    }
     if (looksLikeTitle(t)) continue;
     if (SECTION_HEADER_RE.test(t)) continue;
     if (pricesFromLine(t).length && !INGREDIENTISH_RE.test(t)) continue;
@@ -422,9 +447,11 @@ export function detectNamePriceCandidates(
 
       while (j < lines.length && j < i + 10) {
         const next = lines[j]!;
-        const nextIsTitle = imageSource
-          ? looksLikeProductLine(next, true)
-          : looksLikeTitle(cleanTitle(next));
+        const nextIsTitle = looksLikeContentsLine(next)
+          ? false
+          : imageSource
+            ? looksLikeProductLine(next, true)
+            : looksLikeTitle(cleanTitle(next));
         if (nextIsTitle && prices.length > 0) break;
         if (nextIsTitle && j > i + 1) break;
         if (SECTION_HEADER_RE.test(next) && next.split(/\s+/).length <= 2) break;

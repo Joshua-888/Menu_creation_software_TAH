@@ -96,6 +96,12 @@ const FOOD_LEXICON = new Set(
     "ananas",
     "pommes",
     "pommes frites",
+    "pomfrit",
+    "pomfritter",
+    "sodavand",
+    "nuggets",
+    "pitabrød",
+    "durumbrød",
     "salatmayonnaise",
     "salatmayo",
     "mayonnaise",
@@ -276,13 +282,30 @@ export function looksLikeToppingAsProductName(name: string): boolean {
   return false;
 }
 
-/** True when token must never appear as ingredient or Tilbehør. */
+/** Combo/menu contents (drink, fries) are valid ingredients on Menu products. */
+const COMBO_COMPONENT_RE =
+  /\b(sodavand|cola|fanta|sprite|pommes|pomfrit+er?|frites|nuggets?|pitabrød|pita\s*brød|durumbrød)\b/i;
+
 export function isInvalidFoodComponent(
   name: string,
   productName?: string,
 ): boolean {
   const t = name.trim();
   if (!t) return true;
+  const comboProduct = /\bmenu\b/i.test(productName ?? "");
+  const wrapProduct = /\b(durum|dürüm|pita)\b/i.test(productName ?? "");
+  const shortComponent = t.split(/\s+/).length <= 4 && !/\|/.test(t) && !/^menu\s*:/i.test(t);
+  if (comboProduct && shortComponent && COMBO_COMPONENT_RE.test(t)) return false;
+  if (
+    wrapProduct &&
+    shortComponent &&
+    /\b(pitabrød|pita\s*brød|durumbrød)\b/i.test(t)
+  ) {
+    return false;
+  }
+  if (/^menu\s*:/i.test(t) || /\[(spatial-fallback|base-menu-reassign|col-shift)/i.test(t)) {
+    return true;
+  }
   if (isMetaMenuToken(t)) return true;
   if (isDishNameBlockedAsFoodToken(t)) return true;
   if (KNOWN_JUNK_RE.test(t)) return true;
@@ -427,9 +450,13 @@ export function sanitizeIngredientList(
       s = s
         .replace(/\blog\b/gi, "løg")
         .replace(/\bkodsovs\b/gi, "kødsovs")
-        .replace(/\bpolse\b/gi, "pølse");
+        .replace(/\bpolse\b/gi, "pølse")
+        .replace(/\s+og$/i, "")
+        .trim();
+      if (!s) continue;
+      if (/\d{2,4}/.test(s) || /\bkr\.?\b/i.test(s)) continue;
+      if (/^\d/.test(s) && /\bmenu\b/i.test(s)) continue;
       s = capitalizeFirstLetter(s);
-      if (/\d{2,4}/.test(s)) continue;
       if (isInvalidFoodComponent(s, productName)) continue;
       const key = normKey(s);
       if (seen.has(key)) continue;

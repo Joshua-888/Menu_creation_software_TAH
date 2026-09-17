@@ -416,6 +416,19 @@ export class PortalStore {
     return this.mapJob(row);
   }
 
+  /** Mark a job cancelled without deleting artifacts (stale Create/QA jobs). */
+  cancelJob(jobId: string, reason: string): boolean {
+    const existing = this.getJob(jobId);
+    if (!existing) return false;
+    if (existing.status === "LIVE_EXECUTING" || existing.status === "WRITING") {
+      return false;
+    }
+    this.updateJobStatus(jobId, "CANCELLED", {
+      errorMessage: reason,
+    });
+    return true;
+  }
+
   /** Delete job and related portal rows (files/questions/answers/runs). */
   deleteJob(jobId: string): boolean {
     const existing = this.getJob(jobId);

@@ -39,6 +39,12 @@ const configs: Record<
     raw: "fixtures/golden/smash/raw-source.jpg",
     kind: "image",
   },
+  bella: {
+    restaurantName: "Bella Kebab",
+    restaurantKey: "fixture-bella.example",
+    raw: "fixtures/golden/bella-kebab/raw-source.jpeg",
+    kind: "image",
+  },
   third: {
     restaurantName: "Fixture Thai House",
     restaurantKey: "fixture-thai.example",
@@ -54,7 +60,7 @@ if (fixture === "third") {
 
 const cfg = configs[fixture];
 if (!cfg) {
-  console.error("Usage: cert-fresh-run.mts veroni|smash|third");
+  console.error("Usage: cert-fresh-run.mts veroni|smash|bella|third");
   process.exit(1);
 }
 

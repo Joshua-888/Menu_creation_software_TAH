@@ -119,9 +119,11 @@ function evaluateProduct(
 
   const invalidIngredients = ingredients.filter(
     (i) =>
-      isInvalidFoodComponent(i) ||
-      classifyPhrase(i, { layoutRole: "ingredient_line" }).entityType ===
-        "META_INSTRUCTION",
+      isInvalidFoodComponent(i, name) ||
+      classifyPhrase(i, {
+        layoutRole: "ingredient_line",
+        parentProductName: name,
+      }).entityType === "META_INSTRUCTION",
   );
   checks.push(
     check(

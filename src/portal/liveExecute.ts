@@ -22,11 +22,11 @@ import {
 import { RunStore } from "../runs/sqliteStore.js";
 import { M2B_ADAPTER_CAPABILITIES } from "../tah/contracts/evidence.js";
 import { TahAdminAdapterV1 } from "../tah/adapters/v1/adapter.js";
-import { dismissKnownCookieBanner } from "../tah/write/submitInteractability.js";
 import {
   isDestinationHostAllowlistedForLiveWrites,
   normalizeDestinationHost,
 } from "./liveWrites.js";
+import { loginDiagnosticError, loginTahAdmin } from "./adminLogin.js";
 import { assertStructureWriteConfirmed } from "./structureWriteGate.js";
 import { existsSync, readFileSync } from "node:fs";
 import type { StructurePatternSummary } from "../learning/peerMenuStructure.js";
@@ -190,43 +190,15 @@ function loadStructureFingerprint(root = repoRoot()): {
   }
 }
 
-async function adminLogin(
-  page: Page,
-  baseUrl: string,
-): Promise<void> {
+async function adminLogin(page: Page, baseUrl: string): Promise<void> {
   const email = process.env.TAH_ADMIN_EMAIL;
   const password = process.env.TAH_ADMIN_PASSWORD;
   if (!email || !password) {
     throw new Error("live execute requires TAH_ADMIN_EMAIL and TAH_ADMIN_PASSWORD");
   }
-  await page.goto(`${baseUrl}/login`, {
-    waitUntil: "domcontentloaded",
-    timeout: 60_000,
-  });
-  await dismissKnownCookieBanner(page);
-  await page.locator('input[type="email"]').first().fill(email, {
-    timeout: 30_000,
-  });
-  await page.locator('input[type="password"]').first().fill(password);
-  await dismissKnownCookieBanner(page);
-  await page.getByRole("button", { name: /^login$/i }).click();
-  await Promise.race([
-    page.waitForURL(/\/admin(\/|$)/i, { timeout: 45_000 }),
-    page
-      .locator('input[type="password"]')
-      .first()
-      .waitFor({ state: "hidden", timeout: 45_000 }),
-  ]).catch(() => undefined);
-  await dismissKnownCookieBanner(page);
-  const url = page.url();
-  const passwordVisible =
-    (await page.locator('input[type="password"]').count()) > 0 &&
-    (await page.locator('input[type="password"]').first().isVisible().catch(() => false));
-  if (/\/login/i.test(url) && passwordVisible) {
-    throw new Error(
-      `admin login failed for ${normalizeDestinationHost(baseUrl)} (still on /login)`,
-    );
-  }
+  const diag = await loginTahAdmin({ page, baseUrl, email, password });
+  if (diag.classification === "LOGIN_OK") return;
+  throw new Error(loginDiagnosticError(diag));
 }
 
 export async function loadRealDestinationSnapshot(input: {

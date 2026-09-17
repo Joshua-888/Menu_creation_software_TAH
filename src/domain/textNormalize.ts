@@ -26,6 +26,8 @@ const BASE_OCR_INGREDIENT_FIXES: OcrIngredientFix[] = [
   [/\b0g\b/gi, "og"],
   [/\bpolse\b/gi, "pølse"],
   [/\brodløg\b/gi, "rødløg"],
+  [/\baiche\b/gi, ""],
+  [/\bt\s*ahin\b/gi, "tahin"],
 ];
 
 export type LabelQualitySeverity = "PASS" | "REPAIR" | "REVIEW" | "BLOCK";

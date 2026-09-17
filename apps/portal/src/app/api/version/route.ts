@@ -7,6 +7,7 @@ import {
   CORE_PIPELINE_VERSION,
   MENU_PLATFORM_ARCHITECTURE_VERSION,
 } from "@engine/architecture/menuPlatformArchitectureV1.js";
+import { resolveDeployCommitSha } from "@engine/portal/index.js";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -32,21 +33,10 @@ function readBakedMeta(): DeployMeta {
 
 /**
  * Public deployment provenance — no secrets.
- * Prefer env (Railway / explicit GIT_COMMIT_SHA), then baked deploy-meta.json.
+ * Prefer the SHA baked into the image, then Railway git SHA, then env pins.
  */
 function resolveCommitSha(baked: DeployMeta): string {
-  const candidates = [
-    process.env.RAILWAY_GIT_COMMIT_SHA,
-    process.env.GIT_COMMIT_SHA,
-    process.env.COMMIT_SHA,
-    process.env.SOURCE_VERSION,
-    baked.commitSha,
-  ];
-  for (const c of candidates) {
-    const v = c?.trim();
-    if (v && v !== "unknown") return v;
-  }
-  return "unknown";
+  return resolveDeployCommitSha({ baked: baked.commitSha });
 }
 
 function resolveBuildTime(baked: DeployMeta): string {

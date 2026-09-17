@@ -186,11 +186,13 @@ export function classifyPhrase(
 
   if (context?.layoutRole === "ingredient_line") {
     // Ingredient-line context wins over category/product-name ambiguity.
+    // Wrap fillings (kebab) and wrap bread are components, not new product titles.
     if (
       INGREDIENT_LEXICON.has(lower) ||
-      /^(pasta|ost|bacon|æg|egg|parmesan|kødsovs|kødsauce|ris|naan|skinke|salat|tomat|løg)$/i.test(
+      /^(pasta|ost|bacon|æg|egg|parmesan|kødsovs|kødsauce|ris|naan|skinke|salat|tomat|løg|kebab|falafel)$/i.test(
         normalizedText,
-      )
+      ) ||
+      /\b(pitabrød|pita\s*brød|durumbrød)\b/i.test(normalizedText)
     ) {
       return {
         rawText: raw,
@@ -198,6 +200,19 @@ export function classifyPhrase(
         entityType: "INGREDIENT",
         confidence: 0.92,
         reason: "ingredient_line_context",
+      };
+    }
+    if (
+      /\b(sodavand|cola|fanta|sprite|pommes|pomfrit+er?|frites|nuggets?)\b/i.test(
+        normalizedText,
+      )
+    ) {
+      return {
+        rawText: raw,
+        normalizedText,
+        entityType: context?.parentProductName ? "COMBO_COMPONENT" : "INGREDIENT",
+        confidence: 0.9,
+        reason: "combo_component_on_ingredient_line",
       };
     }
   }

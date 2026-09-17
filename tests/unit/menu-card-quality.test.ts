@@ -40,6 +40,21 @@ describe("menuCardQuality policies", () => {
     ).toEqual(["Tomat", "Ost"]);
   });
 
+  it("keeps wrap bread and combo sides as ingredients of those products", () => {
+    expect(isInvalidFoodComponent("Pitabrød", "Lille pita brød")).toBe(false);
+    expect(isInvalidFoodComponent("Durumbrød", "Durum Kebab")).toBe(false);
+    expect(isInvalidFoodComponent("Sodavand", "Durum menu")).toBe(false);
+    expect(
+      sanitizeIngredientList(["Kebab", "Pitabrød"], "Lille pita brød"),
+    ).toEqual(["Kebab", "Pitabrød"]);
+    expect(
+      sanitizeIngredientList(
+        ["Kebab", "Sodavand", "Pomfritter", "6 nuggets menu Kr."],
+        "Durum menu",
+      ),
+    ).toEqual(["Kebab", "Sodavand", "Pomfritter"]);
+  });
+
   it("drops dish-name and junk Tilbehør like Benja / Nordgårds", () => {
     const cleaned = sanitizeAdditionList(
       [

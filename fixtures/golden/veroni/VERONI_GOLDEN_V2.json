@@ -7,8 +7,8 @@
   "targetProductCount": 88,
   "statusAccounting": {
     "productCount": 88,
-    "ready": 75,
-    "review": 12,
+    "ready": 76,
+    "review": 11,
     "blocked": 1,
     "reconciles": true
   },
@@ -1771,9 +1771,7 @@
       "name": "Ufo og log Menu",
       "category": "Menuer",
       "menuNumber": "124",
-      "ingredients": [
-        "Løg"
-      ],
+      "ingredients": [],
       "description": "Menu: Ufo og log",
       "variants": [
         "Alm."

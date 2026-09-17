@@ -6,13 +6,10 @@ This is **not** a monolithic AI browser agent.
 
 ## Status
 
-**Milestone 1 — Deterministic domain engine** complete.
+Operational status: [docs/PROJECT_STATUS.md](docs/PROJECT_STATUS.md).  
+Architecture: [docs/architecture/MENU_PLATFORM_ARCHITECTURE_V1.md](docs/architecture/MENU_PLATFORM_ARCHITECTURE_V1.md).
 
-- No Playwright writes
-- No AI extraction
-- No production admin mutation
-
-See [PLAN.md](PLAN.md) and [AGENTS.md](AGENTS.md).
+Milestone 1 domain engine is complete. CREATE V1 is the active certification (emptied Bella Kebab), not a new M3/M4 restart.
 
 ## Operator Portal — deploy & invite employees
 

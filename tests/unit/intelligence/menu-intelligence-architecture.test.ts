@@ -214,6 +214,18 @@ describe("Semantic classifier", () => {
     expect(classifyPhrase("Menu").entityType).toBe("COMBO_CONTEXT");
     expect(classifyPhrase("Baconburger").entityType).toBe("PRODUCT_NAME");
     expect(classifyPhrase("Tilbehør").entityType).toBe("META_INSTRUCTION");
+    expect(
+      classifyPhrase("Kebab", { layoutRole: "ingredient_line" }).entityType,
+    ).toBe("INGREDIENT");
+    expect(
+      classifyPhrase("Pitabrød", { layoutRole: "ingredient_line" }).entityType,
+    ).toBe("INGREDIENT");
+    expect(
+      classifyPhrase("Sodavand", {
+        layoutRole: "ingredient_line",
+        parentProductName: "Durum menu",
+      }).entityType,
+    ).toMatch(/^(INGREDIENT|COMBO_COMPONENT)$/);
   });
 });
 

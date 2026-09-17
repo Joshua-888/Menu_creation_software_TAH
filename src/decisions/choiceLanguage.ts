@@ -24,6 +24,7 @@ export function classifyChoiceLanguageStrength(sourceText: string): {
     markers.push("VAELG_SELV");
   }
   if (/\beller\b/i.test(t)) markers.push("ELLER");
+  if (/\bel\.\s+/i.test(t) || /\s+el\.\s+/i.test(t)) markers.push("ELLER");
   const slash = /\w\s*\/\s*\w/.test(t);
   if (slash) markers.push("SLASH");
 
@@ -105,7 +106,7 @@ export function extractEnumeratedOptions(sourceText: string): string[] {
 
   // "X eller Y" (possibly "med …")
   const eller = sourceText.match(
-    /\b([A-Za-zÆØÅæøå][\wÆØÅæøå-]{1,30})\s+eller\s+([A-Za-zÆØÅæøå][\wÆØÅæøå-]{1,30})\b/i,
+    /\b([A-Za-zÆØÅæøå][\wÆØÅæøå-]{1,30})\s+(?:eller|el\.)\s+([A-Za-zÆØÅæøå][\wÆØÅæøå-]{1,40})\b/i,
   );
   if (eller) {
     push(eller[1]!);

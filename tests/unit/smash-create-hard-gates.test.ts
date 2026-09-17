@@ -3,6 +3,9 @@ import {
   joinTitleFragments,
   isCredibleDishTitle,
   dominantBaseMenuPair,
+  looksLikeContentsLine,
+  ingredientTextFromLines,
+  detectNamePriceCandidates,
 } from "../../src/extraction/pdf/namePriceExtract.js";
 import {
   normalizeSourceCategoriesByKind,
@@ -35,6 +38,66 @@ describe("namePrice OCR helpers (merchant-agnostic)", () => {
     expect(
       dominantBaseMenuPair("99,- Menu 149,- 99 Menu 149 99,- Menu 149,-"),
     ).toEqual([99, 149]);
+  });
+
+  it("treats printed combo sides as contents, not a new title", () => {
+    expect(looksLikeContentsLine("Pomfritter og sodavand")).toBe(true);
+    expect(looksLikeContentsLine("Ketchup el. salat mayonnaise")).toBe(true);
+    expect(looksLikeContentsLine("Hamburger menu")).toBe(false);
+    expect(
+      ingredientTextFromLines("Hamburger menu", [
+        "Hamburger menu Kr. 120",
+        "Pomfritter og sodavand",
+      ]),
+    ).toMatch(/pomfritter/i);
+
+    const found = detectNamePriceCandidates(
+      [
+        {
+          pageNumber: 1,
+          width: 800,
+          height: 1000,
+          rawText: "Hamburger menu Kr. 120\nPomfritter og sodavand",
+          items: [],
+          lines: [
+            {
+              y: 500,
+              text: "Hamburger menu Kr. 120",
+              items: [
+                {
+                  str: "Hamburger menu Kr. 120",
+                  x: 40,
+                  y: 500,
+                  width: 200,
+                  height: 20,
+                },
+              ],
+            },
+            {
+              y: 470,
+              text: "Pomfritter og sodavand",
+              items: [
+                {
+                  str: "Pomfritter og sodavand",
+                  x: 40,
+                  y: 470,
+                  width: 220,
+                  height: 18,
+                },
+              ],
+            },
+          ],
+          classification: "MENU_CONTENT",
+          classificationReason: "test",
+          sourceKind: "image",
+        },
+      ],
+      "fixture.jpeg",
+    );
+    const burger = found.find((c) => /hamburger menu/i.test(c.name ?? ""));
+    expect(burger?.ingredientText ?? burger?.description ?? "").toMatch(
+      /pomfritter/i,
+    );
   });
 });
 

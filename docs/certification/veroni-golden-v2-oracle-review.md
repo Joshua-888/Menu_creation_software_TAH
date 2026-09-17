@@ -39,3 +39,16 @@ Smash burger Menuer remain READY (burger Menu convention).
 
 Replace `fixtures/golden/veroni/VERONI_GOLDEN_V2.json` with constitution-correct freeze
 after this review. Certification restarts from the new RELEASE_CANDIDATE_SHA.
+
+## Status-accounting addendum (wrap/combo parse)
+
+Generic wrap-bread completion and printed combo-list parse later captured
+source-supported components on `Kebabmenu` (pommes/soda). Derived non-burger
+Menuer remain `QUALITY_REVIEW` (`COMBO_CONTENTS_UNRESOLVED`). Frozen counts:
+
+| Field | Previous freeze | Current freeze |
+|-------|-----------------|----------------|
+| ready | 75 | 76 |
+| review | 12 | 11 |
+| blocked | 1 | 1 |
+

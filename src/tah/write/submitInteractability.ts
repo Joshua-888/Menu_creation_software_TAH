@@ -24,19 +24,31 @@ export type SubmitInteractabilityResult =
  * Dismiss known cookie banner safely — never use force-click to pierce overlays.
  */
 export async function dismissKnownCookieBanner(page: Page): Promise<boolean> {
+  const overlay = page.locator(
+    ".js-cookie-consent, .cookie-consent, [class*='cookie-consent']",
+  );
   const btn = page.getByRole("button", {
     name: /allow cookies|accept cookies|accept all|tillad/i,
   });
-  if ((await btn.count()) === 0) return false;
+  const buttonVisible = await btn
+    .first()
+    .waitFor({ state: "visible", timeout: 5_000 })
+    .then(() => true)
+    .catch(() => false);
+  if (!buttonVisible && (await overlay.count()) === 0) return false;
   try {
-    await btn.first().click({ timeout: 3_000 });
-    await page
-      .locator(".js-cookie-consent, .cookie-consent, [class*='cookie-consent']")
+    if ((await btn.count()) > 0) {
+      await btn.first().click({ timeout: 8_000 });
+    }
+    await overlay
       .first()
-      .waitFor({ state: "hidden", timeout: 5_000 })
+      .waitFor({ state: "hidden", timeout: 10_000 })
       .catch(() => undefined);
     await page.waitForTimeout(300);
-    return true;
+    const stillVisible =
+      (await overlay.count()) > 0 &&
+      (await overlay.first().isVisible().catch(() => false));
+    return !stillVisible;
   } catch {
     return false;
   }

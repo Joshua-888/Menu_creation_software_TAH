@@ -31,6 +31,7 @@ import {
 } from "./semanticClassifier.js";
 import { inferProductFamily, isFoodFamily } from "./peerCohorts.js";
 import { applyCategoryQualifiedProductName } from "./categoryQualifiedProductName.js";
+import { parseSourceComponents } from "./sourceComponentParse.js";
 import type {
   CompletedProductCard,
   FieldProvenance,
@@ -57,12 +58,34 @@ function filterValidIngredients(
 ): { list: string[]; provenance: FieldProvenance[] } {
   const list: string[] = [];
   const prov: FieldProvenance[] = [];
-  for (const token of sanitizeIngredientList(raw)) {
-    // Combo placeholder / meta never count as food ingredients
-    if (/^menu\s*:/i.test(token) || /^(tilbehør|menu|valgfri)/i.test(token.trim())) {
+  for (const token of sanitizeIngredientList(raw, productName)) {
+    if (
+      /^menu\s*:/i.test(token) ||
+      /^(tilbehør|menu|valgfri)/i.test(token.trim()) ||
+      /\[(spatial-fallback|base-menu-reassign|col-shift)/i.test(token)
+    ) {
       continue;
     }
-    const cls = classifyPhrase(token, { layoutRole: "ingredient_line" });
+    const comboProduct = /\bmenu\b/i.test(productName);
+    const shortCombo =
+      token.split(/\s+/).length <= 4 &&
+      !/\|/.test(token) &&
+      /\b(sodavand|cola|fanta|sprite|pommes|pomfrit+er?|frites|nuggets?|pitabrød)\b/i.test(
+        token,
+      );
+    if (comboProduct && shortCombo) {
+      list.push(token);
+      prov.push(
+        provenance("ingredients", token, "SOURCE", 0.9, {
+          reason: "combo_component",
+        }),
+      );
+      continue;
+    }
+    const cls = classifyPhrase(token, {
+      layoutRole: "ingredient_line",
+      parentProductName: productName,
+    });
     if (isInvalidIngredientEntity(cls.entityType) && cls.entityType !== "INGREDIENT") {
       if (cls.entityType === "UNKNOWN" && token.toLowerCase() === productName.toLowerCase()) {
         continue;
@@ -143,6 +166,16 @@ function inferDomainIngredientsFromName(input: {
   if (/\bspaghetti\s+bolognese\b/i.test(name)) {
     push("Spaghetti");
     push("Kødsovs");
+    return out;
+  }
+  if (/\b(durum|dürüm)\b/i.test(name) && /\bkebab\b/i.test(name)) {
+    push("Kebab");
+    push("Durumbrød");
+    return out;
+  }
+  if (/\bdurum\b/i.test(name) && /falafel/i.test(`${name} ${input.categoryName}`)) {
+    push("Falafel");
+    push("Durumbrød");
     return out;
   }
   if (/\bpasta\s+bolognese\b/i.test(name) || /\bbolognese\b/i.test(name)) {
@@ -323,7 +356,32 @@ export function completeProductCard(input: {
     provenance("category", input.categoryName, "SOURCE", 0.9),
   ];
 
-  const sourceIngredients = input.product.ingredients.map((i) => i.display);
+  const isCombo =
+    input.product.isCombo ||
+    family === "COMBO_MENU" ||
+    /\bmenu\b/i.test(name);
+
+  const sourceDescription = (input.product.description ?? "").trim();
+  const sourceRawText = input.product.evidence?.rawText;
+  const derivedMenuWithoutPrintedContents =
+    isCombo &&
+    /^menu:\s*/i.test(sourceDescription) &&
+    !/\b(sodavand|pomfrit|pommes|frites|nuggets|fries|dip)\b/i.test(
+      sourceDescription,
+    );
+
+  const parsedSource = parseSourceComponents({
+    name,
+    ...(sourceDescription ? { description: sourceDescription } : {}),
+    ...(!derivedMenuWithoutPrintedContents && sourceRawText
+      ? { rawText: sourceRawText }
+      : {}),
+    existingIngredients: derivedMenuWithoutPrintedContents
+      ? []
+      : input.product.ingredients.map((i) => i.display),
+  });
+
+  const sourceIngredients = parsedSource.ingredients;
   const filtered = filterValidIngredients(sourceIngredients, name);
 
   let ingredients = filtered.list;
@@ -346,8 +404,14 @@ export function completeProductCard(input: {
     family === "BURGER" ||
     family === "BACON_BURGER" ||
     family === "CHEESE_BURGER";
+  const isWrap =
+    family === "DURUM" ||
+    family === "PITA" ||
+    (/\b(durum|dürüm|pita)\b/i.test(name) && !isCombo);
 
   const needsFill =
+    !isCombo &&
+    !isWrap &&
     isFoodFamily(family) &&
     burgerLike &&
     (ingredients.length < 2 ||
@@ -394,18 +458,16 @@ export function completeProductCard(input: {
         );
       }
     }
-  } else if (
-    isFoodFamily(family) &&
-    family !== "COMBO_MENU" &&
-    ingredients.length < 2
-  ) {
+  }
+
+  if (!isCombo && isFoodFamily(family) && ingredients.length < 2) {
     const prior = inferDomainIngredientsFromName({
       name,
       categoryName: input.categoryName,
       family,
     });
     if (prior.length >= 2) {
-      ingredients = sanitizeIngredientList(prior);
+      ingredients = sanitizeIngredientList([...ingredients, ...prior], name);
       ingredientOrigin = "DOMAIN_PRIOR";
       for (const ing of ingredients) {
         provenanceList.push(
@@ -420,6 +482,11 @@ export function completeProductCard(input: {
           reason: "generated_from_final_ingredients",
         }),
       );
+    } else if (ingredients.length === 1 && /\b(durum|pita)\b/i.test(name)) {
+      const wrap = /\bdurum\b/i.test(name) ? "Durumbrød" : "Pitabrød";
+      ingredients = sanitizeIngredientList([...ingredients, wrap], name);
+      ingredientOrigin = "DOMAIN_PRIOR";
+      description = DanishDescription(ingredients);
     } else if (ingredients.length >= 1) {
       provenanceList.push(...filtered.provenance);
       if (isFoodFamily(family)) {
@@ -434,7 +501,7 @@ export function completeProductCard(input: {
   } else if (ingredients.length >= 1) {
     provenanceList.push(...filtered.provenance);
     // Always refresh description from final ingredients for food
-    if (isFoodFamily(family) && family !== "COMBO_MENU") {
+    if (isFoodFamily(family) && !isCombo) {
       description = DanishDescription(ingredients);
       provenanceList.push(
         provenance("description", description, "DERIVED", 0.9, {
@@ -442,6 +509,10 @@ export function completeProductCard(input: {
         }),
       );
     }
+  }
+
+  if (isCombo && ingredients.length >= 2) {
+    description = DanishDescription(ingredients);
   }
 
   const variants = (input.product.variants ?? [])
@@ -476,7 +547,7 @@ export function completeProductCard(input: {
   // Burger ekstra / grill dips via shared helpers (not merchant-specific)
   if (family === "DRINK") {
     additions = [];
-  } else if (burgerLike) {
+  } else if (burgerLike && !isCombo && !isWrap) {
     const dipCtx = {
       name,
       categoryName: input.categoryName,
@@ -520,10 +591,12 @@ export function completeProductCard(input: {
     priceOre: a.priceOre,
   }));
 
-  const isCombo =
-    input.product.isCombo ||
-    family === "COMBO_MENU" ||
-    /\bmenu\b/i.test(name);
+  const existingChoices = (input.product.productChoices ?? []).map((pc) => ({
+    prompt: pc.prompt,
+    options: pc.options.map((o) => o.label ?? o.productSourceId),
+  }));
+  const productChoices =
+    existingChoices.length > 0 ? existingChoices : parsedSource.productChoices;
 
   return {
     name,
@@ -531,11 +604,8 @@ export function completeProductCard(input: {
     description,
     ingredients,
     variants,
-    productChoices: (input.product.productChoices ?? []).map((pc) => ({
-      prompt: pc.prompt,
-      options: pc.options.map((o) => o.label ?? o.productSourceId),
-    })),
-    comboComponents: isCombo ? [] : [],
+    productChoices,
+    comboComponents: isCombo ? ingredients : [],
     additions,
     prices: variants
       .filter((v) => v.priceOre != null)
@@ -597,6 +667,17 @@ export function completeCanonicalMenuCards(input: {
           ...(a.priceOre != null ? { price: a.priceOre } : {}),
           origin: "DERIVED" as const,
         })),
+        productChoices:
+          card.productChoices.length > 0
+            ? card.productChoices.map((pc, i) => ({
+                sourceId: `${p.sourceId}:choice:${i}`,
+                prompt: pc.prompt,
+                options: pc.options.map((label, j) => ({
+                  productSourceId: `${p.sourceId}:choice:${i}:opt:${j}`,
+                  label,
+                })),
+              }))
+            : p.productChoices,
         isCombo: card.isCombo,
       };
     });
