@@ -6,6 +6,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { loadDestinationSnapshotForDryRun } from "../src/portal/liveExecute.js";
 import { normalizeDestinationHost } from "../src/portal/liveWrites.js";
+import { getWorkerBrowserRuntime } from "../src/runtime/browserRuntime.js";
 
 function loadEnvFile(path: string): void {
   if (!existsSync(path)) return;
@@ -46,6 +47,7 @@ const payload = {
   hostMatch,
   ms: Date.now() - started,
   source: result.source,
+  status: result.status,
   categories: result.destination.categories.length,
   products: result.destination.products.length,
   categoryNames: result.destination.categories.map((c) => c.name),
@@ -53,8 +55,10 @@ const payload = {
   error: result.error ?? null,
 };
 console.log(JSON.stringify(payload, null, 2));
+await getWorkerBrowserRuntime().close();
 if (result.source !== "live") process.exit(1);
 if (!hostMatch) {
   console.error("DESTINATION_HOST_MISMATCH");
   process.exit(1);
 }
+process.exit(0);
