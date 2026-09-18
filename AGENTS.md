@@ -40,14 +40,20 @@ SOURCE → EXTRACTION → SOURCE MODEL → NORMALIZATION → CANONICAL MENU → 
 - `ValueOrigin`: `SOURCE | DERIVED | SYSTEM_DEFAULT | HUMAN_CORRECTION`.
 - Status aggregation (one function): `BLOCKED > MANUAL_REVIEW_REQUIRED > WARNING > READY`.
 
-## Milestone discipline
+## Authoritative status and architecture
 
-Current work baseline: **Milestone 1 frozen** (deterministic domain engine).
+This file is a broad contributor guide, not the operational source of truth. Before making architectural, execution, recovery, publication, menu-intelligence, or production-safety changes, read the current authoritative documents, in precedence order:
 
-- **M2** = Playwright **read-only** discovery of an **explicitly supplied** restaurant admin URL only. No host guessing. No mutations.
-- **M3** = first WRITE + READ-BACK against **canary** only.
+1. [docs/PROJECT_STATUS.md](docs/PROJECT_STATUS.md) — current operational/certification state (what is certified now).
+2. [docs/architecture/MENU_PLATFORM_ARCHITECTURE_V1.md](docs/architecture/MENU_PLATFORM_ARCHITECTURE_V1.md) — the single frozen authoritative product architecture.
+3. Current architecture/operations documents under [docs/architecture/](docs/architecture/), including `OPERATIONAL_HARDENING_V1.md`, `EXECUTION_BUNDLE_V1.md`, `RUNTIME_AND_RECOVERY_V1.md`, `MENU_CONSTITUTION_V1.md`, `GLOBAL_POLICY_REGISTRY_V1.md`, `QUALITY_CONTRACT_REGISTRY_V1.md`, `CAPABILITY_MATRIX_V1.md`, `STATE_MACHINE_V1.md`, `ARTIFACT_STANDARD_V1.md`, `READINESS_DEFINITIONS_V1.md`, `SCRIPT_CLASSIFICATION_V1.md`, `APPROVAL_ARCHITECTURE_V1.md`, `VERIFICATION_ARCHITECTURE_V1.md`, `RECOVERY_ARCHITECTURE_V1.md`, `PUBLICATION_ARCHITECTURE_V1.md`, and `GOLDEN_FIXTURES_V1.md`.
+4. [docs/INCIDENT_REGRESSION_REGISTRY.md](docs/INCIDENT_REGRESSION_REGISTRY.md) and current reliability/security/runbook documentation.
 
-**Do not start the next milestone** without explicit human approval.
+If an older document conflicts with a newer authoritative status or architecture document, do not silently choose one: follow the current authoritative document and report the drift.
+
+Do not revive superseded milestone assumptions, policies, or legacy behavior merely because they still appear in older files.
+
+Historical note: the early `M1`/`M2`/`M3` milestones (frozen deterministic domain engine, read-only discovery, first canary write + read-back) are historical context only. They are **not** the current operating baseline; see `docs/PROJECT_STATUS.md` for the current state. Destructive or live operations still require explicit human authorization bound to the exact destination and operation.
 
 ## Done means
 
