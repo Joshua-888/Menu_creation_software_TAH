@@ -15,6 +15,7 @@ import { PageHeader } from "../../../components/PageHeader";
 import { DeleteJobButton } from "../../../components/DeleteJobButton";
 import { QaFindingsPanel } from "../../../components/QaFindingsPanel";
 import { ApproveCreateMenuButton } from "../../../components/ApproveCreateMenuButton";
+import { operatorExecutionSummary } from "@engine/runtime/operatorSummary.js";
 
 export default async function JobDetailPage({
   params,
@@ -73,6 +74,13 @@ export default async function JobDetailPage({
     "awaiting-operator-approval.json",
   ) as {
     writePlan?: { categoryCreates?: number; productCreates?: number };
+  } | null;
+  const recoveryPlan = readJobArtifact(id, "recovery-plan.json") as {
+    operations?: Array<{ state?: string }>;
+    neverAutoDelete?: boolean;
+  } | null;
+  const liveError = readJobArtifact(id, "live-execute-error.json") as {
+    message?: string;
   } | null;
   const policyApplication = readJobArtifact(
     id,
@@ -199,8 +207,15 @@ export default async function JobDetailPage({
 
       {job.errorMessage ? (
         <div className="panel">
-          <h2>Status note</h2>
-          <p>{job.errorMessage}</p>
+          <h2>What happened</h2>
+          <p>
+            {operatorExecutionSummary({
+              result: liveResult as never,
+              recovery: recoveryPlan as never,
+              errorMessage: job.errorMessage ?? liveError?.message ?? null,
+            })}
+          </p>
+          <p className="muted">{job.errorMessage}</p>
         </div>
       ) : null}
 

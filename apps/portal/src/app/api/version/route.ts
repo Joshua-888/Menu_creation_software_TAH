@@ -8,6 +8,13 @@ import {
   MENU_PLATFORM_ARCHITECTURE_VERSION,
 } from "@engine/architecture/menuPlatformArchitectureV1.js";
 import { resolveDeployCommitSha } from "@engine/portal/index.js";
+import { ADMIN_CONTRACT_VERSION } from "@engine/tah/contracts/v1.js";
+import { CANONICAL_MENU_SCHEMA_VERSION } from "@engine/domain/versions.js";
+import { assertPlaywrightBrowserReady } from "@engine/runtime/browserRuntime.js";
+import {
+  sanitizeRuntimeConfig,
+  loadRuntimeConfig,
+} from "@engine/runtime/runtimeConfig.js";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -31,10 +38,6 @@ function readBakedMeta(): DeployMeta {
   return {};
 }
 
-/**
- * Public deployment provenance — no secrets.
- * Prefer the SHA baked into the image, then Railway git SHA, then env pins.
- */
 function resolveCommitSha(baked: DeployMeta): string {
   return resolveDeployCommitSha({ baked: baked.commitSha });
 }
@@ -67,10 +70,23 @@ function resolveEnvironment(): string {
 
 export async function GET() {
   const baked = readBakedMeta();
+  const browser = assertPlaywrightBrowserReady();
+  let runtimeConfig: Record<string, string> = {};
+  try {
+    runtimeConfig = sanitizeRuntimeConfig(loadRuntimeConfig());
+  } catch {
+    runtimeConfig = { valid: "NO" };
+  }
   return NextResponse.json({
     commitSha: resolveCommitSha(baked),
     buildTime: resolveBuildTime(baked),
     environment: resolveEnvironment(),
+    adapterVersion: "tah-admin-v1",
+    schemaVersion: CANONICAL_MENU_SCHEMA_VERSION,
+    contractVersion: ADMIN_CONTRACT_VERSION,
+    runtimeEnvironment: resolveEnvironment(),
+    browserReady: browser.ok,
+    runtimeConfig,
     menuConstitution: MENU_CONSTITUTION_VERSION,
     menuPlatformArchitecture: MENU_PLATFORM_ARCHITECTURE_VERSION,
     corePipeline: CORE_PIPELINE_VERSION,

@@ -1,90 +1,50 @@
 /**
  * Cross-platform portal start — honors Railway/Docker PORT and binds 0.0.0.0.
  *
- * Critical: start Next.js FIRST so Railway healthchecks (/login) pass.
- * Playwright Chromium is ensured in the background — never block HTTP ready.
- * Prefer image-baked browsers at /ms-playwright (Dockerfile.portal).
+ * Chromium must already be baked into the image (Dockerfile.portal) or
+ * installed once for local/CI. Runtime never downloads Playwright browsers.
  */
-import { spawn, execSync } from "node:child_process";
-import { existsSync, readdirSync } from "node:fs";
+import { spawn } from "node:child_process";
+import { existsSync } from "node:fs";
+import { chromium } from "playwright";
 
 const port = process.env.PORT?.trim() || "3000";
 const host = process.env.HOST?.trim() || "0.0.0.0";
 
-// Deployment provenance for /api/version (no secrets).
 if (!process.env.BUILD_TIME?.trim()) {
   process.env.BUILD_TIME = new Date().toISOString();
 }
-if (
-  !process.env.GIT_COMMIT_SHA?.trim() &&
-  process.env.RAILWAY_GIT_COMMIT_SHA?.trim()
-) {
-  process.env.GIT_COMMIT_SHA = process.env.RAILWAY_GIT_COMMIT_SHA.trim();
-}
 
-// Never use the volume browser cache — it was installed without OS libs and
-// still breaks even after Chromium binaries exist under /data/ms-playwright.
+// Never use the volume browser cache — it was installed without OS libs.
 if (process.env.PLAYWRIGHT_BROWSERS_PATH?.startsWith("/data/")) {
   delete process.env.PLAYWRIGHT_BROWSERS_PATH;
 }
 
-// Prefer the Docker image browser cache when present.
 if (!process.env.PLAYWRIGHT_BROWSERS_PATH && existsSync("/ms-playwright")) {
   process.env.PLAYWRIGHT_BROWSERS_PATH = "/ms-playwright";
 }
 
-function chromiumInstalled(root) {
-  if (!root || !existsSync(root)) return false;
+function assertBrowserReady() {
   try {
-    return readdirSync(root).some((n) => /chromium/i.test(n));
-  } catch {
+    const executablePath = chromium.executablePath();
+    if (!executablePath || !existsSync(executablePath)) {
+      console.error(
+        `[portal-start] BROWSER_RUNTIME_UNAVAILABLE executable missing at ${executablePath || "(empty)"}. Do not download at runtime; rebuild the image.`,
+      );
+      process.env.TAH_BROWSER_READY = "0";
+      return false;
+    }
+    console.log(`[portal-start] Playwright Chromium ready at ${executablePath}`);
+    process.env.TAH_BROWSER_READY = "1";
+    return true;
+  } catch (err) {
+    console.error("[portal-start] BROWSER_RUNTIME_UNAVAILABLE", err);
+    process.env.TAH_BROWSER_READY = "0";
     return false;
   }
 }
 
-function ensureChromiumAsync() {
-  const browserRoot = process.env.PLAYWRIGHT_BROWSERS_PATH;
-  const homeCache = `${process.env.HOME || "/root"}/.cache/ms-playwright`;
-  if (chromiumInstalled(browserRoot) || chromiumInstalled(homeCache)) {
-    console.log(
-      `[portal-start] Playwright browsers ready (${browserRoot || homeCache})`,
-    );
-    return;
-  }
-  console.log(
-    "[portal-start] Chromium missing — installing in background (HTTP already up; Create waits up to 3m)…",
-  );
-  // Detach: do not block Next.js readiness / Railway healthcheck.
-  const installer = spawn(
-    process.platform === "win32" ? "npx.cmd" : "npx",
-    ["playwright", "install", "--with-deps", "chromium"],
-    {
-      stdio: "inherit",
-      env: process.env,
-      detached: false,
-    },
-  );
-  installer.on("exit", (code) => {
-    if (code === 0) {
-      console.log("[portal-start] Playwright Chromium install finished");
-      return;
-    }
-    console.warn(
-      `[portal-start] --with-deps failed (code ${code}); retrying chromium-only…`,
-    );
-    try {
-      execSync("npx playwright install chromium", {
-        stdio: "inherit",
-        env: process.env,
-      });
-      console.log("[portal-start] Playwright Chromium install finished");
-    } catch (err) {
-      console.error("[portal-start] Playwright install failed:", err);
-    }
-  });
-}
-
-ensureChromiumAsync();
+assertBrowserReady();
 
 const child = spawn(
   process.execPath,

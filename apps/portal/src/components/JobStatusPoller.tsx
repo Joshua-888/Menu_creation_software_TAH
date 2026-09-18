@@ -64,7 +64,7 @@ export function JobStatusPoller({
     if (!working) return;
     const id = window.setInterval(() => {
       router.refresh();
-    }, 2500);
+    }, 8000);
     return () => window.clearInterval(id);
   }, [working, router]);
 
