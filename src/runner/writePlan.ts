@@ -1,3 +1,5 @@
+import { orderOperationsForMinimizedCategoryExposure } from "./categorySequence.js";
+
 /**
  * M4 immutable migration WritePlan — browser must not invent menu decisions.
  *
@@ -125,7 +127,9 @@ export function createMigrationWritePlan(input: {
     immutable: true,
     dryRun: input.dryRun ?? false,
     createdAt: new Date().toISOString(),
-    operations: input.operations.map((o) => ({ ...o })),
+    operations: orderOperationsForMinimizedCategoryExposure(input.operations).map(
+      (o) => ({ ...o }),
+    ),
   });
 }
 

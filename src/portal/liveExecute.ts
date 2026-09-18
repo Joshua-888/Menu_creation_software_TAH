@@ -358,9 +358,18 @@ export async function executePortalLiveWrites(input: {
       // CREATE path: only CREATE ops. QA path: UPDATE (+ CREATE for missing).
       const ops = isQa
         ? dry.operations.filter(
-            (o) => o.action === "UPDATE" || o.action === "CREATE",
+            (o) =>
+              o.action === "UPDATE" ||
+              o.action === "CREATE" ||
+              o.action === "BLOCK" ||
+              o.action === "REVIEW",
           )
-        : dry.operations.filter((o) => o.action === "CREATE");
+        : dry.operations.filter(
+            (o) =>
+              o.action === "CREATE" ||
+              o.action === "BLOCK" ||
+              o.action === "REVIEW",
+          );
       const livePlan = createMigrationWritePlan({
         runId: dry.runId,
         restaurant: dry.restaurant,

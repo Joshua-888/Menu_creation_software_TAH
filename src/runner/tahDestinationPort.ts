@@ -5,6 +5,11 @@ import type { Page } from "playwright";
 import { TahAdminAdapterV1 } from "../tah/adapters/v1/adapter.js";
 import { V1_ROUTES } from "../tah/adapters/v1/selectors.js";
 import { clickSkabAndObserveCreate } from "../tah/write/createRequestObserve.js";
+import {
+  classifyCreateHttpFailure,
+  formatCreateFailureMessage,
+  sanitizeCreateErrorBody,
+} from "../tah/write/createErrorClassify.js";
 import { clickOpdaterAndObserveUpdate } from "../tah/write/updateRequestObserve.js";
 import {
   assertActiveChecked,
@@ -271,9 +276,18 @@ export function createTahPlaywrightDestinationPort(
               databaseId: rowAfterErr.databaseId,
             };
           }
+          const bodyText = sanitizeCreateErrorBody(
+            await page.evaluate(() =>
+              `${document.title} ${(document.body?.innerText || "").slice(0, 400)}`,
+            ),
+          );
+          const classified = classifyCreateHttpFailure({
+            httpStatus: observed.response.status,
+            bodyText,
+          });
           return {
             outcome: "FAILED" as const,
-            error: `CREATE_RESPONSE_ERROR status=${observed.response.status}`,
+            error: formatCreateFailureMessage(classified),
           };
         }
 

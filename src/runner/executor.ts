@@ -20,6 +20,21 @@ import {
   verifyProductFields,
   type ProductVerificationReport,
 } from "./fieldAwareVerify.js";
+import {
+  classifyCreateFailureFromMessage,
+  isDeterministicCreateRejection,
+  type TahCreateErrorSignature,
+} from "../tah/write/createErrorClassify.js";
+import {
+  circuitBreakerMessage,
+  emptyCreateCircuitBreaker,
+  isFurtherPublicCategoryCreate,
+  isProductCreate,
+  recordCreateCircuitFailure,
+  shouldBlockRemainingCreates,
+  type CreateCircuitBreakerState,
+} from "./createCircuitBreaker.js";
+import { orderOperationsForMinimizedCategoryExposure } from "./categorySequence.js";
 
 export type DestinationProduct = {
   databaseId: string;
@@ -108,6 +123,8 @@ export type ExecuteResult = {
     | "COMPLETED_WITH_ERRORS"
     | "PARTIAL_WRITE"
     | "LIVE_EXECUTION_FAILED";
+  circuitBreakerTripped?: boolean;
+  createErrorSignature?: string | null;
 };
 
 const WRITE_STATES: MigrationEntityState[] = [
@@ -373,10 +390,30 @@ export async function executeMigrationPlan(input: {
   let blocked = 0;
   let failed = 0;
   let duplicatesCreated = 0;
+  let circuit: CreateCircuitBreakerState = emptyCreateCircuitBreaker();
+  const operations = orderOperationsForMinimizedCategoryExposure(
+    plan.operations,
+  );
 
-  for (const op of plan.operations) {
+  for (const op of operations) {
     processed += 1;
     const rec = store.getOperation(plan.runId, op.operationId)!;
+
+    if (
+      shouldBlockRemainingCreates(circuit) &&
+      rec.state !== "VERIFIED" &&
+      (isProductCreate(op) || isFurtherPublicCategoryCreate(op))
+    ) {
+      store.upsertOperation({
+        ...rec,
+        state: "BLOCKED",
+        lastErrorCategory: "ADMIN_WRITE_ERROR",
+        lastErrorMessage: circuitBreakerMessage(circuit),
+        updatedAt: now(),
+      });
+      blocked += 1;
+      continue;
+    }
 
     if (op.action === "SKIP" || rec.state === "VERIFIED") {
       skipped += 1;
@@ -464,6 +501,9 @@ export async function executeMigrationPlan(input: {
       onDuplicateRisk: () => {
         duplicatesCreated += 1;
       },
+      onDeterministicCreateFailure: (classified) => {
+        circuit = recordCreateCircuitFailure(circuit, classified);
+      },
     });
   }
 
@@ -528,6 +568,8 @@ export async function executeMigrationPlan(input: {
     menuVerified: createMenuSuccess,
     recoveryRequired,
     status,
+    circuitBreakerTripped: circuit.tripped,
+    createErrorSignature: circuit.signature,
   };
 }
 
@@ -750,6 +792,7 @@ async function processCreateOp(input: {
   onFailed: () => void;
   onBlocked: () => void;
   onDuplicateRisk: () => void;
+  onDeterministicCreateFailure?: (classified: TahCreateErrorSignature) => void;
 }): Promise<void> {
   const { plan, op, store, destination, maxAttempts } = input;
   let rec = store.getOperation(plan.runId, op.operationId)!;
@@ -852,6 +895,14 @@ async function processCreateOp(input: {
         const readbackError = /read-back missing product/i.test(
           createResult.error ?? "",
         );
+        const classified = classifyCreateFailureFromMessage(
+          createResult.error,
+        );
+        const deterministic =
+          classified != null && isDeterministicCreateRejection(classified);
+        if (classified && deterministic) {
+          input.onDeterministicCreateFailure?.(classified);
+        }
         const afterFail = await destination.findByIdentity(identity);
         if (afterFail.outcome === "FOUND") {
           databaseId = afterFail.product.databaseId;
@@ -866,13 +917,15 @@ async function processCreateOp(input: {
           });
           input.onBlocked();
           return;
-        } else if (rec.attemptCount >= maxAttempts) {
+        } else if (deterministic || rec.attemptCount >= maxAttempts) {
           store.upsertOperation({
             ...rec,
             state: "WRITE_FAILED",
             lastErrorCategory: readbackError
               ? "READBACK_ERROR"
-              : "ADMIN_WRITE_ERROR",
+              : classified?.class === "SESSION_OR_CSRF_FAILURE"
+                ? "ADMIN_AUTH_ERROR"
+                : "ADMIN_WRITE_ERROR",
             lastErrorMessage: createResult.error ?? "create failed",
             updatedAt: now(),
           });

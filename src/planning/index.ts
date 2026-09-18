@@ -16,6 +16,14 @@ export {
   shouldCreateProductsHidden,
   type DryRunDestinationSnapshot,
 } from "./dryRun.js";
+export {
+  preflightCreateWrites,
+  assessCreateIdentityAvailability,
+  auditTahInputContract,
+  findTargetMenuDuplicateMenuNumbers,
+  findTargetMenuDuplicateNames,
+  type CreatePreflightReport,
+} from "./createPreflight.js";
 export type { ProductPolicyTrace } from "./structureMapping.js";
 export {
   mapProductChoicesToWriteFields,

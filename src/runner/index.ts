@@ -43,6 +43,15 @@ export {
   type RecoveryPlan,
 } from "./recoveryPlan.js";
 export {
+  emptyCreateCircuitBreaker,
+  recordCreateCircuitFailure,
+  shouldBlockRemainingCreates,
+  CIRCUIT_BREAKER_REASON,
+  NOT_ATTEMPTED_SYSTEMIC_BLOCK,
+  type CreateCircuitBreakerState,
+} from "./createCircuitBreaker.js";
+export { orderOperationsForMinimizedCategoryExposure } from "./categorySequence.js";
+export {
   freezeWritePlan,
   assertWritePlanImmutable,
   createMigrationWritePlan,

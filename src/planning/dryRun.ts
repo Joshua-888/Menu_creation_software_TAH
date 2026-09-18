@@ -18,6 +18,11 @@ import {
 } from "../runner/executor.js";
 import { isTahCanaryProduct } from "./canaries.js";
 import {
+  auditTahInputContract,
+  preflightBlockReason,
+  preflightCreateWrites,
+} from "./createPreflight.js";
+import {
   isSourceStructurePlaceholder,
   mapProductToDestinationCategory,
   type CategoryMappingResult,
@@ -326,6 +331,21 @@ export function buildDryRunWritePlan(input: {
   const pendingCategoryCreates = new Set<string>();
   const createCategoryCertified =
     input.capabilities.write.createCategory === "CERTIFIED";
+
+  const preflight = preflightCreateWrites({
+    targetProducts: canonical.categories.flatMap((category) =>
+      category.products.map((product) => ({
+        sourceId: product.sourceId,
+        menuNumber: product.assignedMenuNumber ?? product.sourceMenuNumber ?? null,
+        name: product.name,
+      })),
+    ),
+    destinationProducts: realDest.map((product) => ({
+      databaseId: product.databaseId,
+      menuNumber: product.menuNumber,
+      name: product.name,
+    })),
+  });
 
   function pendingCategoryToken(categoryName: string): string {
     return `__resolve__:${categoryName.trim()}`;
@@ -798,28 +818,57 @@ export function buildDryRunWritePlan(input: {
         continue;
       }
 
+      const identityPreflightReason = preflightBlockReason(
+        preflight,
+        product.sourceId,
+      );
+      if (identityPreflightReason) {
+        operations.push(
+          planBlockProduct({
+            operationId,
+            identity,
+            reason: identityPreflightReason,
+          }),
+        );
+        continue;
+      }
+
+      const createPayload = toPayload(
+        product,
+        categoryIds,
+        learned
+          ? {
+              name: learned.name,
+              description: learned.description ?? "",
+              ingredients: learned.ingredients,
+            }
+          : {
+              name: labelAssessment.repaired.name,
+              description: labelAssessment.repaired.description,
+              ingredients: labelAssessment.repaired.ingredients,
+            },
+        structurePattern,
+        input.probabilityPolicy,
+        category.name,
+        input.ingredientLikelihood,
+      );
+      const contractHits = auditTahInputContract(createPayload);
+      if (contractHits[0]) {
+        const hit = contractHits[0];
+        operations.push(
+          planBlockProduct({
+            operationId,
+            identity,
+            reason: `TAH_INPUT_CONTRACT_VIOLATION { field: ${hit.field}, submittedValueShape: ${hit.submittedValueShape}, expectedConstraint: ${hit.expectedConstraint}, evidence: ${hit.evidence} }`,
+          }),
+        );
+        continue;
+      }
+
       operations.push(
         planCreateProduct({
           operationId,
-          payload: toPayload(
-            product,
-            categoryIds,
-            learned
-              ? {
-                  name: learned.name,
-                  description: learned.description ?? "",
-                  ingredients: learned.ingredients,
-                }
-              : {
-                  name: labelAssessment.repaired.name,
-                  description: labelAssessment.repaired.description,
-                  ingredients: labelAssessment.repaired.ingredients,
-                },
-            structurePattern,
-            input.probabilityPolicy,
-            category.name,
-            input.ingredientLikelihood,
-          ),
+          payload: createPayload,
           requiredCapabilities: required,
           missingCapabilities: [],
         }),
