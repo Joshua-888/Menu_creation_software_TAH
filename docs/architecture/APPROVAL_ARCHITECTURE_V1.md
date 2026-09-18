@@ -23,6 +23,12 @@ Approval is bound to:
 
 Any relevant change → approval void → re-preview → re-approve.
 
+The executable binding is [EXECUTION_BUNDLE_V1](EXECUTION_BUNDLE_V1.md). After approval the runtime must execute that frozen operation list; it must not rebuild a WritePlan from TargetMenu.
+
+
+The executable binding is [EXECUTION_BUNDLE_V1](EXECUTION_BUNDLE_V1.md). After approval the runtime must execute that frozen operation list; it must not rebuild a WritePlan from TargetMenu.
+
+
 ## Rules
 
 - Explicit operator approval required before live writes / publication.
