@@ -12,10 +12,15 @@ import { isStructureWriteConfirmed } from "../../src/portal/structureWriteGate.j
 import { evaluatePortalLiveWriteGate } from "../../src/portal/liveWrites.js";
 
 describe("multi-merchant host allowlist", () => {
-  it("defaults to any destination host", () => {
-    expect(parseLiveWriteHostAllowlist({})).toBe("*");
-    expect(isHostAllowlistedForLiveWrites("smashmburger.dk", {})).toBe(true);
-    expect(isHostAllowlistedForLiveWrites("anyone.example", {})).toBe(true);
+  it("defaults to bundle-bound, not all hosts", () => {
+    expect(parseLiveWriteHostAllowlist({})).toBe("bundle-bound");
+    expect(isHostAllowlistedForLiveWrites("smashmburger.dk", {})).toBe(false);
+    expect(
+      isHostAllowlistedForLiveWrites("smashmburger.dk", {}, "smashmburger.dk"),
+    ).toBe(true);
+    expect(
+      isHostAllowlistedForLiveWrites("anyone.example", {}, "smashmburger.dk"),
+    ).toBe(false);
   });
 
   it("PORTAL_LIVE_WRITE_HOSTS=* keeps open gate", () => {
@@ -88,7 +93,7 @@ describe("multi-merchant host allowlist", () => {
     ).not.toThrow();
   });
 
-  it("opens live gate for any host when allowlist is open", () => {
+  it("opens live gate for the job destination when allowlist is bundle-bound", () => {
     const gated = evaluatePortalLiveWriteGate({
       destinationHost: "smashmburger.dk",
       env: {
@@ -98,7 +103,7 @@ describe("multi-merchant host allowlist", () => {
     });
     expect(gated.canLiveExecute).toBe(true);
     expect(gated.allowlisted).toBe(true);
-    expect(gated.allowlist).toEqual(["*"]);
+    expect(gated.allowlist).toEqual(["bundle-bound"]);
   });
 
   it("opens live gate for allowlisted new merchants", () => {

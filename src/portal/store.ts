@@ -15,6 +15,12 @@ import {
   verifyPassword,
 } from "./auth.js";
 import { portalDbPath } from "./paths.js";
+import { normalizeDestinationHost } from "../tah/write/hostAllowlist.js";
+import {
+  ensureLeaseSchema,
+  reclaimExpiredLeases,
+} from "../runtime/leases.js";
+import { loadRuntimeConfig, assertDurableDataPath } from "../runtime/runtimeConfig.js";
 import type {
   Employee,
   EmployeeRole,
@@ -124,8 +130,6 @@ function nowIso(): string {
   return new Date().toISOString();
 }
 
-import { normalizeDestinationHost } from "../tah/write/hostAllowlist.js";
-
 function restaurantKeyFromDestinationHost(destinationHost: string): string {
   return normalizeDestinationHost(destinationHost);
 }
@@ -158,8 +162,18 @@ export class PortalStore {
     mkdirSync(dirname(dbPath), { recursive: true });
     this.db = new DatabaseSync(dbPath);
     this.db.exec("PRAGMA foreign_keys = ON");
+    this.db.exec("PRAGMA journal_mode = WAL");
+    this.db.exec("PRAGMA busy_timeout = 5000");
     this.db.exec(SCHEMA);
     this.migrateSchema();
+    ensureLeaseSchema(this.db);
+    reclaimExpiredLeases(this.db);
+    try {
+      const cfg = loadRuntimeConfig();
+      assertDurableDataPath(cfg);
+    } catch (err) {
+      if (process.env.NODE_ENV === "production") throw err;
+    }
   }
 
   /** Additive migrations for existing portal DBs. */
@@ -176,6 +190,43 @@ export class PortalStore {
 
   close(): void {
     this.db.close();
+  }
+
+  /** Convert jobs whose worker lease expired into an explicit resumable error. */
+  expireStaleInFlightJobs(): string[] {
+    const expired = this.db
+      .prepare(
+        `SELECT job_id FROM job_leases WHERE state = 'WORKER_LEASE_EXPIRED'`,
+      )
+      .all() as Array<{ job_id: string }>;
+    const ids: string[] = [];
+    for (const row of expired) {
+      const job = this.getJob(row.job_id);
+      if (!job) continue;
+      if (
+        job.status === "LIVE_EXECUTING" ||
+        job.status === "WRITING"
+      ) {
+        this.updateJobStatus(job.id, "LIVE_EXECUTION_FAILED", {
+          errorMessage:
+            "WORKER_LEASE_EXPIRED: worker heartbeat stopped. Destination may have been mutated; inspect checkpoints before resume. No automatic replay.",
+        });
+        ids.push(job.id);
+      } else if (
+        job.status === "QUEUED" ||
+        job.status === "EXTRACTING" ||
+        job.status === "DOMAIN" ||
+        job.status === "DECISIONS" ||
+        job.status === "ARTIFACTS"
+      ) {
+        this.updateJobStatus(job.id, "FAILED", {
+          errorMessage:
+            "WORKER_LEASE_EXPIRED: planning worker heartbeat stopped. Safe to reschedule; no destination writes were in progress.",
+        });
+        ids.push(job.id);
+      }
+    }
+    return ids;
   }
 
   ensureBootstrapAdmin(): Employee | null {
@@ -788,6 +839,7 @@ export function getPortalStore(): PortalStore {
   if (!singleton) {
     singleton = new PortalStore();
     singleton.ensureBootstrapAdmin();
+    singleton.expireStaleInFlightJobs();
   }
   return singleton;
 }

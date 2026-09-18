@@ -113,7 +113,12 @@ export function createMigrationWritePlan(input: {
   contractFingerprint: string;
   operations: WritePlanOperation[];
   dryRun?: boolean;
+  /** When false, keep caller operation order (approved ExecutionBundle). */
+  preserveOperationOrder?: boolean;
 }): MigrationWritePlan {
+  const ordered = input.preserveOperationOrder
+    ? input.operations
+    : orderOperationsForMinimizedCategoryExposure(input.operations);
   return freezeWritePlan({
     planId: `wp-${input.runId}`,
     runId: input.runId,
@@ -127,9 +132,7 @@ export function createMigrationWritePlan(input: {
     immutable: true,
     dryRun: input.dryRun ?? false,
     createdAt: new Date().toISOString(),
-    operations: orderOperationsForMinimizedCategoryExposure(input.operations).map(
-      (o) => ({ ...o }),
-    ),
+    operations: ordered.map((o) => ({ ...o })),
   });
 }
 

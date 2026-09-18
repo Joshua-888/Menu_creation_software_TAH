@@ -55,7 +55,7 @@ describe("portal live write gate", () => {
     ).toBe(true);
   });
 
-  it("allows any host by default; restrict list can still deny", () => {
+  it("allows the job destination host when bundle-bound (default); restrict list can still deny", () => {
     const open = evaluatePortalLiveWriteGate({
       destinationHost: "https://other-shop.example",
       env: {

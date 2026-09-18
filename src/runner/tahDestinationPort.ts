@@ -73,7 +73,7 @@ export function createTahPlaywrightDestinationPort(
     for (const row of listed) {
       if (!row.databaseId) continue;
       try {
-        const full = await adapter.readProduct(row.databaseId);
+        const full = await adapter.readProduct(row.databaseId, { listRow: row });
         next.push({
           databaseId: row.databaseId,
           menuNumber: full.menuNumber ?? row.menuNumber ?? "",
@@ -121,9 +121,14 @@ export function createTahPlaywrightDestinationPort(
     },
 
     async readProduct(databaseId: string): Promise<DestinationProduct> {
-      const full = await adapter.readProduct(databaseId);
+      if (catalog.length === 0) await refreshCatalogFromList();
+      const cached = catalog.find((p) => p.databaseId === databaseId);
+      if (cached) return cached;
       const listed = await adapter.listProducts();
       const row = listed.find((p) => p.databaseId === databaseId);
+      const full = await adapter.readProduct(databaseId, {
+        ...(row ? { listRow: row } : {}),
+      });
       return {
         databaseId,
         menuNumber: full.menuNumber ?? "",
@@ -258,9 +263,8 @@ export function createTahPlaywrightDestinationPort(
           };
         }
         // 302 redirect is success; only hard-fail on 4xx/5xx final statuses.
-        if (observed.response.status >= 400) {
+          if (observed.response.status >= 400) {
           // Still try list read-back — some servers return 500 after writing.
-          await page.waitForTimeout(800);
           const listedAfterErr = await adapter.listProducts();
           const rowAfterErr = listedAfterErr.find(
             (p) =>
@@ -291,8 +295,8 @@ export function createTahPlaywrightDestinationPort(
           };
         }
 
-        await page.waitForTimeout(1200);
         // Lightweight read-back: list rows only (avoid full edit-form crawl).
+        // RETRY_BACKOFF: bounded list refresh, not UI sync sleep.
         let foundId: string | null = null;
         let lastListLength = 0;
         for (let attempt = 0; attempt < 3 && !foundId; attempt++) {
@@ -306,7 +310,9 @@ export function createTahPlaywrightDestinationPort(
                   normalizeReadbackName(payload.name)),
           );
           if (row?.databaseId) foundId = row.databaseId;
-          else await page.waitForTimeout(800);
+          else if (attempt < 2) {
+            await page.waitForLoadState("domcontentloaded").catch(() => undefined);
+          }
         }
         if (!foundId) {
           return {

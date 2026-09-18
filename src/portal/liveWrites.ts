@@ -11,6 +11,7 @@ import {
   formatLiveWriteHostAllowlist,
   isHostAllowlistedForLiveWrites,
   LIVE_WRITE_HOSTS_ALLOW_ALL,
+  LIVE_WRITE_HOSTS_BUNDLE_BOUND,
   parseLiveWriteHostAllowlist,
 } from "../tah/write/hostAllowlist.js";
 
@@ -19,6 +20,7 @@ export {
   parseLiveWriteHostAllowlist,
   formatLiveWriteHostAllowlist,
   LIVE_WRITE_HOSTS_ALLOW_ALL,
+  LIVE_WRITE_HOSTS_BUNDLE_BOUND,
 } from "../tah/write/hostAllowlist.js";
 
 /** @deprecated use parseLiveWriteHostAllowlist */
@@ -50,7 +52,11 @@ export function isDestinationHostAllowlistedForLiveWrites(
   destinationHost: string,
   env: NodeJS.ProcessEnv = process.env,
 ): boolean {
-  return isHostAllowlistedForLiveWrites(destinationHost, env);
+  return isHostAllowlistedForLiveWrites(
+    destinationHost,
+    env,
+    destinationHost,
+  );
 }
 
 export function evaluatePortalLiveWriteGate(input: {
@@ -69,7 +75,9 @@ export function evaluatePortalLiveWriteGate(input: {
   const allowlist =
     parsed === LIVE_WRITE_HOSTS_ALLOW_ALL
       ? [LIVE_WRITE_HOSTS_ALLOW_ALL]
-      : parsed;
+      : parsed === LIVE_WRITE_HOSTS_BUNDLE_BOUND
+        ? [LIVE_WRITE_HOSTS_BUNDLE_BOUND]
+        : parsed;
   const enabled = isPortalLiveWritesEnabled(env);
   const allowlisted = isDestinationHostAllowlistedForLiveWrites(
     input.destinationHost,
@@ -91,7 +99,7 @@ export function evaluatePortalLiveWriteGate(input: {
   }
   if (!allowlisted) {
     blockers.push(
-      `destination host not allowlisted (need one of: ${formatLiveWriteHostAllowlist(env)}; set PORTAL_LIVE_WRITE_HOSTS=* for any host)`,
+      `destination host not allowlisted (need exact job/bundle host, or one of: ${formatLiveWriteHostAllowlist(env)}; PORTAL_LIVE_WRITE_HOSTS=* is an emergency override)`,
     );
   }
   if (!createCategoryCertified) blockers.push("createCategory not certified");

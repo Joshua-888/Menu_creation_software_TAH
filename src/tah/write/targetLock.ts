@@ -92,7 +92,7 @@ export function assertAllowlistedAdminHost(input: {
       host: actual,
     };
   }
-  if (!isHostAllowlistedForLiveWrites(actual, input.env)) {
+  if (!isHostAllowlistedForLiveWrites(actual, input.env, expected)) {
     const list = formatLiveWriteHostAllowlist(input.env);
     return {
       ok: false,

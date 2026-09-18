@@ -12,6 +12,9 @@ export const DEFAULT_LIVE_WRITE_HOSTS = ["veronipizza.dk"] as const;
 
 export const LIVE_WRITE_HOSTS_ALLOW_ALL = "*" as const;
 
+/** Default: writes only against the exact approved/job destination host. */
+export const LIVE_WRITE_HOSTS_BUNDLE_BOUND = "bundle-bound" as const;
+
 /** Fail-closed: never TypeError on undefined/null/empty host. */
 export class InvalidDestinationHostError extends Error {
   constructor(message = "INVALID_DESTINATION_HOST: missing or empty host") {
@@ -39,14 +42,18 @@ function isAllowAllToken(token: string): boolean {
 }
 
 /**
- * Parsed allowlist. `"*"` means every destination host is permitted.
+ * Parsed allowlist. Unset = bundle-bound (exact job/bundle host only).
+ * `"*"` remains an emergency override, not the default.
  */
 export function parseLiveWriteHostAllowlist(
   env: NodeJS.ProcessEnv = process.env,
-): string[] | typeof LIVE_WRITE_HOSTS_ALLOW_ALL {
+):
+  | string[]
+  | typeof LIVE_WRITE_HOSTS_ALLOW_ALL
+  | typeof LIVE_WRITE_HOSTS_BUNDLE_BOUND {
   const raw = env.PORTAL_LIVE_WRITE_HOSTS?.trim();
-  // Unset / empty / explicit * → any merchant the operator targets.
-  if (!raw || isAllowAllToken(raw)) {
+  if (!raw) return LIVE_WRITE_HOSTS_BUNDLE_BOUND;
+  if (isAllowAllToken(raw)) {
     return LIVE_WRITE_HOSTS_ALLOW_ALL;
   }
   const parts = raw
@@ -70,12 +77,15 @@ export function formatLiveWriteHostAllowlist(
   env: NodeJS.ProcessEnv = process.env,
 ): string {
   const list = parseLiveWriteHostAllowlist(env);
-  return list === LIVE_WRITE_HOSTS_ALLOW_ALL ? "*" : list.join(",");
+  if (list === LIVE_WRITE_HOSTS_ALLOW_ALL) return "*";
+  if (list === LIVE_WRITE_HOSTS_BUNDLE_BOUND) return "bundle-bound";
+  return list.join(",");
 }
 
 export function isHostAllowlistedForLiveWrites(
   destinationHost: unknown,
   env: NodeJS.ProcessEnv = process.env,
+  expectedBundleHost?: string,
 ): boolean {
   if (typeof destinationHost !== "string" || !destinationHost.trim()) {
     return false;
@@ -84,6 +94,10 @@ export function isHostAllowlistedForLiveWrites(
   if (list === LIVE_WRITE_HOSTS_ALLOW_ALL) return true;
   try {
     const host = normalizeDestinationHost(destinationHost);
+    if (list === LIVE_WRITE_HOSTS_BUNDLE_BOUND) {
+      if (!expectedBundleHost?.trim()) return false;
+      return host === normalizeDestinationHost(expectedBundleHost);
+    }
     return list.includes(host);
   } catch {
     return false;

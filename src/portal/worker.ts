@@ -69,6 +69,21 @@ import {
 import { evaluatePortalLiveWriteGate } from "./liveWrites.js";
 import { jobRunDir, portalDataDir, repoRoot } from "./paths.js";
 import { getPortalStore, type PortalStore } from "./store.js";
+import { resolveDeployCommitSha } from "./deployProvenance.js";
+import { normalizeDestinationHost } from "../tah/write/hostAllowlist.js";
+import {
+  acquireDestinationWriteLock,
+  acquireJobLease,
+  approvalBindingFromBundle,
+  freezeExecutionBundle,
+  heartbeatJobLease,
+  newLeaseOwner,
+  persistBlockerRecord,
+  releaseDestinationWriteLock,
+  releaseJobLease,
+  sha256Canonical,
+  type ExecutionBundleV1,
+} from "../runtime/index.js";
 import { DecisionStore } from "../decisions/store.js";
 import {
   shouldSeedDefaultTilbehor,
@@ -262,12 +277,26 @@ export async function runMigrationJob(
   let adapterVersion = "qa-live-improve";
   let preloadedDestination: {
     source: "live";
+    status: "LIVE_COMPLETE";
     destination: DryRunDestinationSnapshot;
     error?: string;
   } | null = null;
+  const owner = newLeaseOwner();
+  const lease = acquireJobLease(store.db, {
+    jobId,
+    owner,
+    stage: "SOURCE",
+  });
+  if (!lease.ok) {
+    store.updateJobStatus(jobId, "FAILED", {
+      errorMessage: `WORKER_LEASE_HELD: job ${jobId} already has an active worker`,
+    });
+    throw new Error(`WORKER_LEASE_HELD: job ${jobId} already has an active worker`);
+  }
 
   try {
     store.updateJobStatus(jobId, "EXTRACTING");
+    heartbeatJobLease(store.db, { jobId, owner, checkpoint: "EXTRACTING" });
     store.db
       .prepare(`UPDATE job_runs SET status = ? WHERE id = ?`)
       .run("EXTRACTING", runStub.id);
@@ -279,18 +308,21 @@ export async function runMigrationJob(
         destinationHost: job.destinationHost,
         deep: true,
       });
-      if (destLoad.source !== "live") {
-        const detail = destLoad.error ?? "gate blocked or empty";
+      if (destLoad.source !== "live" || destLoad.status !== "LIVE_COMPLETE") {
+        const detail = destLoad.error ?? `snapshot status=${destLoad.status}`;
         const chromiumHint =
-          /Executable doesn't exist|playwright install/i.test(detail)
-            ? " Playwright Chromium is missing on the server — redeploy so portal-start can install it."
+          /BROWSER_RUNTIME_UNAVAILABLE|Executable doesn't exist|playwright install/i.test(
+            detail,
+          )
+            ? " Playwright Chromium is missing in the deployment image — rebuild so Chromium is baked in. Runtime does not download browsers."
             : "";
         throw new Error(
-          `QA_RECONCILE requires a live destination snapshot. Set TAH_ADMIN_EMAIL and TAH_ADMIN_PASSWORD on the portal service, ensure the host is allowlisted (any host by default; set PORTAL_LIVE_WRITE_HOSTS to restrict), and that Playwright can log into admin.${chromiumHint} ${detail}`,
+          `QA_RECONCILE requires LIVE_COMPLETE destination snapshot (never a fake empty catalog). Set TAH_ADMIN_EMAIL and TAH_ADMIN_PASSWORD, bind the exact job host, and ensure Playwright can log into admin.${chromiumHint} ${detail}`,
         );
       }
       preloadedDestination = {
         source: "live",
+        status: "LIVE_COMPLETE",
         destination: destLoad.destination,
         ...(destLoad.error ? { error: destLoad.error } : {}),
       };
@@ -546,15 +578,15 @@ export async function runMigrationJob(
       }));
     // Always require a real live catalog whenever credentials/allowlist enable it
     // (and always for QA). Never plan against an empty fake destination.
-    if (destLoad.source !== "live") {
-      const detail = destLoad.error ?? "gate blocked or empty";
-      const chromiumHint = /Executable doesn't exist|playwright install/i.test(
+    if (destLoad.source !== "live" || destLoad.status !== "LIVE_COMPLETE") {
+      const detail = destLoad.error ?? `snapshot status=${destLoad.status}`;
+      const chromiumHint = /BROWSER_RUNTIME_UNAVAILABLE|Executable doesn't exist|playwright install/i.test(
         detail,
       )
-        ? " Playwright Chromium is missing on the server — redeploy so portal-start can install it."
+        ? " Playwright Chromium is missing in the deployment image — rebuild so Chromium is baked in."
         : "";
       throw new Error(
-        `${isQa ? "QA_RECONCILE" : "Create"} requires a live destination snapshot. Set TAH_ADMIN_EMAIL and TAH_ADMIN_PASSWORD on the portal service, ensure the host is allowlisted (any host by default; set PORTAL_LIVE_WRITE_HOSTS to restrict), and that Playwright can log into admin.${chromiumHint} ${detail}`,
+        `${isQa ? "QA_RECONCILE" : "Create"} requires LIVE_COMPLETE destination snapshot. Failed/offline/partial snapshots cannot be planned against.${chromiumHint} ${detail}`,
       );
     }
     const destination = destLoad.destination;
@@ -606,6 +638,34 @@ export async function runMigrationJob(
     });
 
     writeJson(outDir, "dry-run-writeplan.json", plan);
+
+    const destinationSnapshotHash = sha256Canonical({
+      host: destination.host,
+      categories: destination.categories,
+      products: destination.products,
+    });
+    const executionBundle = freezeExecutionBundle({
+      restaurantKey: job.restaurantKey,
+      destinationHost: job.destinationHost,
+      productionSha: resolveDeployCommitSha({}),
+      adapterVersion,
+      contractFingerprint: fingerprint.fingerprint,
+      targetMenuHash: sha256Canonical(recovered.menu),
+      destinationSnapshotHash,
+      operations: plan.operations,
+      qualityStatus: intelligence.quality.menuStatus,
+    });
+    writeJson(outDir, "execution-bundle.json", executionBundle);
+    writeJson(
+      outDir,
+      "approval-binding.json",
+      approvalBindingFromBundle(executionBundle),
+    );
+    heartbeatJobLease(store.db, {
+      jobId,
+      owner,
+      checkpoint: "ARTIFACTS",
+    });
 
     const planGate = assertCreateCardQuality(plan);
     const cardGate = {
@@ -887,6 +947,8 @@ export async function runMigrationJob(
     store.updateJobStatus(jobId, "FAILED", { errorMessage: message });
     store.finishJobRun(runStub.id, "FAILED", metrics, message);
     throw err;
+  } finally {
+    releaseJobLease(store.db, { jobId, owner, state: "RELEASED" });
   }
 }
 
@@ -1003,7 +1065,55 @@ export async function runPostReviewLiveIfReady(jobId: string): Promise<{
     TAH_V1_STRUCTURE_FINGERPRINT_INPUT,
   );
 
+  const bundlePath = join(run.runDir, "execution-bundle.json");
+  if (!existsSync(bundlePath)) {
+    return { ran: false, reason: "no_execution_bundle" };
+  }
+  let executionBundle: ExecutionBundleV1;
   try {
+    executionBundle = JSON.parse(
+      readFileSync(bundlePath, "utf8"),
+    ) as ExecutionBundleV1;
+  } catch {
+    return { ran: false, reason: "execution_bundle_unreadable" };
+  }
+
+  const owner = newLeaseOwner();
+  const lease = acquireJobLease(store.db, {
+    jobId,
+    owner,
+    stage: "EXECUTION",
+  });
+  if (!lease.ok) {
+    return { ran: false, reason: "WORKER_LEASE_HELD" };
+  }
+  const destLock = acquireDestinationWriteLock(store.db, {
+    destinationHost: job.destinationHost,
+    jobId,
+    owner,
+  });
+  if (!destLock.ok) {
+    releaseJobLease(store.db, { jobId, owner, state: "DESTINATION_WRITE_LOCKED" });
+    persistBlockerRecord(store.db, {
+      blockerId: `lock-${jobId}`,
+      runId: run.id,
+      classification: "DESTINATION_WRITE_LOCKED",
+      scope: "destination",
+      severity: "error",
+      fingerprint: `DESTINATION_WRITE_LOCKED:${normalizeDestinationHost(job.destinationHost)}`,
+      destinationHost: job.destinationHost,
+      firstSeenAt: new Date().toISOString(),
+      lastSeenAt: new Date().toISOString(),
+      requiresHuman: true,
+    });
+    return {
+      ran: false,
+      reason: `DESTINATION_WRITE_LOCKED holder=${destLock.holder}`,
+    };
+  }
+
+  try {
+    heartbeatJobLease(store.db, { jobId, owner, checkpoint: "LIVE_PREWRITE" });
     const live = await executePortalLiveWrites({
       runId: `live-postreview-${run.id}`,
       restaurant: job.restaurantKey,
@@ -1011,11 +1121,12 @@ export async function runPostReviewLiveIfReady(jobId: string): Promise<{
       source,
       schemaVersion: CANONICAL_MENU_SCHEMA_VERSION,
       domainRuleVersion: DOMAIN_RULE_ENGINE_VERSION,
-      adapterVersion: "portal-post-review",
+      adapterVersion: executionBundle.adapterVersion,
       contractFingerprint: fingerprint.fingerprint,
       canonical,
       runsDbPath: portalLiveRunsDbPath(portalDataDir()),
       workflow: job.workflow,
+      executionBundle,
     });
     writeJson(run.runDir, "live-writeplan.json", live.livePlan);
     writeJson(run.runDir, "live-destination-snapshot.json", live.destination);
@@ -1068,9 +1179,7 @@ export async function runPostReviewLiveIfReady(jobId: string): Promise<{
           ...dryPlan,
           runId: liveRunId,
           dryRun: false,
-          operations: dryPlan.operations.filter(
-            (operation) => operation.action === "CREATE",
-          ),
+          operations: [...executionBundle.operations],
         },
         operationRecords,
         destinationSnapshot: destination,
@@ -1088,6 +1197,31 @@ export async function runPostReviewLiveIfReady(jobId: string): Promise<{
       remainingQuestions: 0,
       errorMessage: `Live write failed after approval: ${message}`,
     });
+    persistBlockerRecord(store.db, {
+      blockerId: `live-${jobId}-${Date.now()}`,
+      runId: run.id,
+      classification: /STALE_EXECUTION_BUNDLE|APPROVAL_INVALIDATED/.test(message)
+        ? "STALE_EXECUTION_BUNDLE"
+        : /DESTINATION_CONTRACT_DRIFT/.test(message)
+          ? "DESTINATION_CONTRACT_DRIFT"
+          : /BROWSER_RUNTIME/.test(message)
+            ? "BROWSER_RUNTIME_UNAVAILABLE"
+            : "UNKNOWN_BLOCKER",
+      scope: "run",
+      severity: "error",
+      fingerprint: message.slice(0, 180),
+      destinationHost: job.destinationHost,
+      firstSeenAt: new Date().toISOString(),
+      lastSeenAt: new Date().toISOString(),
+      requiresHuman: true,
+      evidenceJson: JSON.stringify({ message: message.slice(0, 500) }),
+    });
     return { ran: false, reason: `live_error:${message}` };
+  } finally {
+    releaseDestinationWriteLock(store.db, {
+      destinationHost: job.destinationHost,
+      jobId,
+    });
+    releaseJobLease(store.db, { jobId, owner, state: "RELEASED" });
   }
 }

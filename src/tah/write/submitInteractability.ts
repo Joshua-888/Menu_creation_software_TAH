@@ -44,7 +44,6 @@ export async function dismissKnownCookieBanner(page: Page): Promise<boolean> {
       .first()
       .waitFor({ state: "hidden", timeout: 10_000 })
       .catch(() => undefined);
-    await page.waitForTimeout(300);
     const stillVisible =
       (await overlay.count()) > 0 &&
       (await overlay.first().isVisible().catch(() => false));

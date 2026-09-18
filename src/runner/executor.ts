@@ -34,7 +34,6 @@ import {
   shouldBlockRemainingCreates,
   type CreateCircuitBreakerState,
 } from "./createCircuitBreaker.js";
-import { orderOperationsForMinimizedCategoryExposure } from "./categorySequence.js";
 
 export type DestinationProduct = {
   databaseId: string;
@@ -391,11 +390,8 @@ export async function executeMigrationPlan(input: {
   let failed = 0;
   let duplicatesCreated = 0;
   let circuit: CreateCircuitBreakerState = emptyCreateCircuitBreaker();
-  const operations = orderOperationsForMinimizedCategoryExposure(
-    plan.operations,
-  );
 
-  for (const op of operations) {
+  for (const op of plan.operations) {
     processed += 1;
     const rec = store.getOperation(plan.runId, op.operationId)!;
 

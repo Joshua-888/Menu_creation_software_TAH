@@ -103,7 +103,10 @@ export async function fillProductCreateForm(
   for (let i = 0; i < input.variants.length; i++) {
     if (i > 0) {
       await page.locator("#add-variant").click();
-      await page.waitForTimeout(200);
+      await page
+        .locator("#variant-list tr.variant-form")
+        .nth(i)
+        .waitFor({ state: "attached", timeout: 5_000 });
     }
     const row = page.locator("#variant-list tr.variant-form").nth(i);
     await row.locator("input.variant-name").fill(input.variants[i]!.name);
@@ -113,7 +116,10 @@ export async function fillProductCreateForm(
   // Ingredients start empty — add rows inside list
   for (let i = 0; i < input.ingredients.length; i++) {
     await page.locator("#add-ingredient").click();
-    await page.waitForTimeout(200);
+    await page
+      .locator("#ingredient-list tr.ingredient-form")
+      .nth(i)
+      .waitFor({ state: "attached", timeout: 5_000 });
     const row = page.locator("#ingredient-list tr.ingredient-form").nth(i);
     await row.locator("input.ingredient-name").fill(input.ingredients[i]!);
   }
@@ -122,7 +128,10 @@ export async function fillProductCreateForm(
   const additions = input.additions ?? [];
   for (let i = 0; i < additions.length; i++) {
     await page.locator("#add-addition").click();
-    await page.waitForTimeout(200);
+    await page
+      .locator("#addition-list tr.addition-form")
+      .nth(i)
+      .waitFor({ state: "attached", timeout: 5_000 });
     const row = page.locator("#addition-list tr.addition-form").nth(i);
     await row.locator("input.addition-name").fill(additions[i]!.name);
     await row.locator("input.addition-price").fill(additions[i]!.priceKr);
@@ -214,7 +223,7 @@ async function trimThenFillNamedPriceRows(
         await fallback.click().catch(() => undefined);
       }
     }
-    await page.waitForTimeout(120);
+    await last.waitFor({ state: "detached", timeout: 1_500 }).catch(() => undefined);
     count = await rows.count();
     if (count >= before) {
       // Row did not detach — blank it and continue with remaining excess.
@@ -251,7 +260,10 @@ async function trimThenFillNamedPriceRows(
     count = await rows.count();
     if (i >= count) {
       await form.locator(opts.addSelector).click();
-      await page.waitForTimeout(150);
+      await form.locator(opts.rowSelector).nth(i).waitFor({
+        state: "attached",
+        timeout: 5_000,
+      });
     }
     const row = form.locator(opts.rowSelector).nth(i);
     await row.locator(opts.nameInput).fill(opts.rows[i]!.name);
@@ -306,7 +318,7 @@ export async function setIngredientRows(
       await last.locator("input.ingredient-name").fill("");
       break;
     }
-    await page.waitForTimeout(120);
+    await last.waitFor({ state: "detached", timeout: 1_500 }).catch(() => undefined);
     count = await rows.count();
     guard += 1;
   }
@@ -314,7 +326,10 @@ export async function setIngredientRows(
     count = await rows.count();
     if (i >= count) {
       await form.locator("#add-ingredient").click();
-      await page.waitForTimeout(150);
+      await form
+        .locator("#ingredient-list tr.ingredient-form")
+        .nth(i)
+        .waitFor({ state: "attached", timeout: 5_000 });
     }
     await form
       .locator("#ingredient-list tr.ingredient-form")

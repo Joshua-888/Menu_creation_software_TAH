@@ -3,13 +3,8 @@
  * Only called when evaluatePortalLiveWriteGate().canLiveExecute is true.
  */
 import { join } from "node:path";
-import { chromium, type Page } from "playwright";
 import type { CanonicalMenu } from "../domain/schema/canonical.js";
-import {
-  buildDryRunWritePlan,
-  mapSourceCategoriesToDestination,
-  type DryRunDestinationSnapshot,
-} from "../planning/index.js";
+import type { DryRunDestinationSnapshot } from "../planning/index.js";
 import {
   createMigrationWritePlan,
   createTahPlaywrightDestinationPort,
@@ -20,7 +15,6 @@ import {
   type RecoveryPlan,
 } from "../runner/index.js";
 import { RunStore } from "../runs/sqliteStore.js";
-import { M2B_ADAPTER_CAPABILITIES } from "../tah/contracts/evidence.js";
 import { TahAdminAdapterV1 } from "../tah/adapters/v1/adapter.js";
 import {
   isDestinationHostAllowlistedForLiveWrites,
@@ -30,23 +24,26 @@ import { loginDiagnosticError, loginTahAdmin } from "./adminLogin.js";
 import { assertStructureWriteConfirmed } from "./structureWriteGate.js";
 import { existsSync, readFileSync } from "node:fs";
 import type { StructurePatternSummary } from "../learning/peerMenuStructure.js";
-import {
-  loadProbabilityPolicyForRestaurant,
-  peerStructureSummaryPath,
-} from "../learning/peerArtifacts.js";
-import type { IngredientLikelihoodPolicy } from "../learning/ingredientLikelihood.js";
-import { resolvePortalDecisionDbPath } from "../learning/tilbehorOverride.js";
-import { DecisionStore } from "../decisions/store.js";
-import type { ProductPolicyTrace } from "../planning/index.js";
+import { peerStructureSummaryPath } from "../learning/peerArtifacts.js";
 import { repoRoot } from "./paths.js";
+import {
+  assertApprovedPlanEqualsExecutedPlan,
+  evaluatePreWriteGate,
+  getWorkerBrowserRuntime,
+  sha256Canonical,
+  validateExecutionBundle,
+  type ExecutionBundleV1,
+} from "../runtime/index.js";
+import type { DestinationSnapshotResult } from "../runtime/destinationSnapshot.js";
+import { probeAdminContract } from "../tah/probe/contractProbe.js";
+import {
+  buildAdminContractFingerprint,
+  TAH_V1_STRUCTURE_FINGERPRINT_INPUT,
+} from "../tah/contracts/fingerprint.js";
+import { resolveDeployCommitSha } from "./deployProvenance.js";
+import type { Page } from "playwright";
 
-/** Create must wait out background portal-start Chromium installs on Railpack. */
-const CHROMIUM_READY_TIMEOUT_MS = 180_000;
 const SNAPSHOT_TIMEOUT_MS = 240_000;
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 async function withTimeout<T>(
   promise: Promise<T>,
@@ -69,36 +66,20 @@ async function withTimeout<T>(
   }
 }
 
-function isChromiumMissingError(err: unknown): boolean {
-  const msg = err instanceof Error ? err.message : String(err);
-  return /Executable doesn't exist|browserType\.launch|Please run npx playwright install/i.test(
-    msg,
-  );
-}
-
-/**
- * Wait for Chromium while portal-start installs it in the background.
- * Create/QA must not hang forever or fail instantly during that window.
- */
-async function launchChromiumWhenReady(): Promise<
-  Awaited<ReturnType<typeof chromium.launch>>
-> {
-  const started = Date.now();
-  let lastErr: unknown;
-  while (Date.now() - started < CHROMIUM_READY_TIMEOUT_MS) {
-    try {
-      return await chromium.launch({ headless: true });
-    } catch (err) {
-      lastErr = err;
-      if (!isChromiumMissingError(err)) throw err;
-      await sleep(2_500);
-    }
-  }
-  const detail =
-    lastErr instanceof Error ? lastErr.message : String(lastErr ?? "unknown");
-  throw new Error(
-    `Playwright Chromium not ready after ${CHROMIUM_READY_TIMEOUT_MS}ms. ${detail}`,
-  );
+async function launchJobPage(): Promise<{
+  page: Page;
+  close: () => Promise<void>;
+}> {
+  const runtime = getWorkerBrowserRuntime();
+  const context = await runtime.newJobContext();
+  const page = await context.newPage();
+  page.setDefaultTimeout(60_000);
+  return {
+    page,
+    close: async () => {
+      await context.close().catch(() => undefined);
+    },
+  };
 }
 
 function emptyDestinationSnapshot(host: string): DryRunDestinationSnapshot {
@@ -133,42 +114,71 @@ export async function loadDestinationSnapshotForDryRun(input: {
   deep?: boolean;
 }): Promise<{
   destination: DryRunDestinationSnapshot;
-  source: "live" | "empty";
+  source: "live" | "empty" | "failed";
+  status: DestinationSnapshotResult["status"];
   error?: string;
+  meta?: { pagesRead: number; complete: boolean; errors: string[] };
 }> {
   const env = input.env ?? process.env;
   const host = normalizeDestinationHost(input.destinationHost);
   const empty = emptyDestinationSnapshot(host);
   if (!shouldLoadLiveDestinationForDryRun(host, env)) {
-    return { destination: empty, source: "empty" };
+    return {
+      destination: empty,
+      source: "empty",
+      status: "OFFLINE_EXPLICIT",
+      error: "OFFLINE_EXPLICIT: live destination load not enabled",
+    };
   }
   const baseUrl = `https://${host}`;
-  let browser: Awaited<ReturnType<typeof chromium.launch>> | undefined;
+  let session: { page: Page; close: () => Promise<void> } | undefined;
   try {
-    browser = await launchChromiumWhenReady();
-    const page = await browser.newPage();
-    page.setDefaultTimeout(60_000);
+    session = await launchJobPage();
+    const page = session.page;
     return await withTimeout(
       (async () => {
         await adminLogin(page, baseUrl);
-        const destination = await loadRealDestinationSnapshot({
+        const loaded = await loadRealDestinationSnapshot({
           baseUrl,
           page,
           deep: input.deep === true,
         });
-        return { destination, source: "live" as const };
+        return {
+          destination: loaded.snapshot,
+          source: loaded.status === "LIVE_COMPLETE" ? ("live" as const) : ("failed" as const),
+          status: loaded.status,
+          ...(loaded.errors.length
+            ? { error: loaded.errors.join("; ") }
+            : {}),
+          meta: {
+            pagesRead: loaded.pagesRead,
+            complete: loaded.complete,
+            errors: loaded.errors,
+          },
+        };
       })(),
       SNAPSHOT_TIMEOUT_MS,
       "Create live destination snapshot",
     );
   } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    const code = /BROWSER_RUNTIME_UNAVAILABLE|Executable doesn't exist/i.test(
+      message,
+    )
+      ? "BROWSER_RUNTIME_UNAVAILABLE"
+      : /timeout/i.test(message)
+        ? "TIMEOUT"
+        : /login/i.test(message)
+          ? "LOGIN_FAILED"
+          : "UNKNOWN";
     return {
       destination: empty,
-      source: "empty",
-      error: err instanceof Error ? err.message : String(err),
+      source: "failed",
+      status: "FAILED",
+      error: `${code}: ${message}`,
     };
   } finally {
-    await browser?.close().catch(() => undefined);
+    await session?.close().catch(() => undefined);
   }
 }
 
@@ -206,16 +216,28 @@ export async function loadRealDestinationSnapshot(input: {
   page: Page;
   /** When true, readProduct each row for QA reconcile depth. */
   deep?: boolean;
-}): Promise<DryRunDestinationSnapshot> {
+}): Promise<{
+  snapshot: DryRunDestinationSnapshot;
+  status: "LIVE_COMPLETE" | "LIVE_PARTIAL_WITH_ERRORS";
+  pagesRead: number;
+  complete: boolean;
+  errors: string[];
+}> {
   const adapter = new TahAdminAdapterV1({
     page: input.page,
     baseUrl: input.baseUrl,
     expectedHost: normalizeDestinationHost(input.baseUrl),
   });
   const categories = await adapter.listCategories();
-  const products = await adapter.listProducts();
+  const listed = await adapter.listProductsDetailed();
+  if (listed.truncated) {
+    throw new Error(
+      `SNAPSHOT_TRUNCATED pagesRead=${listed.pagesRead} productCount=${listed.products.length}`,
+    );
+  }
   const mapped = [];
-  for (const p of products) {
+  const errors: string[] = [];
+  for (const p of listed.products) {
     if (!p.databaseId) continue;
     if (!input.deep) {
       mapped.push({
@@ -228,7 +250,7 @@ export async function loadRealDestinationSnapshot(input: {
       continue;
     }
     try {
-      const full = await adapter.readProduct(p.databaseId);
+      const full = await adapter.readProduct(p.databaseId, { listRow: p });
       mapped.push({
         databaseId: p.databaseId,
         menuNumber: full.menuNumber ?? p.menuNumber ?? "",
@@ -247,23 +269,27 @@ export async function loadRealDestinationSnapshot(input: {
           priceOre: a.priceOre ?? 0,
         })),
       });
-    } catch {
-      mapped.push({
-        databaseId: p.databaseId,
-        menuNumber: p.menuNumber ?? "",
-        name: p.name,
-        categoryIds: [] as string[],
-        listStatus: (p.statusText || "").trim(),
-      });
+    } catch (err) {
+      errors.push(
+        `readProduct ${p.databaseId}: ${err instanceof Error ? err.message : String(err)}`,
+      );
     }
   }
-  return {
+  const snapshot = {
     host: normalizeDestinationHost(input.baseUrl),
     categories: categories.map((c) => ({
       databaseId: c.databaseId,
       name: c.name,
     })),
     products: mapped,
+  };
+  const complete = errors.length === 0;
+  return {
+    snapshot,
+    status: complete ? "LIVE_COMPLETE" : "LIVE_PARTIAL_WITH_ERRORS",
+    pagesRead: listed.pagesRead,
+    complete,
+    errors,
   };
 }
 
@@ -276,12 +302,10 @@ export async function executePortalLiveWrites(input: {
   domainRuleVersion: string;
   adapterVersion: string;
   contractFingerprint: string;
-  canonical: CanonicalMenu;
+  canonical?: CanonicalMenu;
   runsDbPath: string;
-  /** QA_RECONCILE enables UPDATE ops + deep snapshot. */
   workflow?: "CREATE_MENU" | "QA_RECONCILE";
-  /** Must match dry-run intelligence path — no divergent live replan. */
-  ingredientLikelihood?: IngredientLikelihoodPolicy | null;
+  executionBundle: ExecutionBundleV1;
 }): Promise<{
   livePlan: MigrationWritePlan;
   result: ExecuteResult;
@@ -290,11 +314,24 @@ export async function executePortalLiveWrites(input: {
 }> {
   const host = normalizeDestinationHost(input.destinationHost);
   const baseUrl = `https://${host}`;
+  const productionSha = resolveDeployCommitSha({});
+  const bundleCheck = validateExecutionBundle({
+    bundle: input.executionBundle,
+    productionSha,
+    destinationHost: host,
+    destinationSnapshotHash: input.executionBundle.destinationSnapshotHash,
+  });
+  if (host !== input.executionBundle.destinationHost) {
+    throw new Error(
+      `STALE_EXECUTION_BUNDLE destinationHost expected=${input.executionBundle.destinationHost} actual=${host}`,
+    );
+  }
+  if (!bundleCheck.ok) {
+    throw new Error(`${bundleCheck.code}: ${bundleCheck.reason}`);
+  }
+
   const root = repoRoot();
   const isQa = input.workflow === "QA_RECONCILE";
-
-  // Peer structure confirm is optional for multi-merchant create path.
-  // Set STRUCTURE_WRITE_REQUIRED=1 to enforce fingerprint confirm before live writes.
   const structure = loadStructureFingerprint(root);
   const requireStructure =
     process.env.STRUCTURE_WRITE_REQUIRED === "1" ||
@@ -307,117 +344,108 @@ export async function executePortalLiveWrites(input: {
     });
   }
 
-  const browser = await launchChromiumWhenReady();
-  const page = await browser.newPage();
-  page.setDefaultTimeout(60_000);
+  const session = await launchJobPage();
+  const page = session.page;
   try {
     await adminLogin(page, baseUrl);
-    const destination = await loadRealDestinationSnapshot({
+    const probe = await probeAdminContract({
+      page,
+      baseUrl,
+      expectedHost: host,
+    });
+    if (probe.authentication !== "PASS") {
+      throw new Error("AUTH_CREDENTIALS_REJECTED: contract probe is not authenticated");
+    }
+    const observedFingerprint = buildAdminContractFingerprint(
+      TAH_V1_STRUCTURE_FINGERPRINT_INPUT,
+    ).fingerprint;
+    const loaded = await loadRealDestinationSnapshot({
       baseUrl,
       page,
       deep: isQa,
     });
-    const categoryMappings = mapSourceCategoriesToDestination(
-      input.canonical.categories.map((c) => ({
-        sourceId: c.sourceId,
-        name: c.name,
-      })),
-      destination.categories,
-    );
-    const policyTraces: ProductPolicyTrace[] = [];
-    const probabilityPolicy = loadProbabilityPolicyForRestaurant(
-      root,
-      input.restaurant,
-    );
-    const decisionDbPath = resolvePortalDecisionDbPath(root);
-    const decisionStore = existsSync(decisionDbPath)
-      ? new DecisionStore(decisionDbPath)
-      : null;
-    try {
-      const dry = buildDryRunWritePlan({
-        runId: input.runId,
-        restaurant: input.restaurant,
-        host,
-        source: input.source,
-        schemaVersion: input.schemaVersion,
-        domainRuleVersion: input.domainRuleVersion,
-        adapterVersion: input.adapterVersion,
-        contractFingerprint: input.contractFingerprint,
-        canonical: input.canonical,
-        categoryMappings,
-        destination,
-        capabilities: M2B_ADAPTER_CAPABILITIES,
-        ...(decisionStore ? { decisionStore } : {}),
-        ...(probabilityPolicy ? { probabilityPolicy } : {}),
-        ...(input.ingredientLikelihood
-          ? { ingredientLikelihood: input.ingredientLikelihood }
-          : {}),
-        policyTraces,
-        ...(isQa ? { emitReconcileUpdates: true } : {}),
-      });
-      // CREATE path: only CREATE ops. QA path: UPDATE (+ CREATE for missing).
-      const ops = isQa
-        ? dry.operations.filter(
-            (o) =>
-              o.action === "UPDATE" ||
-              o.action === "CREATE" ||
-              o.action === "BLOCK" ||
-              o.action === "REVIEW",
-          )
-        : dry.operations.filter(
-            (o) =>
-              o.action === "CREATE" ||
-              o.action === "BLOCK" ||
-              o.action === "REVIEW",
-          );
-      const livePlan = createMigrationWritePlan({
-        runId: dry.runId,
-        restaurant: dry.restaurant,
-        host: dry.host,
-        source: dry.source,
-        schemaVersion: dry.schemaVersion,
-        domainRuleVersion: dry.domainRuleVersion,
-        adapterVersion: dry.adapterVersion,
-        contractFingerprint: dry.contractFingerprint,
-        dryRun: false,
-        operations: ops.map((o) => ({ ...o })),
-      });
+    if (loaded.status !== "LIVE_COMPLETE") {
+      throw new Error(
+        `SNAPSHOT incomplete (${loaded.status}): ${loaded.errors.join("; ") || "not LIVE_COMPLETE"}`,
+      );
+    }
+    const destination = loaded.snapshot;
+    const observedSnapshotHash = sha256Canonical({
+      host: destination.host,
+      categories: destination.categories,
+      products: destination.products,
+    });
+    const freshness = validateExecutionBundle({
+      bundle: input.executionBundle,
+      productionSha,
+      destinationHost: host,
+      destinationSnapshotHash: observedSnapshotHash,
+    });
+    if (!freshness.ok) {
+      throw new Error(`${freshness.code}: ${freshness.reason}`);
+    }
+    const gate = evaluatePreWriteGate({
+      bundle: input.executionBundle,
+      pageUrl: page.url(),
+      authenticated: true,
+      observedContractFingerprint: observedFingerprint,
+      observedSnapshotHash,
+      productionSha,
+    });
+    if (!gate.ok) {
+      throw new Error(`${gate.code}: ${gate.reason}`);
+    }
 
-      const store = new RunStore(input.runsDbPath);
-      try {
-        const destinationPort = createTahPlaywrightDestinationPort({
-          page,
-          baseUrl,
+    const livePlan = createMigrationWritePlan({
+      runId: input.runId,
+      restaurant: input.restaurant,
+      host: input.executionBundle.destinationHost,
+      source: input.source,
+      schemaVersion: input.schemaVersion,
+      domainRuleVersion: input.domainRuleVersion,
+      adapterVersion: input.adapterVersion,
+      contractFingerprint: input.executionBundle.contractFingerprint,
+      dryRun: false,
+      operations: input.executionBundle.operations.map((o) => ({ ...o })),
+      preserveOperationOrder: true,
+    });
+    assertApprovedPlanEqualsExecutedPlan({
+      approvedOperations: input.executionBundle.operations,
+      executedOperations: livePlan.operations,
+    });
+
+    const store = new RunStore(input.runsDbPath);
+    try {
+      const destinationPort = createTahPlaywrightDestinationPort({
+        page,
+        baseUrl,
+        expectedHost: host,
+        restaurantKey: input.restaurant,
+      });
+      const result = await executeMigrationPlan({
+        plan: livePlan,
+        store,
+        destination: destinationPort,
+        workflow: input.workflow ?? "CREATE_MENU",
+        gate: {
+          hostOk: gate.ok,
+          contractMatch:
+            observedFingerprint === input.executionBundle.contractFingerprint,
+          host,
           expectedHost: host,
-          restaurantKey: input.restaurant,
-          ...(decisionStore ? { decisionStore } : {}),
-        });
-        const result = await executeMigrationPlan({
-          plan: livePlan,
-          store,
-          destination: destinationPort,
-          workflow: input.workflow ?? "CREATE_MENU",
-          gate: {
-            hostOk: true,
-            contractMatch: true,
-            host,
-            expectedHost: host,
-          },
-        });
-        const recoveryPlan = buildRecoveryPlan({
-          plan: livePlan,
-          operationRecords: store.listOperations(livePlan.runId),
-          destinationSnapshot: destination,
-        });
-        return { livePlan, result, destination, recoveryPlan };
-      } finally {
-        store.close();
-      }
+        },
+      });
+      const recoveryPlan = buildRecoveryPlan({
+        plan: livePlan,
+        operationRecords: store.listOperations(livePlan.runId),
+        destinationSnapshot: destination,
+      });
+      return { livePlan, result, destination, recoveryPlan };
     } finally {
-      decisionStore?.close();
+      store.close();
     }
   } finally {
-    await browser.close();
+    await session.close();
   }
 }
 

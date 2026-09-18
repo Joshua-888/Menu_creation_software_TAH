@@ -186,11 +186,19 @@ export class TahAdminAdapterV1 implements TahAdminAdapter {
     return page.evaluate(extractCategoryRows);
   }
 
-  async listProducts(): Promise<DestinationProductListItem[]> {
+  async listProductsDetailed(input?: { maxPages?: number }): Promise<{
+    products: DestinationProductListItem[];
+    pagesRead: number;
+    complete: boolean;
+    truncated: boolean;
+  }> {
     const { page, baseUrl } = this.options;
+    const maxPages = input?.maxPages ?? 200;
     const all: DestinationProductListItem[] = [];
     const seen = new Set<string>();
-    for (let pageNum = 1; pageNum <= 20; pageNum++) {
+    let pagesRead = 0;
+    let truncated = false;
+    for (let pageNum = 1; pageNum <= maxPages; pageNum++) {
       const url =
         pageNum === 1
           ? new URL(V1_ROUTES.menuList, baseUrl).toString()
@@ -199,6 +207,7 @@ export class TahAdminAdapterV1 implements TahAdminAdapter {
               baseUrl,
             ).toString();
       await page.goto(url, { waitUntil: "domcontentloaded" });
+      pagesRead += 1;
       const rows = await page.evaluate(extractProductListRows);
       let newOnPage = 0;
       for (const row of rows) {
@@ -208,15 +217,29 @@ export class TahAdminAdapterV1 implements TahAdminAdapter {
         all.push(row);
         newOnPage += 1;
       }
-      if (rows.length === 0 || newOnPage === 0) break;
-      // Stop when no "Next" pagination control remains
+      if (rows.length === 0 || newOnPage === 0) {
+        return { products: all, pagesRead, complete: true, truncated: false };
+      }
       const hasNext = await page.evaluate(`(() => {
         const links = [...document.querySelectorAll("a")];
         return links.some((a) => /next|næste|»/i.test((a.textContent || "").trim()));
       })()`);
-      if (!hasNext) break;
+      if (!hasNext) {
+        return { products: all, pagesRead, complete: true, truncated: false };
+      }
+      if (pageNum === maxPages) truncated = true;
     }
-    return all;
+    return { products: all, pagesRead, complete: !truncated, truncated };
+  }
+
+  async listProducts(): Promise<DestinationProductListItem[]> {
+    const listed = await this.listProductsDetailed();
+    if (listed.truncated) {
+      throw new Error(
+        `SNAPSHOT_TRUNCATED pagesRead=${listed.pagesRead} productCount=${listed.products.length}`,
+      );
+    }
+    return listed.products;
   }
 
   async findProduct(query: {
@@ -243,7 +266,10 @@ export class TahAdminAdapterV1 implements TahAdminAdapter {
     );
   }
 
-  async readProduct(destinationId: string): Promise<DestinationProduct> {
+  async readProduct(
+    destinationId: string,
+    options?: { listRow?: DestinationProductListItem },
+  ): Promise<DestinationProduct> {
     const { page, baseUrl } = this.options;
     const host = (() => {
       try {
@@ -255,8 +281,12 @@ export class TahAdminAdapterV1 implements TahAdminAdapter {
 
     // List status is often a stronger availability signal than edit #active
     // (M3D Veroni: Skjult + public absent while #active is server-checked).
-    const listRows = await this.listProducts();
-    const listRow = listRows.find((p) => p.databaseId === destinationId);
+    // Callers that already listed the catalog must pass listRow so this path
+    // stays 1 list + N edit reads. A lone readProduct still looks up the row.
+    const listRow =
+      options?.listRow?.databaseId === destinationId
+        ? options.listRow
+        : (await this.listProducts()).find((row) => row.databaseId === destinationId);
     const listStatusText = listRow?.statusText ?? null;
 
     const editPath = menuEditPath(destinationId);
