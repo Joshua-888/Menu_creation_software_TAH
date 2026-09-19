@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
   grillTilbehorLooksWrong,
-  inferGrillDescription,
   inferGrillIngredients,
   preferGrillDipAdditions,
   productWantsGrillDips,
@@ -26,13 +25,6 @@ describe("grillCardFill", () => {
         categoryName: "Grill",
       }),
     ).toEqual(["Pitabrød", "Pommes frites", "Sodavand"]);
-    expect(
-      inferGrillDescription({
-        name: "Kebabmenu",
-        categoryName: "Grill",
-        description: "Pommes frites, M. pommes frites",
-      }),
-    ).toMatch(/pitabrød/i);
   });
 
   it("builds full baconburger ingredients with meat and sauces", () => {

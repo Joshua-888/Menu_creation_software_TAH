@@ -318,46 +318,6 @@ export function inferGrillIngredients(input: {
   return out;
 }
 
-export function inferGrillDescription(input: {
-  name: string;
-  categoryName?: string;
-  description?: string;
-  ingredients?: string[];
-}): string | null {
-  const name = input.name.trim();
-  const live = (input.description ?? "").trim();
-  if (/\bekstra\s*tilbeh/i.test(name)) {
-    return "Salatmayonnaise, remoulade og ketchup";
-  }
-  if (/\bkebabmenu\b/i.test(name)) {
-    if (!live || /m\.\s*pommes/i.test(live) || /pommes frites,\s*m\./i.test(live)) {
-      return "Pitabrød, pommes frites og sodavand";
-    }
-  }
-  if (/^pommes\b/i.test(name) && !live) {
-    return "Valgfri dyppelse";
-  }
-  if (
-    (isBurgerProductName(name) || FRIES_IN_NAME_RE.test(name)) &&
-    (input.ingredients?.length ?? 0) >= 2
-  ) {
-    if (!live || live.length < 12 || grillIngredientsInsufficient(
-      live.split(/\s*,\s*/),
-      name,
-    )) {
-      return input.ingredients!.join(", ");
-    }
-  }
-  if (
-    FRIES_IN_NAME_RE.test(name) &&
-    (!live || live.length < 4) &&
-    (input.ingredients?.length ?? 0) > 0
-  ) {
-    return input.ingredients!.join(", ");
-  }
-  return null;
-}
-
 /** True when Tilbehør looks like a pizza dump on a fries/dip product. */
 export function grillTilbehorLooksWrong(
   additions: Array<{ name: string }>,

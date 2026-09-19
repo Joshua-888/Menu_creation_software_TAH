@@ -297,17 +297,6 @@
     },
     {
       "module": "src/domain/grillCardFill.ts",
-      "function": "inferGrillDescription",
-      "fieldsAffected": ["description"],
-      "calledByCreate": false,
-      "calledByQa": true,
-      "beforeTargetMenu": false,
-      "afterTargetMenu": true,
-      "authoritativeOwner": "deprecated",
-      "mutationKind": "invent"
-    },
-    {
-      "module": "src/domain/grillCardFill.ts",
       "function": "preferGrillDipAdditions",
       "fieldsAffected": ["additions", "prices"],
       "calledByCreate": true,
@@ -491,17 +480,6 @@
       "beforeTargetMenu": false,
       "afterTargetMenu": true,
       "authoritativeOwner": "planning",
-      "mutationKind": "invent"
-    },
-    {
-      "module": "src/learning/categorySizeVariantPolicy.ts",
-      "function": "applyCategorySizeVariantFanOut",
-      "fieldsAffected": ["name", "variants", "prices"],
-      "calledByCreate": false,
-      "calledByQa": false,
-      "beforeTargetMenu": false,
-      "afterTargetMenu": true,
-      "authoritativeOwner": "deprecated",
       "mutationKind": "invent"
     },
     {

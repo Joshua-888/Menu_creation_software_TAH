@@ -500,6 +500,3 @@ export function applyCategoryVariantFanOut(input: {
     traces,
   };
 }
-
-/** @deprecated Prefer applyCategoryVariantFanOut */
-export const applyCategorySizeVariantFanOut = applyCategoryVariantFanOut;

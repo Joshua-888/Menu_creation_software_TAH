@@ -6,12 +6,8 @@ TargetMenu is owned by `runMenuIntelligence` → `completeProductCard`. Anything
 
 | Function | Module | Why drain |
 |---|---|---|
-| `toPayload` | `planning/dryRun.ts` | Re-proposes pizza toppings, grill ingredients, dip/ekstra additions, desc join — parallel completion |
-| `buildQaTargetPayload` | `planning/qaLiveImprove.ts` | Same invent stack + `inferGrillDescription` on QA merge |
-| `inferGrillDescription` | `domain/grillCardFill.ts` | QA-only invent not on intelligence spine |
 | `fanOutRestaurantAdditions` | `planning/structureMapping.ts` | Fills Tilbehør onto cards after TargetMenu |
 | `applyCategoryVariantFanOut` | `learning/categorySizeVariantPolicy.ts` | Fills structural variants after TargetMenu |
-| `applyCategorySizeVariantFanOut` | `learning/categorySizeVariantPolicy.ts` | Deprecated alias of fan-out |
 | `composeCategoryIngredientAdditions` | `learning/categoryIngredientAdditions.ts` | Builds addition sets post-TargetMenu |
 | `upsertCategoryIngredientAdditionFacts` | `learning/categoryIngredientAdditions.ts` | Persists those sets for fan-out |
 | `upsertPeerAdditionFactsForMenu` | `learning/additionLikelihood.ts` | Peer Tilbehør facts applied after TargetMenu |
@@ -24,6 +20,11 @@ TargetMenu is owned by `runMenuIntelligence` → `completeProductCard`. Anything
 | Function | Module | Why drain |
 |---|---|---|
 | `enrichProduct` / `enrichCanonicalBurgerCards` | `planning/enrichBurgerCards.ts` | Orphan duplicate of `completeProductCard` (deprecated). Drained — module removed; had no callers, exports, or tests. |
+| `inferGrillDescription` | `domain/grillCardFill.ts` | Zero production callers; orphaned after invent-call-site removal. Function definition deleted; unit test assertion and ownership entry removed. |
+| `applyCategorySizeVariantFanOut` | `learning/categorySizeVariantPolicy.ts` | Unused `@deprecated` alias of `applyCategoryVariantFanOut`. Alias export deleted; real function untouched. |
+
+**Already drained via call-site removal (earlier commit):** `toPayload` (`planning/dryRun.ts`) and `buildQaTargetPayload` (`planning/qaLiveImprove.ts`) had their invent call-sites removed — `resolveGrillIngredients`, `inferGrillIngredients`, `inferBurgerIngredients`, `prefer*`, `proposePizzaToppingsFromDescription`, `proposePeerIngredients`, `inferGrillDescription`, `formatDescriptionFromIngredients`. They now only map/sanitize/strip TargetMenu output and remain in the 'Keep after TargetMenu (not invent)' framing below, not as still-pending drains.
+
 
 ## Shared invent helpers (keep for intelligence; stop calling after TargetMenu)
 
