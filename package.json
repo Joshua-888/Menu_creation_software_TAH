@@ -50,7 +50,6 @@
     "node": ">=22"
   },
   "dependencies": {
-    "bcryptjs": "^3.0.3",
     "next": "^15.5.25",
     "pdfjs-dist": "^6.3.289",
     "react": "^19.3.0",
@@ -60,12 +59,10 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.22.0",
-    "@types/bcryptjs": "^2.4.6",
     "@types/node": "^22.13.10",
     "@types/pdf-parse": "^1.1.5",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
-    "dotenv": "^16.4.7",
     "eslint": "^9.22.0",
     "fast-check": "^4.0.1",
     "playwright": "^1.51.0",
