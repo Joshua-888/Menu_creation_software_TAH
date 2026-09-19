@@ -13,6 +13,20 @@ const rawPath = resolve(
   "fixtures/golden/third-merchant/raw-source.pdf",
 );
 
+/**
+ * Beef-leakage guard: a non-beef-named Asian dish must never carry oksekød.
+ * Exported via the test module boundary for a synthetic negative check.
+ */
+export function flagsBeefLeakInNonBeefDish(
+  name: string,
+  ingredients: readonly string[],
+): boolean {
+  const isAsianDish = /pad thai|curry|wok|satay|tom yam/i.test(name);
+  const namesBeef = /oksekoed|oksekød|beef/i.test(name);
+  const hasBeef = ingredients.some((i) => /^oksekød$/i.test(i));
+  return isAsianDish && !namesBeef && hasBeef;
+}
+
 describe("Third merchant RAW PDF certification (Thai takeaway)", () => {
   it(
     "runs production path with realistic product count and no leakage",
@@ -57,12 +71,31 @@ describe("Third merchant RAW PDF certification (Thai takeaway)", () => {
         }
       }
 
+      // Beef must not LEAK into non-beef Asian dishes. A dish whose own name
+      // explicitly encodes beef (e.g. "Rod Curry Oksekoed") is allowed to carry
+      // oksekød; the guard still fails for chicken/vegetarian/other non-beef
+      // names that would wrongly pick up oksekød.
       for (const p of result.semantic.products) {
-        if (/pad thai|curry|wok|satay|tom yam/i.test(p.name)) {
-          expect(p.ingredients.some((i) => /^oksekød$/i.test(i))).toBe(false);
-        }
+        expect(
+          flagsBeefLeakInNonBeefDish(p.name, p.ingredients),
+          `unexpected oksekød leakage into non-beef dish: ${p.name}`,
+        ).toBe(false);
       }
     },
     180_000,
   );
+
+  it("guard still flags oksekød leakage into a non-beef-named curry (synthetic)", () => {
+    // Negative control: the narrowed guard must NOT become a rubber stamp.
+    expect(
+      flagsBeefLeakInNonBeefDish("Gron Curry Kylling", ["Kokosmaelk", "Oksekød"]),
+    ).toBe(true);
+    expect(
+      flagsBeefLeakInNonBeefDish("Vegetar Curry", ["Oksekød"]),
+    ).toBe(true);
+    // Beef-named dish is legitimately allowed to carry oksekød.
+    expect(
+      flagsBeefLeakInNonBeefDish("Rod Curry Oksekoed", ["Oksekød"]),
+    ).toBe(false);
+  });
 });

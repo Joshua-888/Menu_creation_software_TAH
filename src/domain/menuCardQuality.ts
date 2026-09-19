@@ -226,6 +226,30 @@ function normKey(s: string): string {
     .replace(/\s+/g, " ");
 }
 
+/**
+ * Dedup-ONLY normalization key for ingredient/addition lists.
+ *
+ * Folds the common Danish transliteration equivalence pairs (æ↔ae, ø↔oe, å↔aa)
+ * on top of NFKD accent folding, so the same semantic ingredient written as an
+ * ASCII OCR transliteration ("Kokosmaelk") and its Danish spelling
+ * ("Kokosmælk") are recognized as ONE entry. This changes only the KEY used for
+ * uniqueness; callers keep the first-seen display string, so source spelling is
+ * preserved and no value is rewritten. Non-equivalent tokens ("Ris" vs
+ * "Risnudler") stay distinct because this is a character fold, not a substring
+ * match.
+ */
+function ingredientDedupKey(s: string): string {
+  return s
+    .trim()
+    .toLowerCase()
+    .replace(/æ/g, "ae")
+    .replace(/ø/g, "oe")
+    .replace(/å/g, "aa")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ");
+}
+
 export function isMetaMenuToken(name: string): boolean {
   return META_TOKEN_RE.test(name.trim());
 }
@@ -458,7 +482,7 @@ export function sanitizeIngredientList(
       if (/^\d/.test(s) && /\bmenu\b/i.test(s)) continue;
       s = capitalizeFirstLetter(s);
       if (isInvalidFoodComponent(s, productName)) continue;
-      const key = normKey(s);
+      const key = ingredientDedupKey(s);
       if (seen.has(key)) continue;
       seen.add(key);
       out.push(s);
@@ -501,7 +525,7 @@ export function sanitizeAdditionList(
       if (isInvalidFoodComponent(name, productName)) continue;
       // Tilbehør must be known food — never menu item titles
       if (!isKnownFoodToken(name) && !DIP_ADDITION_RE.test(name)) continue;
-      const key = normKey(name);
+      const key = ingredientDedupKey(name);
       if (seen.has(key)) continue;
       seen.add(key);
       cleaned.push({ name, priceOre: a.priceOre });
@@ -543,7 +567,7 @@ export function polishDescriptionText(
   const seen = new Set<string>();
   const uniq: string[] = [];
   for (const p of parts) {
-    const k = normKey(p);
+    const k = ingredientDedupKey(p);
     if (seen.has(k)) continue;
     seen.add(k);
     uniq.push(p);

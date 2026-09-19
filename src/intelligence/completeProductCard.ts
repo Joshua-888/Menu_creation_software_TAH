@@ -371,6 +371,27 @@ function additionsSufficiencyStatus(
   return isAdditionSetSufficient(family, candidates) ? "SUFFICIENT" : "PARTIAL";
 }
 
+/**
+ * Ordinal ranking of sufficiency status, higher = better evidence. Used to
+decide whether a candidate resolution STRICTLY improves the card; a status that
+ * stays the same must not trigger a speculative addition (WP4 ruling on generic
+ * curry priors that do not resolve the real missing requirement).
+ */
+function sufficiencyRank(status: FieldSufficiencyStatus): number {
+  switch (status) {
+    case "SUFFICIENT":
+      return 3;
+    case "PARTIAL":
+      return 2;
+    case "INSUFFICIENT":
+      return 1;
+    case "UNRESOLVED":
+      return 0;
+    case "NOT_APPLICABLE":
+      return -1;
+  }
+}
+
 /** Map a grill-resolution source onto the shared provenance tier hierarchy. */
 function grillSourceTier(source: GrillIngredientSource): SemanticProvenanceTier {
   switch (source) {
@@ -626,23 +647,42 @@ export function completeProductCard(input: {
       family,
     });
     if (prior.length >= 2) {
-      ingredients = sanitizeIngredientList([...ingredients, ...prior], name);
-      ingredientOrigin = "DOMAIN_PRIOR";
-      ingredientEvidence.push("DOMAIN_PRIOR");
-      ingredientSelectedTier = "DOMAIN_PRIOR";
-      for (const ing of ingredients) {
+      const merged = sanitizeIngredientList([...ingredients, ...prior], name);
+      // WP4 improvement gate: when the card is a LENGTH-OK list (it was NOT
+      // triggered by the legacy `length < 2` path), only accept the name-encoded
+      // prior if it STRICTLY improves structural sufficiency. A generic
+      // curry-family prior that adds basil without resolving the real missing
+      // requirement (e.g. Massaman: potato+peanut+coconut milk, still
+      // INSUFFICIENT afterwards) must not be forced in; the status is recorded in
+      // the completeness trace for WP5 review instead. Thin-list (length < 2)
+      // legacy behavior is preserved unconditionally.
+      const triggeredByLength = ingredients.length < 2;
+      const gatedByImprovement = !triggeredByLength;
+      const mergedStatus = assessIngredientSufficiency(family, undefined, merged, name);
+      const improves = sufficiencyRank(mergedStatus) > sufficiencyRank(ingredientStatusAfterGrill);
+      if (gatedByImprovement && !improves) {
+        // Do not fabricate completeness: leave the card as-is and let the
+        // INSUFFICIENT/UNRESOLVED status surface via the trace.
+        ingredientEvidence.push(grillSourceTier("DOMAIN_PRIOR"));
+      } else {
+        ingredients = merged;
+        ingredientOrigin = "DOMAIN_PRIOR";
+        ingredientEvidence.push("DOMAIN_PRIOR");
+        ingredientSelectedTier = "DOMAIN_PRIOR";
+        for (const ing of ingredients) {
+          provenanceList.push(
+            provenance("ingredients", ing, "DOMAIN_PRIOR", 0.7, {
+              reason: "name_encoded_domain_prior",
+            }),
+          );
+        }
+        description = DanishDescription(ingredients);
         provenanceList.push(
-          provenance("ingredients", ing, "DOMAIN_PRIOR", 0.7, {
-            reason: "name_encoded_domain_prior",
+          provenance("description", description, "DERIVED", 0.85, {
+            reason: "generated_from_final_ingredients",
           }),
         );
       }
-      description = DanishDescription(ingredients);
-      provenanceList.push(
-        provenance("description", description, "DERIVED", 0.85, {
-          reason: "generated_from_final_ingredients",
-        }),
-      );
     } else if (ingredients.length === 1 && /\b(durum|pita)\b/i.test(name)) {
       const wrap = /\bdurum\b/i.test(name) ? "Durumbrød" : "Pitabrød";
       ingredients = sanitizeIngredientList([...ingredients, wrap], name);
