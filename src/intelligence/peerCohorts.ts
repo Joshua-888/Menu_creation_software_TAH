@@ -4,6 +4,38 @@
 
 import type { PeerConfidenceBand, PeerEvidenceThresholds, ProductFamily } from "./types.js";
 
+/**
+ * Single source of truth for the product-family taxonomy.
+ *
+ * The `ProductFamily` union is defined in `./types.ts` and consumed here; this
+ * re-export lets dependent modules (e.g. the field-requirement matrix) import the
+ * taxonomy from the peer-cohort module without duplicating it. Adding a family
+ * means extending the union in `./types.ts` and this list together.
+ */
+export type { ProductFamily } from "./types.js";
+
+/** Ordered list of every product family (drives exhaustive matrix coverage). */
+export const ALL_PRODUCT_FAMILIES: readonly ProductFamily[] = [
+  "BURGER",
+  "BACON_BURGER",
+  "CHEESE_BURGER",
+  "SANDWICH",
+  "PIZZA",
+  "SALATPIZZA",
+  "CALZONE",
+  "DURUM",
+  "PITA",
+  "PASTA",
+  "INDIAN_MAIN",
+  "FRIES",
+  "NACHOS",
+  "SUSHI",
+  "DRINK",
+  "COMBO_MENU",
+  "OTHER_FOOD",
+  "UNKNOWN",
+];
+
 export const DEFAULT_PEER_THRESHOLDS: PeerEvidenceThresholds = {
   highMinRestaurants: 8,
   highMinProbability: 0.7,
