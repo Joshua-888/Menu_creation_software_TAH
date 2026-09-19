@@ -29,6 +29,10 @@ import {
   isInvalidAdditionEntity,
   isInvalidIngredientEntity,
 } from "./semanticClassifier.js";
+import {
+  buildAdditionCandidatePool,
+  resolveAdditionCandidates,
+} from "./additionCandidatePool.js";
 import { inferProductFamily, isFoodFamily } from "./peerCohorts.js";
 import { applyCategoryQualifiedProductName } from "./categoryQualifiedProductName.js";
 import { parseSourceComponents } from "./sourceComponentParse.js";
@@ -544,7 +548,10 @@ export function completeProductCard(input: {
     family,
   );
 
-  // Burger ekstra / grill dips via shared helpers (not merchant-specific)
+  // Burger ekstra / grill dips via shared helpers (not merchant-specific).
+  // WP3: a non-empty-but-SPARSE addition set is now supplemented from lower
+  // evidence tiers through the shared candidate-pool resolver, instead of the
+  // old `additions.length === 0` check that locked out supplementation entirely.
   if (family === "DRINK") {
     additions = [];
   } else if (burgerLike && !isCombo && !isWrap) {
@@ -555,26 +562,53 @@ export function completeProductCard(input: {
       variants,
     };
     const dipWanted = productWantsGrillDips(dipCtx);
-    const asPriced = additions.map((a) => ({
-      name: a.name,
-      priceOre: a.priceOre ?? 1000,
-    }));
     if (dipWanted) {
+      const asPriced = additions.map((a) => ({
+        name: a.name,
+        priceOre: a.priceOre ?? 0,
+      }));
       additions = preferGrillDipAdditions(asPriced, dipCtx).map((a) => ({
         name: a.name,
         priceOre: a.priceOre,
       }));
-    } else if (additions.length === 0) {
-      additions = preferBurgerEkstraAdditions([], dipCtx).map((a) => ({
+    } else {
+      // Source additions are the authoritative tier; domain priors only fill the
+      // gap when the resulting set is insufficient for the family.
+      const domainPriors = preferBurgerEkstraAdditions([], dipCtx).map((a) => ({
         name: a.name,
         priceOre: a.priceOre,
-        priceProvenance: provenance(
-          "addition.price",
-          String(a.priceOre),
-          "DOMAIN_PRIOR",
-          0.55,
-          { reason: "burger_ekstra_fallback" },
-        ),
+      }));
+      const poolContext = {
+        productName: name,
+        categoryName: input.categoryName,
+        ...(description ? { description } : {}),
+        family,
+        kind,
+        isCombo,
+      };
+      const pool = buildAdditionCandidatePool({
+        ...poolContext,
+        sourceAdditions: additions.map((a) => ({
+          name: a.name,
+          priceOre: a.priceOre ?? null,
+        })),
+        domainPriorAdditions: domainPriors,
+      });
+      const { selected } = resolveAdditionCandidates(pool, poolContext);
+      additions = selected.map((c) => ({
+        name: c.name,
+        priceOre: c.priceOre ?? 0,
+        ...(c.tier === "DOMAIN_PRIOR"
+          ? {
+              priceProvenance: provenance(
+                "addition.price",
+                String(c.priceOre),
+                "DOMAIN_PRIOR",
+                0.55,
+                { reason: "burger_ekstra_fallback" },
+              ),
+            }
+          : {}),
       }));
     }
   }

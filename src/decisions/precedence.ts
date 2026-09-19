@@ -299,13 +299,21 @@ export function resolveAdditionsForProduct(input: {
     };
   }
 
-  const category = sets.find((s) => s.scope === "RESTAURANT_CATEGORY");
+  // WP3 core fix: collect ALL matching RESTAURANT_CATEGORY sets (the
+  // category-ingredient union AND peer category facts), not just the first.
+  // `sets` is sorted so the stronger category-ingredient facts come first, but
+  // peer statistics must still contribute additional candidates instead of
+  // being silently locked out by a first-non-empty `find`.
+  const categorySets = sets.filter((s) => s.scope === "RESTAURANT_CATEGORY");
   const restaurant = sets.find((s) => s.scope === "RESTAURANT");
-  if (category && restaurant) {
-    const byKey = new Map(
-      category.additions.map((a) => [a.nameKey, a] as const),
-    );
-    for (const a of restaurant.additions) {
+  if (categorySets.length > 0 || restaurant) {
+    const byKey = new Map<string, AdditionDefinition>();
+    for (const s of categorySets) {
+      for (const a of s.additions) {
+        if (!byKey.has(a.nameKey)) byKey.set(a.nameKey, a);
+      }
+    }
+    for (const a of restaurant?.additions ?? []) {
       if (!byKey.has(a.nameKey)) byKey.set(a.nameKey, a);
     }
     return {
@@ -315,7 +323,7 @@ export function resolveAdditionsForProduct(input: {
     };
   }
 
-  const best = category ?? restaurant ?? sets[0];
+  const best = restaurant ?? sets[0];
   if (!best) {
     return { additions: [], origin: "AI_OR_HUMAN_REVIEW", conflicts };
   }
