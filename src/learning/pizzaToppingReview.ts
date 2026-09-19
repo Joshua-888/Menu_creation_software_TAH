@@ -2,7 +2,6 @@
  * Seed review when pizza-like products still lack ingredients after description recovery.
  */
 
-import { randomUUID } from "node:crypto";
 import type { CanonicalMenu, CanonicalProduct } from "../domain/schema/canonical.js";
 import { proposePizzaToppingsFromDescription } from "./pizzaToppings.js";
 import { productLooksPizzaLike } from "./pizzaToppings.js";
@@ -107,9 +106,4 @@ export function pizzaToppingReviewQuestions(
       batchKey: `${PIZZA_TOPPING_DECISION_TYPE}:missing:${menuNumber}`,
     };
   });
-}
-
-/** Stable id helper for future DecisionCase wiring. */
-export function newPizzaToppingCaseId(): string {
-  return `dc_pizza_top_${randomUUID()}`;
 }

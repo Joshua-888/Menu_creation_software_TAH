@@ -378,8 +378,3 @@ export function runDomainEngine(input: SourceMenu): DomainEngineResult {
     versions,
   };
 }
-
-/** Structural equality helper for determinism tests. */
-export function stableStringify(value: unknown): string {
-  return JSON.stringify(value);
-}

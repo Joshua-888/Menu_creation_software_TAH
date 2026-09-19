@@ -67,19 +67,12 @@ const SIZE_VARIANT_RE =
   /^(alm\.?|fam\.?|familie|lille|stor|deep|normal|gluten[\s-]?fri|fuldkorn|hj\.?|hjemmelavet|\d+\s*cm)$/i;
 const MEAT_OR_TYPE_RE =
   /\b(kebab|kylling|skinke|falafel|okse|oksekød|rejer|mix|vegetar|grøntsager|champignon|broccoli|blomkål|indisk)\b/i;
-const TILBEHOR_HINT_RE =
-  /\b(tilbehør|mayo|mayonnaise|remoulade|ketchup|kethup|dressing|pommes|frites|salatmayo)\b/i;
-
 export function isSizeVariantName(name: string): boolean {
   return SIZE_VARIANT_RE.test(name.trim());
 }
 
 export function looksLikeTypeOrMeatVariant(name: string): boolean {
   return MEAT_OR_TYPE_RE.test(name) && !isSizeVariantName(name);
-}
-
-export function looksLikeTilbehorAddition(name: string): boolean {
-  return TILBEHOR_HINT_RE.test(name);
 }
 
 function additionSignature(

@@ -42,4 +42,4 @@ Production `src/` must not import `scripts/m*` milestone files.
 
 - `scripts/production/` — documented start/build helpers (`portal-start.mjs`, `write-deploy-meta.mjs`, `ensure-playwright-chromium.mjs`)
 - `scripts/diagnostics/` — read-only probes (future promotions only)
-- `scripts/archive/milestones/` — historical `m5*`–`m75*` evidence (currently still in `scripts/` for path stability; treat as archive)
+- `scripts/archive/milestones/` — historical `m5*`–`m75*` evidence, physically relocated under `scripts/archive/milestones/` (see its `README.md`)
