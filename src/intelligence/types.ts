@@ -60,6 +60,110 @@ export type ClassifiedPhrase = {
   reason: string;
 };
 
+/**
+ * Semantic Completeness Engine (V1) — evidence provenance tier.
+ *
+ * Ordered evidence hierarchy used when deciding how a field should be completed:
+ *
+ *   SOURCE > EXACT_PRODUCT_FACT > RESTAURANT_FACT > CATEGORY_EVIDENCE >
+ *   PEER_SUBTYPE > PEER_FAMILY > GLOBAL_POLICY > DOMAIN_PRIOR > UNRESOLVED
+ *
+ * Higher-ranked tiers must win over lower-ranked tiers when both supply a value
+ * for the same field. `UNRESOLVED` means no evidence source could produce a
+ * value; it must never be silently treated as an empty/complete value.
+ *
+ * This type is foundational only in WP1 — it is not yet wired into runtime logic.
+ */
+export type SemanticProvenanceTier =
+  | "SOURCE"
+  | "EXACT_PRODUCT_FACT"
+  | "RESTAURANT_FACT"
+  | "CATEGORY_EVIDENCE"
+  | "PEER_SUBTYPE"
+  | "PEER_FAMILY"
+  | "GLOBAL_POLICY"
+  | "DOMAIN_PRIOR"
+  | "UNRESOLVED";
+
+/**
+ * Semantic Completeness Engine (V1) — requiredness of a field for a product.
+ *
+ * Describes how strongly a field must be present for a given product/category:
+ * - REQUIRED: missing/insufficient value blocks completeness (hard gate).
+ * - EXPECTED: missing value is a completeness gap but not a hard block.
+ * - CONDITIONAL: requirement depends on other resolved facts/context.
+ * - OPTIONAL: value may be absent without affecting completeness.
+ * - FORBIDDEN: a value must NOT be present (presence is a defect).
+ * - NOT_APPLICABLE: field is meaningless for this product/context.
+ *
+ * Foundational only in WP1 — not yet wired into runtime logic.
+ */
+export type FieldRequirementLevel =
+  | "REQUIRED"
+  | "EXPECTED"
+  | "CONDITIONAL"
+  | "OPTIONAL"
+  | "FORBIDDEN"
+  | "NOT_APPLICABLE";
+
+/**
+ * Semantic Completeness Engine (V1) — sufficiency outcome for a field.
+ *
+ * - SUFFICIENT: acceptable value resolved from evidence.
+ * - PARTIAL: some value/evidence exists but does not fully satisfy the field.
+ * - INSUFFICIENT: evidence exists but is below the required bar.
+ * - UNRESOLVED: no usable evidence found (must remain explicit, never implicit empty).
+ * - NOT_APPLICABLE: field does not apply for this product/context.
+ *
+ * Foundational only in WP1 — not yet wired into runtime logic.
+ */
+export type FieldSufficiencyStatus =
+  | "SUFFICIENT"
+  | "PARTIAL"
+  | "INSUFFICIENT"
+  | "UNRESOLVED"
+  | "NOT_APPLICABLE";
+
+/**
+ * Semantic Completeness Engine (V1) — audit trace for one field's completion.
+ *
+ * Records how a field was evaluated: the requirement level, its status before
+ * completion, every provenance tier considered, which tier/value was selected,
+ * what was rejected and why, and the final status after the engine ran.
+ *
+ * `evidenceConsidered` should reflect the ranked evidence hierarchy
+ * (see {@link SemanticProvenanceTier}); `selectedTier` should be the highest-ranked
+ * tier that produced the accepted value. `rejectedCandidates` captures lower-ranked
+ * or conflicting candidates for auditability. `confidence` is optional and only
+ * meaningful when the engine can quantify it.
+ *
+ * Foundational only in WP1 — not yet wired into runtime logic.
+ */
+export interface FieldCompletenessTrace {
+  /** The target field this trace describes (e.g. "ingredients", "description"). */
+  field: string;
+  /** Requiredness of the field for the product/context being completed. */
+  requirementLevel: FieldRequirementLevel;
+  /** Sufficiency status before completion was attempted. */
+  initialStatus: FieldSufficiencyStatus;
+  /** Provenance tiers that were inspected as candidate evidence. */
+  evidenceConsidered: SemanticProvenanceTier[];
+  /** Highest-ranked tier whose value was accepted, if any. */
+  selectedTier?: SemanticProvenanceTier;
+  /** Value selected from `selectedTier`, if any. */
+  selectedValue?: unknown;
+  /** Candidates considered but not selected, with the tier and rejection reason. */
+  rejectedCandidates?: {
+    value: unknown;
+    tier: SemanticProvenanceTier;
+    reason: string;
+  }[];
+  /** Optional confidence for the selected value when quantifiable. */
+  confidence?: number;
+  /** Sufficiency status after completion was attempted. */
+  finalStatus: FieldSufficiencyStatus;
+}
+
 export type ProductFamily =
   | "BURGER"
   | "BACON_BURGER"
