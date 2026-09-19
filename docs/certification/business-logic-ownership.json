@@ -219,28 +219,6 @@
       "mutationKind": "invent"
     },
     {
-      "module": "src/planning/enrichBurgerCards.ts",
-      "function": "enrichProduct",
-      "fieldsAffected": ["description", "ingredients"],
-      "calledByCreate": false,
-      "calledByQa": false,
-      "beforeTargetMenu": false,
-      "afterTargetMenu": true,
-      "authoritativeOwner": "deprecated",
-      "mutationKind": "invent"
-    },
-    {
-      "module": "src/planning/enrichBurgerCards.ts",
-      "function": "enrichCanonicalBurgerCards",
-      "fieldsAffected": ["description", "ingredients"],
-      "calledByCreate": false,
-      "calledByQa": false,
-      "beforeTargetMenu": false,
-      "afterTargetMenu": true,
-      "authoritativeOwner": "deprecated",
-      "mutationKind": "invent"
-    },
-    {
       "module": "src/planning/applyPizzaToppingRecovery.ts",
       "function": "applyPizzaToppingRecovery",
       "fieldsAffected": ["ingredients"],
