@@ -10,7 +10,7 @@ import {
   readdirSync,
   writeFileSync,
 } from "node:fs";
-import { dirname, join } from "node:path";
+import { join } from "node:path";
 import type { PeerMenuSnapshot } from "./peerMenuStructure.js";
 import type { ProbabilityPolicyMap } from "./categoryLikelihood.js";
 import { distillProbabilityPolicy } from "./categoryLikelihood.js";
@@ -253,8 +253,4 @@ export function writeIngredientLikelihoodArtifact(
   const path = peerIngredientLikelihoodPath(repoRoot);
   writeFileSync(path, JSON.stringify(policy, null, 2));
   return path;
-}
-
-export function ensureParentDir(filePath: string): void {
-  mkdirSync(dirname(filePath), { recursive: true });
 }

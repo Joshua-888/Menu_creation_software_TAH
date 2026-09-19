@@ -10,6 +10,9 @@ They are **not** production entry points and are **not** runnable against the cu
 - `discover-m2c-public-final.mjs`
 - `discover-m2c-readonly.mjs`
 - `discover-m2c-surcharge-proof.mjs`
+- `discover-admin-deep.ts`
+- `discover-admin-forms.ts`
+- `discover-admin-forms.mjs`
 
 Classification: `KEEP_AS_HISTORICAL_ARTIFACT` per [`SCRIPT_CLASSIFICATION_V1.md`](../../../docs/architecture/SCRIPT_CLASSIFICATION_V1.md).
 

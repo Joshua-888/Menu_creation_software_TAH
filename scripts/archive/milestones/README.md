@@ -99,6 +99,11 @@ Each entry was independently verified as having **zero references** anywhere in 
 - `m75-calzone-ingredients.ts`
 - `m80-veroni-delete-category-cert.mts`
 
+### Other one-off debug / delta scripts (zero references)
+
+- `portal-inspect-job.cjs` (hardcoded historical job UUID; one-off inspection tool)
+- `receipt-safe-naming-delta.mts` (offline delta report tied to commit `55485c2`)
+
 ## Not archived (deferred)
 
 The following zero-reference candidates were considered but **excluded** as out-of-scope / ambiguous and left in place pending a dedicated objective:
@@ -106,13 +111,8 @@ The following zero-reference candidates were considered but **excluded** as out-
 - `cert-fresh-run.mts` (certification tooling)
 - `full-cert-gate.mts` (certification tooling)
 - `freeze-golden-manifest.mts` (golden-manifest tooling)
-- `receipt-safe-naming-delta.mts` (delta report tooling)
 - `smoke-create-dest-snapshot.ts`
-- `portal-inspect-job.cjs`
 - `diagnose-tah-admin-login.ts`
-- `discover-admin-deep.ts`
-- `discover-admin-forms.ts`
-- `discover-admin-forms.mjs`
 - `veroni-product-accounting.mts` (named in `SCRIPT_CLASSIFICATION_V1.md`)
 
 See [AUTHORITATIVE_PRODUCTION_ENTRY_POINTS.md](../../../docs/architecture/AUTHORITATIVE_PRODUCTION_ENTRY_POINTS.md).

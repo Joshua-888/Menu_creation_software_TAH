@@ -326,9 +326,3 @@ export function labelQualityBlocksWrite(
     assessment.severity === "REVIEW" || assessment.severity === "BLOCK"
   );
 }
-
-export function formatLabelQualityFailure(
-  assessment: LabelQualityAssessment,
-): string {
-  return `LABEL_QUALITY_${assessment.severity}: ${assessment.reasons.join(",") || "unspecified"}`;
-}

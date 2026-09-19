@@ -34,7 +34,3 @@ export function aggregateStatus(
   }
   return worst;
 }
-
-export function severityForStatus(status: ValidationStatus): ValidationStatus {
-  return status;
-}
