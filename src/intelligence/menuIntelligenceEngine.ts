@@ -112,6 +112,10 @@ export function runMenuIntelligence(
         ),
       },
       qualityChecks: pq?.checks ?? [],
+      // WP4: additive per-field completeness explainability. Existing consumers
+      // of policyTraces (portal, reports) are unaffected — this is a new optional
+      // field, not a reshape of existing trace data.
+      completenessTraces: card.completenessTraces,
     };
   });
 

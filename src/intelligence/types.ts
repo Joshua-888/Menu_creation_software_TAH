@@ -302,6 +302,14 @@ export type CompletedProductCard = {
   isCombo: boolean;
   provenance: FieldProvenance[];
   policyTrace: Record<string, unknown>;
+  /**
+   * Semantic Completeness Engine (V1) — per-field completion traces.
+   *
+   * Additive explainability only (WP4): records how ingredients/additions were
+   * evaluated. It does NOT by itself change READY/REVIEW/BLOCKED outcomes; the
+   * QualityContract gate that consumes these traces is a later work package.
+   */
+  completenessTraces: FieldCompletenessTrace[];
 };
 
 export type MenuIntelligenceInput = {
@@ -331,6 +339,11 @@ export type MenuIntelligenceResult = {
     category: string;
     fields: Record<string, unknown>;
     qualityChecks: QualityCheckResult[];
+    /**
+     * Semantic Completeness Engine (V1) — per-field completion traces (WP4).
+     * Additive explainability; consumers of the existing shape are unaffected.
+     */
+    completenessTraces?: FieldCompletenessTrace[];
   }>;
   writeEligible: boolean;
   writeBlockReason?: string;
