@@ -31,8 +31,9 @@ const SIZE_TOKEN_RE =
 export type ComposedCategoryAddition = {
   name: string;
   nameKey: string;
-  priceOre: number;
-  priceSource: "PEER_MEDIAN" | "DEFAULT_10KR";
+  /** Peer-median price when real peer evidence exists, else null (UNRESOLVED). */
+  priceOre: number | null;
+  priceSource: "PEER_MEDIAN" | "UNRESOLVED";
 };
 
 export type CategoryIngredientComposition = {
@@ -158,11 +159,13 @@ export function composeCategoryIngredientAdditions(input: {
       .sort((a, b) => a[1].localeCompare(b[1], "da"))
       .map(([nameKey, name]) => {
         const peer = priceByKey.get(nameKey);
+        // WP3: a missing peer median is UNRESOLVED, not a fabricated 10 kr.
+        // The domain-prior tier (menuCardQuality) prices it later if appropriate.
         return {
           name,
           nameKey,
-          priceOre: peer ?? DEFAULT_EKSTRA_PRICE_ORE,
-          priceSource: peer != null ? ("PEER_MEDIAN" as const) : ("DEFAULT_10KR" as const),
+          priceOre: peer ?? null,
+          priceSource: peer != null ? ("PEER_MEDIAN" as const) : ("UNRESOLVED" as const),
         };
       });
 

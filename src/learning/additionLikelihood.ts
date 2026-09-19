@@ -34,7 +34,8 @@ export type KindAdditionProposal = {
   additions: Array<{
     name: string;
     nameKey: string;
-    priceOre: number;
+    /** Real peer median when peers supplied prices, else null (UNRESOLVED). */
+    priceOre: number | null;
     pHat: number;
     support: number;
     isDip: boolean;
@@ -204,7 +205,8 @@ export function distillAdditionLikelihood(
       const dips = allowDip.map((s) => ({
         name: s.displayName,
         nameKey: s.nameKey,
-        priceOre: s.medianPriceOre ?? 1000,
+        // WP3: no real peer median → UNRESOLVED (null), never a fabricated 10 kr.
+        priceOre: s.medianPriceOre ?? null,
         pHat: s.pHat,
         support: s.kWithAddition,
         isDip: true,
@@ -225,7 +227,8 @@ export function distillAdditionLikelihood(
       const extras = allowNonDip.map((s) => ({
         name: s.displayName,
         nameKey: s.nameKey,
-        priceOre: s.medianPriceOre ?? 1500,
+        // WP3: no real peer median → UNRESOLVED (null), never a fabricated 15 kr.
+        priceOre: s.medianPriceOre ?? null,
         pHat: s.pHat,
         support: s.kWithAddition,
         isDip: false,

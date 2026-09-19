@@ -9,7 +9,6 @@ import { fanOutRestaurantAdditions } from "../../src/planning/structureMapping.j
 import {
   composeCategoryIngredientAdditions,
   upsertCategoryIngredientAdditionFacts,
-  DEFAULT_EKSTRA_PRICE_ORE,
 } from "../../src/learning/categoryIngredientAdditions.js";
 import type { AdditionLikelihoodPolicy } from "../../src/learning/additionLikelihood.js";
 import { upsertPeerAdditionFactsForMenu } from "../../src/learning/additionLikelihood.js";
@@ -149,9 +148,14 @@ describe("category ingredient Tilbehør", () => {
       ]),
     );
     expect(names).toContain("ananas"); // from #3 description even with source adds
-    expect(pizza.additions.every((a) => a.priceOre === DEFAULT_EKSTRA_PRICE_ORE)).toBe(
-      true,
-    );
+    // WP3 anti-pattern fix: with no real peer median there is NO price. The old
+    // assertion pinned every addition to the fabricated DEFAULT_EKSTRA_PRICE_ORE
+    // constant; it now must be UNRESOLVED (null) instead. (Assertion updated
+    // because it encoded the removed anti-pattern itself.)
+    expect(pizza.additions.every((a) => a.priceOre === null)).toBe(true);
+    expect(
+      pizza.additions.every((a) => a.priceSource === "UNRESOLVED"),
+    ).toBe(true);
 
     expect(comps.find((c) => c.categoryName === "Drikkevarer")!.additions).toEqual(
       [],

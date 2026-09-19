@@ -13,6 +13,9 @@ import {
   resolveAdditionCandidates,
   resolveAdditionPrice,
 } from "../../../src/intelligence/additionCandidatePool.js";
+import { lookupPeerAdditionPrice } from "../../../src/learning/peerAdditionPriceBenchmark.js";
+import { completeProductCard } from "../../../src/intelligence/completeProductCard.js";
+import type { CanonicalProduct } from "../../../src/domain/schema/canonical.js";
 
 const BURGER = {
   productName: "Cheeseburger",
@@ -150,5 +153,102 @@ describe("addition candidate pool", () => {
     const { selected } = resolveAdditionCandidates(one, BURGER);
     expect(isAdditionSetSufficient("BURGER", selected)).toBe(false);
     expect(isAdditionSetSufficient("DRINK", [])).toBe(true);
+  });
+});
+
+describe("WP3 price-fallback tiering", () => {
+  const emptyBenchmark = {
+    restaurantsAnalyzed: 0,
+    hosts: [],
+    byNameKey: {},
+    ekstraMedianOre: null,
+    dipMedianOre: null,
+    fingerprint: "empty",
+  };
+
+  it("peer tier with zero support resolves to UNRESOLVED (not 1000/1500/10kr)", () => {
+    const named = lookupPeerAdditionPrice(emptyBenchmark, "Ost");
+    expect(named.priceOre).toBeNull();
+    expect(named.source).toBe("UNRESOLVED");
+
+    const dip = lookupPeerAdditionPrice(emptyBenchmark, "Remoulade");
+    expect(dip.priceOre).toBeNull();
+    expect(dip.source).toBe("UNRESOLVED");
+
+    const viaResolver = resolveAdditionPrice({
+      name: "Ost",
+      benchmark: emptyBenchmark,
+    });
+    expect(viaResolver.priceOre).toBeNull();
+    expect(viaResolver.source).toBe("UNRESOLVED");
+  });
+
+  it("domain-prior tier still resolves and is tagged DOMAIN_PRIOR (peer exhausted)", () => {
+    const resolved = resolveAdditionPrice({
+      name: "Ost",
+      benchmark: emptyBenchmark,
+      domainPriorPriceOre: 1000,
+    });
+    expect(resolved.priceOre).toBe(1000);
+    expect(resolved.source).toBe("DOMAIN_PRIOR");
+  });
+
+  it("peer tier wins over the domain prior when real peer evidence exists", () => {
+    const bench = {
+      ...emptyBenchmark,
+      ekstraMedianOre: 1750,
+      fingerprint: "peer",
+    };
+    const resolved = resolveAdditionPrice({
+      name: "Ukendt tilbehør",
+      benchmark: bench,
+      domainPriorPriceOre: 1000,
+    });
+    expect(resolved.priceOre).toBe(1750);
+    expect(resolved.source).toBe("PEER_MEDIAN");
+  });
+
+  it("pool tags a domain-prior priced candidate with the DOMAIN_PRIOR price source", () => {
+    const pool = buildAdditionCandidatePool({
+      ...BURGER,
+      domainPriorAdditions: [{ name: "Bacon", priceOre: 2000 }],
+    });
+    const bacon = pool.find((c) => c.nameKey === "bacon");
+    expect(bacon).toBeTruthy();
+    expect(bacon!.tier).toBe("DOMAIN_PRIOR");
+    expect(bacon!.priceSource).toBe("DOMAIN_PRIOR");
+    expect(bacon!.priceOre).toBe(2000);
+  });
+
+  it("completeProductCard never emits a 0 (free) addition price", () => {
+    const card = completeProductCard({
+      product: {
+        sourceId: "src:1",
+        categorySourceId: "cat:1",
+        sourceOrder: 1,
+        name: "Cheeseburger",
+        ingredients: [],
+        variants: [
+          {
+            sourceId: "v0",
+            name: "Alm.",
+            nameOrigin: "SOURCE",
+            surcharge: 0,
+            surchargeOrigin: "DERIVED",
+            isBase: true,
+            sourceTotalPrice: 9900,
+          },
+        ],
+        addOns: [{ sourceId: "a0", name: "Ekstra ost", origin: "SOURCE" }],
+        productChoices: [],
+        isCombo: false,
+        status: "READY",
+        issues: [],
+      } as unknown as CanonicalProduct,
+      categoryName: "Burgers",
+    });
+    for (const a of card.additions) {
+      expect(a.priceOre ?? 0).not.toBe(0);
+    }
   });
 });

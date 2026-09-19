@@ -17,6 +17,7 @@ import {
   formatProductName,
 } from "../domain/textNormalize.js";
 import {
+  defaultTilbehorPriceOre,
   isForbiddenTilbehorName,
   sanitizeIngredientList,
   sanitizeAdditionList,
@@ -32,6 +33,7 @@ import {
 import {
   buildAdditionCandidatePool,
   resolveAdditionCandidates,
+  resolveAdditionPrice,
 } from "./additionCandidatePool.js";
 import { inferProductFamily, isFoodFamily } from "./peerCohorts.js";
 import { applyCategoryQualifiedProductName } from "./categoryQualifiedProductName.js";
@@ -563,9 +565,11 @@ export function completeProductCard(input: {
     };
     const dipWanted = productWantsGrillDips(dipCtx);
     if (dipWanted) {
+      // WP3: never fabricate a 0 (free) price. Fall to the conservative
+      // domain-prior price tier when a source addition lacks a price.
       const asPriced = additions.map((a) => ({
         name: a.name,
-        priceOre: a.priceOre ?? 0,
+        priceOre: a.priceOre ?? defaultTilbehorPriceOre(a.name),
       }));
       additions = preferGrillDipAdditions(asPriced, dipCtx).map((a) => ({
         name: a.name,
@@ -595,28 +599,41 @@ export function completeProductCard(input: {
         domainPriorAdditions: domainPriors,
       });
       const { selected } = resolveAdditionCandidates(pool, poolContext);
-      additions = selected.map((c) => ({
-        name: c.name,
-        priceOre: c.priceOre ?? 0,
-        ...(c.tier === "DOMAIN_PRIOR"
-          ? {
-              priceProvenance: provenance(
-                "addition.price",
-                String(c.priceOre),
-                "DOMAIN_PRIOR",
-                0.55,
-                { reason: "burger_ekstra_fallback" },
-              ),
-            }
-          : {}),
-      }));
+      additions = selected.map((c) => {
+        // WP3: resolve price through the shared tier order (peer → domain prior →
+        // UNRESOLVED) instead of defaulting to 0. Never fabricate a free price.
+        const priceOre =
+          c.priceOre ??
+          resolveAdditionPrice({
+            name: c.name,
+            domainPriorPriceOre: defaultTilbehorPriceOre(c.name),
+          }).priceOre;
+        return {
+          name: c.name,
+          ...(priceOre != null ? { priceOre } : {}),
+          ...(c.tier === "DOMAIN_PRIOR"
+            ? {
+                priceProvenance: provenance(
+                  "addition.price",
+                  String(priceOre),
+                  "DOMAIN_PRIOR",
+                  0.55,
+                  { reason: "burger_ekstra_fallback" },
+                ),
+              }
+            : {}),
+        };
+      });
     }
   }
 
+  // WP3: sanitize requires a concrete price, and it reprices via the authorized
+  // domain-prior tier (repriceTilbehorList). Supply that tier here rather than a
+  // fabricated 0 (free) price so nothing downstream sees a bogus zero.
   additions = sanitizeAdditionList(
     additions.map((a) => ({
       name: a.name,
-      priceOre: a.priceOre ?? 0,
+      priceOre: a.priceOre ?? defaultTilbehorPriceOre(a.name),
     })),
     name,
     input.categoryName,

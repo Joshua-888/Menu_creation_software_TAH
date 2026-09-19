@@ -142,24 +142,35 @@ const FAMILY_MIN_EVIDENCE_ADDITIONS: Partial<Record<ProductFamily, number>> = {
 
 /**
  * Resolve a price for a candidate name without inventing an arbitrary constant.
- * Peer name median → peer dip/ekstra median → UNRESOLVED (null).
+ *
+ * Tier order (Semantic Completeness Engine V1, WP3):
+ *   1. peer name median → peer dip/ekstra median (real peer evidence),
+ *   2. explicitly supplied conservative DOMAIN_PRIOR price (caller-provided; the
+ *      mission's authorized "tier 9 conservative domain prior"),
+ *   3. UNRESOLVED (null) — never a fabricated constant and never 0.
+ *
+ * A DOMAIN_PRIOR result is tagged `source: "DOMAIN_PRIOR"` so WP5's QualityContract
+ * can distinguish an evidence-backed price from a reviewable domain-prior default.
  */
 export function resolveAdditionPrice(input: {
   name: string;
   benchmark?: PeerAdditionPriceBenchmark | null;
+  /** Explicit conservative domain-prior price (øre) for this name, if any. */
+  domainPriorPriceOre?: number | null;
 }): { priceOre: number | null; source: AdditionPriceSource } {
   const look = lookupPeerAdditionPrice(input.benchmark ?? null, input.name);
-  // `lookupPeerAdditionPrice` never returns null — it silently falls back to the
-  // arbitrary DEFAULT_10KR constant. Treat that as an UNRESOLVED price so the
-  // caller marks the addition price field as unresolved instead of inventing 10 kr.
-  if (look.source === "DEFAULT_10KR" || look.priceOre == null) {
-    return { priceOre: null, source: "UNRESOLVED" };
+  if (look.priceOre != null && look.source !== "UNRESOLVED") {
+    return {
+      priceOre: look.priceOre,
+      source:
+        look.source === "PEER_NAME_MEDIAN" ? "PEER_NAME_MEDIAN" : "PEER_MEDIAN",
+    };
   }
-  return {
-    priceOre: look.priceOre,
-    source:
-      look.source === "PEER_NAME_MEDIAN" ? "PEER_NAME_MEDIAN" : "PEER_MEDIAN",
-  };
+  // Peer tier exhausted. Apply the conservative domain prior only when supplied.
+  if (input.domainPriorPriceOre != null && input.domainPriorPriceOre > 0) {
+    return { priceOre: input.domainPriorPriceOre, source: "DOMAIN_PRIOR" };
+  }
+  return { priceOre: null, source: "UNRESOLVED" };
 }
 
 /**
