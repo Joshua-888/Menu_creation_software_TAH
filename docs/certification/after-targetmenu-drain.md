@@ -8,7 +8,6 @@ TargetMenu is owned by `runMenuIntelligence` → `completeProductCard`. Anything
 |---|---|---|
 | `toPayload` | `planning/dryRun.ts` | Re-proposes pizza toppings, grill ingredients, dip/ekstra additions, desc join — parallel completion |
 | `buildQaTargetPayload` | `planning/qaLiveImprove.ts` | Same invent stack + `inferGrillDescription` on QA merge |
-| `enrichProduct` / `enrichCanonicalBurgerCards` | `planning/enrichBurgerCards.ts` | Orphan duplicate of `completeProductCard` (deprecated) |
 | `inferGrillDescription` | `domain/grillCardFill.ts` | QA-only invent not on intelligence spine |
 | `fanOutRestaurantAdditions` | `planning/structureMapping.ts` | Fills Tilbehør onto cards after TargetMenu |
 | `applyCategoryVariantFanOut` | `learning/categorySizeVariantPolicy.ts` | Fills structural variants after TargetMenu |
@@ -19,6 +18,12 @@ TargetMenu is owned by `runMenuIntelligence` → `completeProductCard`. Anything
 | `proposalForKind` | `learning/additionLikelihood.ts` | Feeds peer addition invent |
 | `veroniDefaultTilbehorAdditions` | `planning/structureMapping.ts` | Hardcoded dip seed |
 | `upsertVeroniTilbehorBusinessFact` | `learning/structurePolicy.ts` | Seed fact path for default dips |
+
+## Drained (completed)
+
+| Function | Module | Why drain |
+|---|---|---|
+| `enrichProduct` / `enrichCanonicalBurgerCards` | `planning/enrichBurgerCards.ts` | Orphan duplicate of `completeProductCard` (deprecated). Drained — module removed; had no callers, exports, or tests. |
 
 ## Shared invent helpers (keep for intelligence; stop calling after TargetMenu)
 
