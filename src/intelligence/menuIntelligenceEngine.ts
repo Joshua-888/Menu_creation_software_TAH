@@ -21,6 +21,7 @@ import type {
   MenuIntelligenceResult,
 } from "./types.js";
 import type { ProbabilityPolicyMap } from "../learning/categoryLikelihood.js";
+import { buildCompletenessBenchmark } from "./completenessBenchmark.js";
 
 /**
  * Run the unified intelligence pipeline on a canonical menu.
@@ -119,12 +120,24 @@ export function runMenuIntelligence(
     };
   });
 
+  // WP6: purely additive completeness observability. Computed LAST from data the
+  // pipeline has already produced (quality statuses + WP4 traces). It does not
+  // gate, mutate, or otherwise influence the result above.
+  const completenessBenchmark = buildCompletenessBenchmark({
+    menu,
+    quality,
+    completenessTraces: policyTraces.map(
+      (t) => t.completenessTraces ?? [],
+    ),
+  });
+
   return {
     constitutionVersion: MENU_CONSTITUTION_VERSION,
     mode: input.mode,
     targetMenu: menu,
     quality,
     policyTraces,
+    completenessBenchmark,
     writeEligible: !writeGate.blocked && quality.readyProductIds.length > 0,
     ...(writeGate.reason ? { writeBlockReason: writeGate.reason } : {}),
   };
