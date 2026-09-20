@@ -51,10 +51,13 @@ const SKIP_TITLE_RE =
   /^(åbningstider|drikkevarer|sides|frokost|tilbud|menu|inkluder|ekstra|dip|sodavand|vand|kildevand|harboe|mandag|tirsdag|onsdag|torsdag|fredag|lørdag|søndag|man-tors|kontakt|email|telefon|torvet|priserne|send|viva|nuggets|loaded|fries|grill|burgers?)\b/i;
 const INGREDIENTISH_RE =
   /\b(grillet|bøf|bef|cheddar|ost|agurk|løg|sauce|jalapeño|jalapenos|champignon|chicken|crispy|pickles|karamellis|burgersauce|bearnaise|colslaw|coleslaw|honey|peberfrugt|nuggets|fries|pomfrit+er?|sodavand|ketchup|mayonnaise|dressing|dip|kylling|syltede?)\b/i;
+// Currency suffix/prefix is merchant-agnostic: Danish menus print prices as
+// "85,-", "85 kr", "kr 85", or "85 DKK" (case-insensitive). The DKK suffix is
+// recognized alongside the legacy comma/period/degree forms.
 const PRICE_LINE_RE =
-  /(?:^|\b)(?:menu\s*)?(\d{2,3})\s*[,.\-°]/gi;
+  /(?:^|\b)(?:menu\s*)?(\d{2,3})\s*(?:[,.°]|[-\u00b0]|dkk\b)/gi;
 const IMAGE_PRICE_LINE_RE =
-  /(?:\bkr\.?\s*(\d{2,3})\b|(?:^|\b)(?:menu\s*)?(\d{2,3})\s*[,.\-°])/gi;
+  /(?:\bkr\.?\s*(\d{2,3})\b|(?:^|\b)(?:menu\s*)?(\d{2,3})\s*(?:[,.°]|[-\u00b0]|dkk\b))/gi;
 const SECTION_HEADER_RE =
   /^(burgers?|grill|pizza|pasta|drikkevarer|sides|tilbehør|menuer|sandwich|durum|pita)\b/i;
 
