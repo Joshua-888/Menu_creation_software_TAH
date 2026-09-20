@@ -8,6 +8,7 @@ import type { SourceMenu } from "../domain/schema/source.js";
 import type { IngredientLikelihoodPolicy } from "../learning/ingredientLikelihood.js";
 import type { AdditionLikelihoodPolicy } from "../learning/additionLikelihood.js";
 import type { DecisionStore } from "../decisions/store.js";
+import type { CompletenessBenchmark } from "./completenessBenchmark.js";
 
 export type IntelligenceMode = "CREATE_MENU" | "QA_RECONCILE";
 
@@ -366,4 +367,13 @@ export type MenuIntelligenceResult = {
   }>;
   writeEligible: boolean;
   writeBlockReason?: string;
+  /**
+   * Semantic Completeness Engine (V1) — WP6 completeness observability.
+   *
+   * Deterministic per-run field-level counts aggregated from already-computed
+   * quality outcomes + WP4 completion traces (see `buildCompletenessBenchmark`).
+   * Purely additive: observability only — it never influences `writeEligible`,
+   * `quality`, or any gate. Optional so existing consumers are unaffected.
+   */
+  completenessBenchmark?: CompletenessBenchmark;
 };

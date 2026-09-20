@@ -40,6 +40,13 @@ export {
 } from "./qualityContract.js";
 export { runMenuIntelligence } from "./menuIntelligenceEngine.js";
 export {
+  buildCompletenessBenchmark,
+  type CompletenessBenchmark,
+  type CompletenessBenchmarkInput,
+  type RequiredFieldCounts,
+  type ExpectedFieldCounts,
+} from "./completenessBenchmark.js";
+export {
   diagnoseSourceProductCoverage,
   type SourceCoverageDiagnostic,
 } from "./sourceCoverage.js";

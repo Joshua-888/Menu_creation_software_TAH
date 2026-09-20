@@ -554,6 +554,13 @@ export async function runMigrationJob(
       writeBlockReason: intelligence.writeBlockReason ?? null,
       quality: intelligence.quality,
     });
+    // WP6: completeness observability artifact. Field-level counts only (never a
+    // single quality score), aggregated from already-computed quality + traces.
+    writeJson(
+      outDir,
+      "completeness-benchmark.json",
+      intelligence.completenessBenchmark ?? null,
+    );
     writeJson(outDir, "policy-application-trace.json", {
       constitutionVersion: MENU_CONSTITUTION_VERSION,
       products: intelligence.policyTraces,
