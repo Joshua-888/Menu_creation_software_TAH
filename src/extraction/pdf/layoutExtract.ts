@@ -353,10 +353,19 @@ export function detectSourceCandidatesLayout(
     }
 
     const imageSource = page.sourceKind === "image";
+    // A page starts in PIZZA only when it actually carries a pizza heading
+    // signal; the previous page-number prior ("pages 1-4 are pizza") silently
+    // miscategorised non-pizza content such as soups. Photos must earn a
+    // category from visible evidence; otherwise sections remain unresolved.
+    const pageHasPizzaHeading = page.lines.some((l) => {
+      const t = l.text.trim();
+      return (
+        detectSectionHeading(t) === "PIZZA" ||
+        /^pizza\s+(alm\.?|familie)\b/i.test(t)
+      );
+    });
     let state: SectionState = {
-      // Page-number defaults are a legacy PDF layout prior. Photos must earn a
-      // category from visible evidence; otherwise they remain unresolved.
-      section: !imageSource && page.pageNumber <= 4 ? "PIZZA" : "UNKNOWN",
+      section: !imageSource && pageHasPizzaHeading ? "PIZZA" : "UNKNOWN",
       priceMode:
         imageSource
           ? "single"

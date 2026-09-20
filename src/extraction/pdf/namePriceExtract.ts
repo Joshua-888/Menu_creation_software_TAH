@@ -59,7 +59,33 @@ const PRICE_LINE_RE =
 const IMAGE_PRICE_LINE_RE =
   /(?:\bkr\.?\s*(\d{2,3})\b|(?:^|\b)(?:menu\s*)?(\d{2,3})\s*(?:[,.°]|[-\u00b0]|dkk\b))/gi;
 const SECTION_HEADER_RE =
-  /^(burgers?|grill|pizza|pasta|drikkevarer|sides|tilbehør|menuer|sandwich|durum|pita)\b/i;
+  /^(burgers?|grill|pizza|pasta|drikkevarer|sides|tilbehør|menuer|sandwich|durum|pita|forret(?:ter)?|hovedret(?:ter)?|suppe(?:r)?|dessert(?:er)?|børnemenu(?:er)?|oksekød|svinekød|kylling|and|seafood|fisk|vegetar|ris|nudler|all[\s-]*inclusive)\b/i;
+
+/** Variant / price-column headers that legitimately sit above a product row. */
+const VARIANT_OR_COLUMN_HEADER_RE =
+  /^(alm\.?|familie|lille|stor|ekstra:?|menu)$/i;
+
+/**
+ * A short course/protein sub-section divider rather than a product.
+ * A line carrying its own price is always a product, never a divider — this
+ * preserves real dishes literally named after a protein ("Kylling 89,-").
+ */
+function isSectionHeaderText(line: string): boolean {
+  const t = line.trim().replace(/\s+/g, " ");
+  if (!SECTION_HEADER_RE.test(t)) return false;
+  if (pricesFromLine(t).length > 0) return false;
+  return t.split(/\s+/).length <= 2;
+}
+
+/** A row beginning with a printed menu number followed by a dish name. */
+function looksLikeNumberedDishLine(line: string | undefined): boolean {
+  if (!line) return false;
+  const t = line.trim();
+  return (
+    /^\d{1,3}[a-zA-Z]?\.\s+[A-Za-zÆØÅæøå]/.test(t) ||
+    /^\d{1,3}\s+[A-ZÆØÅ]/.test(t)
+  );
+}
 
 function slugId(name: string): string {
   return name
@@ -73,7 +99,7 @@ function looksLikeTitle(line: string): boolean {
   const t = line.trim().replace(/\s+/g, " ");
   if (t.length < 3 || t.length > 42) return false;
   if (SKIP_TITLE_RE.test(t)) return false;
-  if (SECTION_HEADER_RE.test(t) && t.split(/\s+/).length <= 2) return false;
+  if (isSectionHeaderText(t)) return false;
   if (looksLikeContentsLine(t)) return false;
   if (INGREDIENTISH_RE.test(t) && t.split(/\s+/).length >= 4) {
     return false;
@@ -227,7 +253,7 @@ export function isCredibleDishTitle(name: string): boolean {
   const t = name.trim();
   if (t.length < 3 || t.length > 42) return false;
   if (looksLikeOcrGarbageName(t)) return false;
-  if (SKIP_TITLE_RE.test(t) || SECTION_HEADER_RE.test(t)) return false;
+  if (SKIP_TITLE_RE.test(t) || isSectionHeaderText(t)) return false;
   if (/\b(ritual|ketchup|mayo|remoulade|dip)\b/i.test(t) && !PRODUCT_NOUN_RE.test(t)) {
     return false;
   }
@@ -417,6 +443,26 @@ export function detectNamePriceCandidates(
       if (
         (!looksLikeTitle(name) || !isCredibleDishTitle(name)) &&
         !strongPricedLine
+      ) {
+        i += 1;
+        continue;
+      }
+
+      // Structural guard: a short unnumbered line without its own price that is
+      // immediately followed by numbered dish rows is a course/protein
+      // sub-section divider (e.g. "Oksekød", "Svinekød", "Seafood"), not a
+      // standalone product. Creating a candidate here would mis-steal the first
+      // following dish's price. Lines with their own price, and legitimate
+      // variant/column headers (Alm./Familie/Lille/Stor), are exempt.
+      const rawT = line.trim().replace(/\s+/g, " ");
+      if (
+        !VARIANT_OR_COLUMN_HEADER_RE.test(rawT) &&
+        SECTION_HEADER_RE.test(rawT) &&
+        pricesFromLine(line, imageSource).length === 0 &&
+        rawT.split(/\s+/).length <= 3 &&
+        Array.from({ length: 3 }, (_, k) => lines[i + 1 + k]).some((next) =>
+          looksLikeNumberedDishLine(next),
+        )
       ) {
         i += 1;
         continue;
