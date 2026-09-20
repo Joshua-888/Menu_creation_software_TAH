@@ -17,6 +17,7 @@ import {
   formatProductName,
 } from "../domain/textNormalize.js";
 import {
+  defaultTilbehorPriceOre,
   isForbiddenTilbehorName,
   sanitizeIngredientList,
   sanitizeAdditionList,
@@ -29,6 +30,11 @@ import {
   isInvalidAdditionEntity,
   isInvalidIngredientEntity,
 } from "./semanticClassifier.js";
+import {
+  buildAdditionCandidatePool,
+  resolveAdditionCandidates,
+  resolveAdditionPrice,
+} from "./additionCandidatePool.js";
 import { inferProductFamily, isFoodFamily } from "./peerCohorts.js";
 import { applyCategoryQualifiedProductName } from "./categoryQualifiedProductName.js";
 import { parseSourceComponents } from "./sourceComponentParse.js";
@@ -544,7 +550,10 @@ export function completeProductCard(input: {
     family,
   );
 
-  // Burger ekstra / grill dips via shared helpers (not merchant-specific)
+  // Burger ekstra / grill dips via shared helpers (not merchant-specific).
+  // WP3: a non-empty-but-SPARSE addition set is now supplemented from lower
+  // evidence tiers through the shared candidate-pool resolver, instead of the
+  // old `additions.length === 0` check that locked out supplementation entirely.
   if (family === "DRINK") {
     additions = [];
   } else if (burgerLike && !isCombo && !isWrap) {
@@ -555,34 +564,76 @@ export function completeProductCard(input: {
       variants,
     };
     const dipWanted = productWantsGrillDips(dipCtx);
-    const asPriced = additions.map((a) => ({
-      name: a.name,
-      priceOre: a.priceOre ?? 1000,
-    }));
     if (dipWanted) {
+      // WP3: never fabricate a 0 (free) price. Fall to the conservative
+      // domain-prior price tier when a source addition lacks a price.
+      const asPriced = additions.map((a) => ({
+        name: a.name,
+        priceOre: a.priceOre ?? defaultTilbehorPriceOre(a.name),
+      }));
       additions = preferGrillDipAdditions(asPriced, dipCtx).map((a) => ({
         name: a.name,
         priceOre: a.priceOre,
       }));
-    } else if (additions.length === 0) {
-      additions = preferBurgerEkstraAdditions([], dipCtx).map((a) => ({
+    } else {
+      // Source additions are the authoritative tier; domain priors only fill the
+      // gap when the resulting set is insufficient for the family.
+      const domainPriors = preferBurgerEkstraAdditions([], dipCtx).map((a) => ({
         name: a.name,
         priceOre: a.priceOre,
-        priceProvenance: provenance(
-          "addition.price",
-          String(a.priceOre),
-          "DOMAIN_PRIOR",
-          0.55,
-          { reason: "burger_ekstra_fallback" },
-        ),
       }));
+      const poolContext = {
+        productName: name,
+        categoryName: input.categoryName,
+        ...(description ? { description } : {}),
+        family,
+        kind,
+        isCombo,
+      };
+      const pool = buildAdditionCandidatePool({
+        ...poolContext,
+        sourceAdditions: additions.map((a) => ({
+          name: a.name,
+          priceOre: a.priceOre ?? null,
+        })),
+        domainPriorAdditions: domainPriors,
+      });
+      const { selected } = resolveAdditionCandidates(pool, poolContext);
+      additions = selected.map((c) => {
+        // WP3: resolve price through the shared tier order (peer → domain prior →
+        // UNRESOLVED) instead of defaulting to 0. Never fabricate a free price.
+        const priceOre =
+          c.priceOre ??
+          resolveAdditionPrice({
+            name: c.name,
+            domainPriorPriceOre: defaultTilbehorPriceOre(c.name),
+          }).priceOre;
+        return {
+          name: c.name,
+          ...(priceOre != null ? { priceOre } : {}),
+          ...(c.tier === "DOMAIN_PRIOR"
+            ? {
+                priceProvenance: provenance(
+                  "addition.price",
+                  String(priceOre),
+                  "DOMAIN_PRIOR",
+                  0.55,
+                  { reason: "burger_ekstra_fallback" },
+                ),
+              }
+            : {}),
+        };
+      });
     }
   }
 
+  // WP3: sanitize requires a concrete price, and it reprices via the authorized
+  // domain-prior tier (repriceTilbehorList). Supply that tier here rather than a
+  // fabricated 0 (free) price so nothing downstream sees a bogus zero.
   additions = sanitizeAdditionList(
     additions.map((a) => ({
       name: a.name,
-      priceOre: a.priceOre ?? 0,
+      priceOre: a.priceOre ?? defaultTilbehorPriceOre(a.name),
     })),
     name,
     input.categoryName,

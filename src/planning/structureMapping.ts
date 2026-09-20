@@ -28,6 +28,12 @@ import {
   isForbiddenMenuVariantName,
   stripForbiddenMenuVariants,
 } from "../learning/categorySizeVariantPolicy.js";
+import {
+  buildAdditionCandidatePool,
+  isAdditionSetSufficient,
+  resolveAdditionCandidates,
+} from "../intelligence/additionCandidatePool.js";
+import { inferProductFamily } from "../intelligence/peerCohorts.js";
 
 export type MappedWriteFields = {
   variants: Array<{ name: string; surchargeOre: number }>;
@@ -182,19 +188,45 @@ export function fanOutRestaurantAdditions(input: {
           resolved.additions.length > 0 &&
           sourceAdditions.length === 0
         ) {
+          // WP3: route the resolved fact set through the shared candidate pool so
+          // a sparse-but-non-empty set is recognised (and reported) instead of
+          // being treated as a complete set. No new business engine is introduced:
+          // the pool only collects the authoritative fact additions here; domain
+          // priors / peers are NOT injected until completeProductCard, which runs
+          // AFTER the probability filter (injecting dips pre-filter would both
+          // invert pipeline order and re-introduce stripped dips).
+          const family = inferProductFamily({
+            name: p.name,
+            categoryName: cat.name,
+          });
+          const pool = buildAdditionCandidatePool({
+            productName: p.name,
+            categoryName: cat.name,
+            family,
+            restaurantAdditions: resolved.additions.map((a) => ({
+              name: a.name,
+              priceOre: a.priceMinor ?? null,
+            })),
+          });
+          const { selected } = resolveAdditionCandidates(pool, {
+            productName: p.name,
+            categoryName: cat.name,
+            family,
+          });
           if (menuNumber) {
             appliedMenus.push(menuNumber);
             fanOutMenus.push(menuNumber);
           }
+          const sparse = !isAdditionSetSufficient(family, selected);
           notes.push(
-            `#${menuNumber ?? p.sourceId}: fan-out ${resolved.additions.map((a) => a.name).join(",")} (${resolved.origin})`,
+            `#${menuNumber ?? p.sourceId}: fan-out ${selected.map((a) => a.name).join(",")} (${resolved.origin})${sparse ? " [sparse:supplement-downstream]" : ""}`,
           );
           return {
             ...p,
-            addOns: resolved.additions.map((a, idx) => ({
+            addOns: selected.map((a, idx) => ({
               sourceId: `${p.sourceId}::addon-fanout-${idx}`,
               name: a.name,
-              ...(a.priceMinor != null ? { price: a.priceMinor } : {}),
+              ...(a.priceOre != null ? { price: a.priceOre } : {}),
               origin: "DERIVED" as const,
             })),
           };

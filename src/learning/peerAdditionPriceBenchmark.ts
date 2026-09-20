@@ -4,7 +4,7 @@
  * When the source has no addition prices, use peer URL addition prices:
  * 1) median by addition name across peers
  * 2) else overall ekstra (non-dip) or dip median
- * 3) else DEFAULT_EKSTRA_PRICE_ORE (10 kr)
+ * 3) else UNRESOLVED (no fabricated default — WP3)
  */
 
 import type { CanonicalMenu } from "../domain/schema/canonical.js";
@@ -14,8 +14,7 @@ import {
   normalizePeerAdditionKey,
 } from "./additionLikelihood.js";
 import type { PeerMenuSnapshot } from "./peerMenuStructure.js";
-import { DEFAULT_EKSTRA_PRICE_ORE } from "./categoryIngredientAdditions.js";
-import { defaultTilbehorPriceOre } from "../domain/menuCardQuality.js";
+
 
 export type PeerAdditionPriceEntry = {
   nameKey: string;
@@ -29,10 +28,13 @@ export type PeerAdditionPriceBenchmark = {
   restaurantsAnalyzed: number;
   hosts: string[];
   byNameKey: Record<string, PeerAdditionPriceEntry>;
-  /** Median of all non-dip peer addition prices. */
-  ekstraMedianOre: number;
-  /** Median of all dip peer addition prices. */
-  dipMedianOre: number;
+  /**
+   * Median of all non-dip peer addition prices, or null when peers gave no
+   * real sample. WP3: never a fabricated constant — no support means UNRESOLVED.
+   */
+  ekstraMedianOre: number | null;
+  /** Median of all dip peer addition prices, or null. See {@link ekstraMedianOre}. */
+  dipMedianOre: number | null;
   fingerprint: string;
 };
 
@@ -40,7 +42,8 @@ export type PeerPriceSource =
   | "PEER_NAME_MEDIAN"
   | "PEER_EKSTRA_MEDIAN"
   | "PEER_DIP_MEDIAN"
-  | "DEFAULT_10KR";
+  /** No trustworthy peer sample existed — price is intentionally absent. */
+  | "UNRESOLVED";
 
 function median(nums: number[]): number | null {
   if (!nums.length) return null;
@@ -110,9 +113,9 @@ export function distillPeerAdditionPriceBenchmark(
     };
   }
 
-  const ekstraMedianOre =
-    median(ekstraPrices) ?? DEFAULT_EKSTRA_PRICE_ORE;
-  const dipMedianOre = median(dipPrices) ?? DEFAULT_EKSTRA_PRICE_ORE;
+  // WP3: no real peer sample → null (UNRESOLVED), never a fabricated constant.
+  const ekstraMedianOre = median(ekstraPrices);
+  const dipMedianOre = median(dipPrices);
 
   const fingerprint = [
     "peer-add-price",
@@ -135,7 +138,7 @@ export function distillPeerAdditionPriceBenchmark(
 export function lookupPeerAdditionPrice(
   benchmark: PeerAdditionPriceBenchmark | null | undefined,
   name: string,
-): { priceOre: number; source: PeerPriceSource; samples: number } {
+): { priceOre: number | null; source: PeerPriceSource; samples: number } {
   const key = normalizePeerAdditionKey(name) || normalizeAdditionName(name);
   const isDip = isDipLikeAddition(name) || isDipLikeAddition(key);
 
@@ -149,11 +152,19 @@ export function lookupPeerAdditionPrice(
       };
     }
     if (isDip) {
+      // No named peer median: use the dip median only when peers actually supplied
+      // dip prices. Otherwise the price is UNRESOLVED — never a fabricated 10 kr.
+      if (benchmark.dipMedianOre == null) {
+        return { priceOre: null, source: "UNRESOLVED", samples: 0 };
+      }
       return {
         priceOre: benchmark.dipMedianOre,
         source: "PEER_DIP_MEDIAN",
         samples: 0,
       };
+    }
+    if (benchmark.ekstraMedianOre == null) {
+      return { priceOre: null, source: "UNRESOLVED", samples: 0 };
     }
     return {
       priceOre: benchmark.ekstraMedianOre,
@@ -162,11 +173,9 @@ export function lookupPeerAdditionPrice(
     };
   }
 
-  return {
-    priceOre: defaultTilbehorPriceOre(name) || DEFAULT_EKSTRA_PRICE_ORE,
-    source: "DEFAULT_10KR",
-    samples: 0,
-  };
+  // No benchmark at all: UNRESOLVED. (Domain-prior pricing is a separate tier
+  // applied explicitly by callers, not smuggled in as fake peer evidence.)
+  return { priceOre: null, source: "UNRESOLVED", samples: 0 };
 }
 
 /**
@@ -207,6 +216,10 @@ export function applyPeerAdditionPricesToMenu(input: {
       const next = addOns.map((a) => {
         if (typeof a.price === "number" && a.price > 0) return a;
         const look = lookupPeerAdditionPrice(input.benchmark, a.name);
+        // WP3: no trustworthy peer price → leave the addition unpriced (price
+        // stays absent) rather than fabricating a default. The omission itself
+        // is the UNRESOLVED signal; callers/users decide how to surface it.
+        if (look.priceOre == null) return a;
         changed = true;
         priced.push({
           menuNumber: p.sourceMenuNumber ?? p.assignedMenuNumber ?? null,
