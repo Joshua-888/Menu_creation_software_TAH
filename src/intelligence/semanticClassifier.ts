@@ -336,3 +336,37 @@ export function classifyPhrases(
 ): ClassifiedPhrase[] {
   return phrases.map((p) => classifyPhrase(p, context));
 }
+
+/* =========================================================================
+ * Unified classification surface for Semantic Completeness Engine (WP1)
+ * -------------------------------------------------------------------------
+ * This section is intentionally ADDITIVE and behavior-preserving. It does
+ * not change, rename, or remove any existing export or predicate logic.
+ *
+ * WP2+ will consume one cohesive `EntityClassifier` namespace instead of
+ * re-deriving the same entity-validity concepts across modules. Each member
+ * is a direct reference to the existing predicate/classifier function, so
+ * behavior is identical to calling the underlying function directly.
+ * ========================================================================= */
+
+/**
+ * Unified classification surface for the Semantic Completeness Engine.
+ *
+ * Every member is the exact existing function, re-exposed under one object so
+ * later work packages have a single classification entry point. This is not a
+ * new implementation and must not diverge from the functions it references.
+ */
+export const EntityClassifier = {
+  /** Classify one phrase into a SemanticEntityType (see {@link classifyPhrase}). */
+  classifyPhrase,
+  /** Classify many phrases (see {@link classifyPhrases}). */
+  classifyPhrases,
+  /** True when the entity type cannot be a product name. */
+  isInvalidProductName: isInvalidProductNameEntity,
+  /** True when the entity type cannot be an ingredient. */
+  isInvalidIngredient: isInvalidIngredientEntity,
+  /** True when the entity type cannot be an addition. */
+  isInvalidAddition: isInvalidAdditionEntity,
+} as const;
+
+export type EntityClassifierSurface = typeof EntityClassifier;
