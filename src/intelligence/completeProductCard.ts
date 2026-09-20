@@ -11,6 +11,7 @@ import {
   productWantsGrillDips,
   isBurgerProductName,
   isGrillCategory,
+  type GrillIngredientSource,
 } from "../domain/grillCardFill.js";
 import {
   formatDescriptionFromIngredients,
@@ -34,14 +35,24 @@ import {
   buildAdditionCandidatePool,
   resolveAdditionCandidates,
   resolveAdditionPrice,
+  isAdditionSetSufficient,
+  additionTierRank,
+  type AdditionCandidate,
 } from "./additionCandidatePool.js";
 import { inferProductFamily, isFoodFamily } from "./peerCohorts.js";
+import { assessIngredientSufficiency } from "./ingredientSufficiency.js";
+import { getFieldRequirements } from "./fieldRequirements.js";
 import { applyCategoryQualifiedProductName } from "./categoryQualifiedProductName.js";
 import { parseSourceComponents } from "./sourceComponentParse.js";
+import { normalizeAdditionName } from "../decisions/facts.js";
 import type {
   CompletedProductCard,
+  FieldCompletenessTrace,
   FieldProvenance,
+  FieldRequirementLevel,
+  FieldSufficiencyStatus,
   ProductFamily,
+  SemanticProvenanceTier,
 } from "./types.js";
 
 function provenance(
@@ -323,6 +334,101 @@ function inferDomainIngredientsFromName(input: {
 }
 
 /**
+ * Wrap plain source additions as SOURCE-tier candidates for sufficiency tracing.
+ * No business logic: identity only, so the shared bar can judge the set.
+ */
+function toSourceCandidates(
+  additions: ReadonlyArray<{ name: string; priceOre?: number | null }>,
+): AdditionCandidate[] {
+  const out: AdditionCandidate[] = [];
+  for (const a of additions) {
+    const name = (a.name ?? "").trim();
+    if (!name) continue;
+    const nameKey = normalizeAdditionName(name);
+    if (!nameKey) continue;
+    out.push({
+      name,
+      nameKey,
+      priceOre: a.priceOre ?? null,
+      tier: "SOURCE",
+      priceSource: "SOURCE",
+    });
+  }
+  return out;
+}
+
+/**
+ * Trace-facing sufficiency of an addition set for a family. Uses the shared
+ * WP3 bar ({@link isAdditionSetSufficient}); a drink is NOT_APPLICABLE and an
+ * empty set is UNRESOLVED (no evidence) rather than a below-bar failure.
+ */
+function additionsSufficiencyStatus(
+  family: ProductFamily,
+  candidates: readonly AdditionCandidate[],
+): FieldSufficiencyStatus {
+  if (family === "DRINK") return "NOT_APPLICABLE";
+  if (candidates.length === 0) return "UNRESOLVED";
+  return isAdditionSetSufficient(family, candidates) ? "SUFFICIENT" : "PARTIAL";
+}
+
+/**
+ * Ordinal ranking of sufficiency status, higher = better evidence. Used to
+decide whether a candidate resolution STRICTLY improves the card; a status that
+ * stays the same must not trigger a speculative addition (WP4 ruling on generic
+ * curry priors that do not resolve the real missing requirement).
+ */
+function sufficiencyRank(status: FieldSufficiencyStatus): number {
+  switch (status) {
+    case "SUFFICIENT":
+      return 3;
+    case "PARTIAL":
+      return 2;
+    case "INSUFFICIENT":
+      return 1;
+    case "UNRESOLVED":
+      return 0;
+    case "NOT_APPLICABLE":
+      return -1;
+  }
+}
+
+/** Map a grill-resolution source onto the shared provenance tier hierarchy. */
+function grillSourceTier(source: GrillIngredientSource): SemanticProvenanceTier {
+  switch (source) {
+    case "PEER_SUBTYPE":
+      return "PEER_SUBTYPE";
+    case "PEER_KIND":
+      return "PEER_FAMILY";
+    case "DOMAIN_PRIOR":
+      return "DOMAIN_PRIOR";
+    case "NONE":
+      return "UNRESOLVED";
+  }
+}
+
+/** Build a WP1 completness trace record without ever over-claiming evidence. */
+function buildCompletenessTrace(input: {
+  field: string;
+  requirementLevel: FieldRequirementLevel;
+  initialStatus: FieldSufficiencyStatus;
+  finalStatus: FieldSufficiencyStatus;
+  evidenceConsidered: SemanticProvenanceTier[];
+  selectedTier?: SemanticProvenanceTier;
+  selectedValue?: unknown;
+}): FieldCompletenessTrace {
+  const trace: FieldCompletenessTrace = {
+    field: input.field,
+    requirementLevel: input.requirementLevel,
+    initialStatus: input.initialStatus,
+    evidenceConsidered: [...new Set(input.evidenceConsidered)],
+    finalStatus: input.finalStatus,
+  };
+  if (input.selectedTier !== undefined) trace.selectedTier = input.selectedTier;
+  if (input.selectedValue !== undefined) trace.selectedValue = input.selectedValue;
+  return trace;
+}
+
+/**
  * Complete a single product card from source + peer + constitution rules.
  * Shared by Create and QA — no separate grillCardFill universe at call sites.
  */
@@ -391,10 +497,49 @@ export function completeProductCard(input: {
   const filtered = filterValidIngredients(sourceIngredients, name);
 
   let ingredients = filtered.list;
+  // WP4: pre-resolution snapshot so the completeness trace can report the tier
+  // that actually produced the ACCEPTED final value (never over-claim a prior
+  // when the accepted ingredients remain the source list).
+  const ingredientsBeforeResolution = [...ingredients];
   let ingredientOrigin: FieldProvenance["origin"] = "SOURCE";
   let description =
     (input.product.description ?? "").trim() ||
     DanishDescription(ingredients);
+
+  // ---- Semantic Completeness Engine (V1) — WP4 ----------------------------
+  // Requirement model + structural sufficiency judgement. These are used ONLY
+  // to decide whether the EXISTING resolution mechanisms run, and to record an
+  // explainability trace. They never invent values and never change the quality
+  // gate (READY/REVIEW/BLOCKED) directly — that is a later work package (WP5).
+  const requirements = getFieldRequirements(family, undefined);
+  const initialIngredientStatus = assessIngredientSufficiency(
+    family,
+    undefined,
+    ingredients,
+    name,
+  );
+  const ingredientEvidence: SemanticProvenanceTier[] =
+    ingredients.length > 0 ? ["SOURCE"] : [];
+  let ingredientSelectedTier: SemanticProvenanceTier | undefined =
+    ingredients.length > 0 ? "SOURCE" : undefined;
+
+  const sourceAdditionsForTrace: Array<{ name: string; priceOre: number | null }> = [
+    ...(input.existingAdditions ?? []).map((a) => ({
+      name: a.name,
+      priceOre: a.priceOre ?? null,
+    })),
+    ...input.product.addOns.map((a) => ({
+      name: a.name,
+      priceOre: a.price ?? null,
+    })),
+  ];
+  const initialAdditionStatus = additionsSufficiencyStatus(
+    family,
+    toSourceCandidates(sourceAdditionsForTrace),
+  );
+  const additionEvidence: SemanticProvenanceTier[] =
+    sourceAdditionsForTrace.length > 0 ? ["SOURCE"] : [];
+  let additionSelectedTier: SemanticProvenanceTier | undefined;
 
   const kind = classifyProductKind({
     name,
@@ -415,13 +560,21 @@ export function completeProductCard(input: {
     family === "PITA" ||
     (/\b(durum|dürüm|pita)\b/i.test(name) && !isCombo);
 
+  // WP4: drive the EXISTING grill resolution from the structural sufficiency
+  // assessment (WP2) instead of the naive `ingredients.length < 2` heuristic.
+  // INSUFFICIENT / PARTIAL / UNRESOLVED trigger resolution; SUFFICIENT /
+  // NOT_APPLICABLE skip it (no resolution attempt is made).
+  const ingredientNeedsResolution =
+    initialIngredientStatus !== "SUFFICIENT" &&
+    initialIngredientStatus !== "NOT_APPLICABLE";
+
   const needsFill =
     !isCombo &&
     !isWrap &&
     isFoodFamily(family) &&
     burgerLike &&
     (ingredients.length < 2 ||
-      grillIngredientsInsufficient(ingredients, name) ||
+      ingredientNeedsResolution ||
       !(input.product.description ?? "").trim());
 
   if (needsFill) {
@@ -433,6 +586,7 @@ export function completeProductCard(input: {
         : {}),
       ingredientPolicy: input.ingredientLikelihood ?? null,
     });
+    ingredientEvidence.push(grillSourceTier(resolved.source));
     if (resolved.ingredients.length >= 2) {
       if (
         input.preserveLiveRichness &&
@@ -441,6 +595,7 @@ export function completeProductCard(input: {
       ) {
         // QA never-worse: keep richer live card
       } else {
+        ingredientSelectedTier = grillSourceTier(resolved.source);
         ingredients = sanitizeIngredientList(resolved.ingredients);
         ingredientOrigin =
           resolved.source === "DOMAIN_PRIOR"
@@ -466,28 +621,68 @@ export function completeProductCard(input: {
     }
   }
 
-  if (!isCombo && isFoodFamily(family) && ingredients.length < 2) {
+  // WP4: re-assess the CURRENT list so name-encoded domain priors run only while
+  // the card is still structurally insufficient for its family. The old
+  // `< 2` gate is kept in the union so existing thin-list behavior is preserved
+  // (no richness loss); the new structural trigger only ADDS attempts where a
+  // length-2+ list is still below its family's evidence bar (e.g. sparse pizza).
+  const ingredientStatusAfterGrill = assessIngredientSufficiency(
+    family,
+    undefined,
+    ingredients,
+    name,
+  );
+  const domainPriorNeeded =
+    ingredientStatusAfterGrill !== "SUFFICIENT" &&
+    ingredientStatusAfterGrill !== "NOT_APPLICABLE";
+
+  if (
+    !isCombo &&
+    isFoodFamily(family) &&
+    (ingredients.length < 2 || domainPriorNeeded)
+  ) {
     const prior = inferDomainIngredientsFromName({
       name,
       categoryName: input.categoryName,
       family,
     });
     if (prior.length >= 2) {
-      ingredients = sanitizeIngredientList([...ingredients, ...prior], name);
-      ingredientOrigin = "DOMAIN_PRIOR";
-      for (const ing of ingredients) {
+      const merged = sanitizeIngredientList([...ingredients, ...prior], name);
+      // WP4 improvement gate: when the card is a LENGTH-OK list (it was NOT
+      // triggered by the legacy `length < 2` path), only accept the name-encoded
+      // prior if it STRICTLY improves structural sufficiency. A generic
+      // curry-family prior that adds basil without resolving the real missing
+      // requirement (e.g. Massaman: potato+peanut+coconut milk, still
+      // INSUFFICIENT afterwards) must not be forced in; the status is recorded in
+      // the completeness trace for WP5 review instead. Thin-list (length < 2)
+      // legacy behavior is preserved unconditionally.
+      const triggeredByLength = ingredients.length < 2;
+      const gatedByImprovement = !triggeredByLength;
+      const mergedStatus = assessIngredientSufficiency(family, undefined, merged, name);
+      const improves = sufficiencyRank(mergedStatus) > sufficiencyRank(ingredientStatusAfterGrill);
+      if (gatedByImprovement && !improves) {
+        // Do not fabricate completeness: leave the card as-is and let the
+        // INSUFFICIENT/UNRESOLVED status surface via the trace.
+        ingredientEvidence.push(grillSourceTier("DOMAIN_PRIOR"));
+      } else {
+        ingredients = merged;
+        ingredientOrigin = "DOMAIN_PRIOR";
+        ingredientEvidence.push("DOMAIN_PRIOR");
+        ingredientSelectedTier = "DOMAIN_PRIOR";
+        for (const ing of ingredients) {
+          provenanceList.push(
+            provenance("ingredients", ing, "DOMAIN_PRIOR", 0.7, {
+              reason: "name_encoded_domain_prior",
+            }),
+          );
+        }
+        description = DanishDescription(ingredients);
         provenanceList.push(
-          provenance("ingredients", ing, "DOMAIN_PRIOR", 0.7, {
-            reason: "name_encoded_domain_prior",
+          provenance("description", description, "DERIVED", 0.85, {
+            reason: "generated_from_final_ingredients",
           }),
         );
       }
-      description = DanishDescription(ingredients);
-      provenanceList.push(
-        provenance("description", description, "DERIVED", 0.85, {
-          reason: "generated_from_final_ingredients",
-        }),
-      );
     } else if (ingredients.length === 1 && /\b(durum|pita)\b/i.test(name)) {
       const wrap = /\bdurum\b/i.test(name) ? "Durumbrød" : "Pitabrød";
       ingredients = sanitizeIngredientList([...ingredients, wrap], name);
@@ -550,12 +745,23 @@ export function completeProductCard(input: {
     family,
   );
 
-  // Burger ekstra / grill dips via shared helpers (not merchant-specific).
-  // WP3: a non-empty-but-SPARSE addition set is now supplemented from lower
-  // evidence tiers through the shared candidate-pool resolver, instead of the
-  // old `additions.length === 0` check that locked out supplementation entirely.
-  if (family === "DRINK") {
+  // WP4: the addition requirements matrix now gates the work. A family whose
+  // `additions` requirement is FORBIDDEN (DRINK under DRINKS_NO_FOOD_EXTRAS) must
+  // never even invoke the WP3 candidate pool — no food extras on a drink.
+  // Families with additions NOT_APPLICABLE likewise skip pool invocation.
+  // Tracked candidates carry REAL tiers so the completion trace never over-claims.
+  let additionFinalCandidates: AdditionCandidate[] = [];
+  const additionsForbidden =
+    requirements.additions === "FORBIDDEN" ||
+    requirements.additions === "NOT_APPLICABLE";
+
+  if (additionsForbidden) {
     additions = [];
+    additionFinalCandidates = [];
+    // FORBIDDEN/NOT_APPLICABLE: no resolution was attempted, so the trace must
+    // not claim any tier was inspected as candidate evidence.
+    additionEvidence.length = 0;
+    additionSelectedTier = undefined;
   } else if (burgerLike && !isCombo && !isWrap) {
     const dipCtx = {
       name,
@@ -574,6 +780,16 @@ export function completeProductCard(input: {
       additions = preferGrillDipAdditions(asPriced, dipCtx).map((a) => ({
         name: a.name,
         priceOre: a.priceOre,
+      }));
+      // Dips come from the authoritative restaurant dip set — a domain prior.
+      additionEvidence.push("DOMAIN_PRIOR");
+      additionSelectedTier = "DOMAIN_PRIOR";
+      additionFinalCandidates = additions.map((a) => ({
+        name: a.name,
+        nameKey: normalizeAdditionName(a.name),
+        priceOre: a.priceOre ?? null,
+        tier: "DOMAIN_PRIOR" as const,
+        priceSource: "DOMAIN_PRIOR" as const,
       }));
     } else {
       // Source additions are the authoritative tier; domain priors only fill the
@@ -598,7 +814,18 @@ export function completeProductCard(input: {
         })),
         domainPriorAdditions: domainPriors,
       });
+      // Reuse the pool's REAL tier data as trace evidence (no invention).
+      additionEvidence.push(...pool.map((c) => c.tier));
       const { selected } = resolveAdditionCandidates(pool, poolContext);
+      if (selected.length > 0) {
+        const first = selected[0]!;
+        additionSelectedTier = selected.reduce(
+          (best, c) =>
+            additionTierRank(c.tier) > additionTierRank(best) ? c.tier : best,
+          first.tier,
+        );
+      }
+      additionFinalCandidates = selected;
       additions = selected.map((c) => {
         // WP3: resolve price through the shared tier order (peer → domain prior →
         // UNRESOLVED) instead of defaulting to 0. Never fabricate a free price.
@@ -625,6 +852,11 @@ export function completeProductCard(input: {
         };
       });
     }
+  } else {
+    // No resolution path ran; the final set is the filtered source evidence.
+    additionFinalCandidates = toSourceCandidates(
+      additions.map((a) => ({ name: a.name, priceOre: a.priceOre ?? null })),
+    );
   }
 
   // WP3: sanitize requires a concrete price, and it reprices via the authorized
@@ -649,6 +881,59 @@ export function completeProductCard(input: {
   const productChoices =
     existingChoices.length > 0 ? existingChoices : parsedSource.productChoices;
 
+  // ---- Semantic Completeness Engine (V1) — WP4 explainability ---------------
+  // Additive per-field traces for the two most developed resolution paths. They
+  // never invent evidence: every tier listed came from an actual resolution
+  // attempt (ingredients) or the real candidate pool (additions). This is NOT a
+  // quality gate — READY/REVIEW/BLOCKED is decided by qualityContract (WP5).
+  const finalIngredientStatus = assessIngredientSufficiency(
+    family,
+    undefined,
+    ingredients,
+    name,
+  );
+  const finalAdditionStatus = additionsSufficiencyStatus(
+    family,
+    additionFinalCandidates,
+  );
+  // Honesty guard: only claim a prior tier as `selectedTier` when the accepted
+  // list actually differs from the pre-resolution source list. If resolution ran
+  // but the source list won (e.g. richer live card preserved), the accepted tier
+  // is SOURCE, not the prior we merely inspected.
+  const ingredientsChangedByResolution =
+    ingredients.length !== ingredientsBeforeResolution.length ||
+    ingredients.some((v, i) => v !== ingredientsBeforeResolution[i]);
+  const effectiveIngredientTier: SemanticProvenanceTier | undefined =
+    ingredientsChangedByResolution
+      ? ingredientSelectedTier
+      : ingredients.length > 0
+        ? "SOURCE"
+        : undefined;
+  const completenessTraces: FieldCompletenessTrace[] = [
+    buildCompletenessTrace({
+      field: "ingredients",
+      requirementLevel: requirements.ingredients,
+      initialStatus: initialIngredientStatus,
+      finalStatus: finalIngredientStatus,
+      evidenceConsidered: ingredientEvidence,
+      ...(effectiveIngredientTier !== undefined
+        ? { selectedTier: effectiveIngredientTier }
+        : {}),
+      ...(ingredients.length > 0 ? { selectedValue: ingredients } : {}),
+    }),
+    buildCompletenessTrace({
+      field: "additions",
+      requirementLevel: requirements.additions,
+      initialStatus: initialAdditionStatus,
+      finalStatus: finalAdditionStatus,
+      evidenceConsidered: additionEvidence,
+      ...(additionSelectedTier !== undefined
+        ? { selectedTier: additionSelectedTier }
+        : {}),
+      ...(additions.length > 0 ? { selectedValue: additions.map((a) => a.name) } : {}),
+    }),
+  ];
+
   return {
     name,
     categoryName: input.categoryName,
@@ -672,6 +957,7 @@ export function completeProductCard(input: {
       drinksNoFoodExtras: family === "DRINK",
       categoryQualifiedProductName: qualified.trace,
     },
+    completenessTraces,
   };
 }
 
