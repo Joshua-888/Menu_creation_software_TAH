@@ -46,9 +46,18 @@ const MEAT_OR_PROTEIN_RE =
 const PROTEIN_OR_CHEESE_RE =
   /\b(oksekød|bøf|hakket|kød|kødsovs|kødstrimler|kylling|chicken|crispy|bacon|skinke|kebab|pepperoni|salami|pølse|tun|rejer|fisk|fiskefilet|falafel|vegetar|vegan|tofu|halloumi|döner|doner|köfte|kofte|nuggets|lamm|kalkun|ost|cheese|mozzarella|gorgonzola|parmesan|cheddar|feta)\b/i;
 
-/** Sauce / dressing / wet component signals. */
+/**
+ * Sauce / dressing / wet component signals.
+ *
+ * Danish compound nouns glue the modifier directly to "sovs" (kødsovs,
+ * flødesovs, tomatsovs), so a leading `\b` before "sovs" never fires — the word
+ * boundary exists only before the whole compound, not before the head noun. The
+ * `\w*sovs\b` alternative matches any word ending in "sovs" regardless of the
+ * (non-ASCII) modifier letters, so real Danish sauce terms are recognised
+ * generically instead of by an ever-growing dish-name list.
+ */
 const SAUCE_RE =
-  /\b(sauce|sovs|ketchup|mayo|mayonnaise|remoulade|dressing|bearnaise|pesto|carbonara|fløde|creme|cremefraiche|tomat|tomatsauce|tomatsovs|dip)\b/i;
+  /\b(sauce|ketchup|mayo|mayonnaise|remoulade|dressing|bearnaise|pesto|carbonara|fløde|creme|cremefraiche|tomat|tomatsauce|tomatsovs|dip)\b|\w*sovs\b/i;
 
 /** Bread / wrap / bun signals. */
 const BREAD_RE =
