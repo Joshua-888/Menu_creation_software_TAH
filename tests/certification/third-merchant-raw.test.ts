@@ -51,7 +51,21 @@ describe("Third merchant RAW PDF certification (Thai takeaway)", () => {
       expect(result.stats.targetProducts).toBeGreaterThanOrEqual(8);
       expect(result.menuVariantCount).toBe(0);
       expect(result.stats.statusAccounting.blocked).toBe(0);
-      expect(result.stats.menuStatus).toBe("MENU_QUALITY_READY");
+      // WP5 intentional delta (pre-approved by Architect/Supervisor): the Quality
+      // Contract now recomputes structural ingredient sufficiency. Massaman Curry
+      // resolves INSUFFICIENT for INDIAN_MAIN (its source list lacks the structural
+      // potato/peanut/coconut-milk slots) and is correctly surfaced as
+      // QUALITY_REVIEW instead of silently passing the old `length >= 2` check.
+      // Every other fixture product stays READY (15 ready / 1 review / 0 blocked).
+      expect(result.stats.menuStatus).toBe("MENU_QUALITY_REVIEW");
+      const thaiReview = result.intelligence.quality.products.filter(
+        (p) => p.status !== "QUALITY_READY",
+      );
+      expect(thaiReview.map((p) => p.name)).toEqual(["Massaman Curry"]);
+      expect(
+        thaiReview[0]?.checks.find((c) => c.id === "INGREDIENTS_COMPLETE")
+          ?.pass,
+      ).toBe(false);
 
       const blob = JSON.stringify(result.targetMenu);
       expect(blob).not.toMatch(

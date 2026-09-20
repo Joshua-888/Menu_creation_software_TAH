@@ -13,6 +13,13 @@ import {
 import { looksLikeGarbageName } from "../domain/textNormalize.js";
 import { classifyPhrase, isInvalidProductNameEntity } from "./semanticClassifier.js";
 import { inferProductFamily, isFoodFamily } from "./peerCohorts.js";
+import { assessIngredientSufficiency } from "./ingredientSufficiency.js";
+import { getFieldRequirements } from "./fieldRequirements.js";
+import {
+  isAdditionSetSufficient,
+  type AdditionCandidate,
+} from "./additionCandidatePool.js";
+import { normalizeAdditionName } from "../decisions/facts.js";
 import { isProductNameReceiptSafe } from "./categoryQualifiedProductName.js";
 import type {
   MenuCoherenceCheck,
@@ -45,6 +52,10 @@ function evaluateProduct(
   });
   const food = isFoodFamily(family) && family !== "COMBO_MENU";
   const checks: QualityCheckResult[] = [];
+  // WP5: non-gating completeness advisories (EXPECTED-level gaps). These never
+  // move a product off QUALITY_READY on their own.
+  const completenessWarnings: string[] = [];
+  let forbiddenAdditionsViolated = false;
 
   const nameCls = classifyPhrase(name, { layoutRole: "product" });
   const nameValid =
@@ -106,14 +117,34 @@ function evaluateProduct(
     ),
   );
 
-  const ingredientsComplete = !food || ingredients.length >= 2;
+  // WP5 — replace the naive `ingredients.length >= 2` heuristic with recomputation
+  // on the already-available local ingredient list, using the authoritative
+  // field-requirement matrix + structural sufficiency assessor (WP2). No trace
+  // lookup, no sourceId, no mutation: a direct pure-function call on local data.
+  const requirements = getFieldRequirements(family, undefined);
+  const ingredientStatus = assessIngredientSufficiency(
+    family,
+    undefined,
+    ingredients,
+    name,
+  );
+  // Only a REQUIRED ingredient field gates on sufficiency, and only when the
+  // evidence is genuinely unresolved or below the structural bar (UNRESOLVED /
+  // INSUFFICIENT). PARTIAL means some evidence exists but not every structural
+  // slot is filled — it is advisory, not a hard block. EXPECTED/CONDITIONAL/
+  // OPTIONAL are advisory and never move a product off READY alone.
+  const ingredientsComplete =
+    !food ||
+    requirements.ingredients !== "REQUIRED" ||
+    (ingredientStatus !== "UNRESOLVED" &&
+      ingredientStatus !== "INSUFFICIENT");
   checks.push(
     check(
       "INGREDIENTS_COMPLETE",
       ingredientsComplete,
       ingredientsComplete
         ? undefined
-        : "food product missing ingredients (QUALITY_REVIEW)",
+        : `ingredients ${ingredientStatus.toLowerCase()} for ${family} (REQUIRED, QUALITY_REVIEW)`,
     ),
   );
 
@@ -214,6 +245,72 @@ function evaluateProduct(
     ),
   );
 
+  // WP5 — addition expectation resolution (recomputation on local data).
+  // Evidence semantics (Architect ruling):
+  //   REQUIRED   unresolved/insufficient → QUALITY_REVIEW
+  //   EXPECTED   unresolved/insufficient → non-gating completeness warning
+  //   FORBIDDEN  any addition present      → QUALITY_BLOCKED (hard invariant)
+  //   CONDITIONAL/OPTIONAL/NOT_APPLICABLE  → non-gating (CONDITIONAL has no
+  //              trigger evaluator yet — known WP2 limitation, treated inert)
+  const additionCandidates: AdditionCandidate[] = product.addOns.map((a) => ({
+    name: a.name,
+    nameKey: normalizeAdditionName(a.name),
+    priceOre: a.price ?? null,
+    tier: a.origin === "SYSTEM_DEFAULT" ? "DOMAIN_PRIOR" : "SOURCE",
+    priceSource: a.origin === "SYSTEM_DEFAULT" ? "DOMAIN_PRIOR" : "SOURCE",
+  }));
+  const additionsPresent = product.addOns.length > 0;
+  const additionsSufficient =
+    additionsPresent && isAdditionSetSufficient(family, additionCandidates);
+  const additionLevel = requirements.additions;
+  const additionForbiddenViolation =
+    additionLevel === "FORBIDDEN" && additionsPresent;
+  const additionRequiredUnresolved =
+    additionLevel === "REQUIRED" && !additionsSufficient;
+  if (additionForbiddenViolation) forbiddenAdditionsViolated = true;
+  if (additionLevel === "EXPECTED" && !additionsSufficient) {
+    completenessWarnings.push(
+      `additions expected for ${family} but unresolved (advisory)`,
+    );
+  }
+  checks.push(
+    check(
+      "ADDITIONS_EXPECTATION_RESOLVED",
+      !additionForbiddenViolation && !additionRequiredUnresolved,
+      additionForbiddenViolation
+        ? "additions are forbidden for this family"
+        : additionRequiredUnresolved
+          ? `additions unresolved/insufficient for ${family} (REQUIRED, QUALITY_REVIEW)`
+          : undefined,
+    ),
+  );
+
+  // WP5 — variant expectation resolution. FORBIDDEN here means an actual
+  // forbidden Menu-as-variant NAME (never `variants.length > 0`), so a combo's
+  // legitimate Alm./Familie size variants are not misclassified as a violation.
+  const forbiddenVariantName = variants.some((v) =>
+    isForbiddenMenuVariantName(v),
+  );
+  const variantLevel = requirements.variants;
+  const variantRequiredUnresolved =
+    variantLevel === "REQUIRED" && variants.length === 0;
+  if (variantLevel === "EXPECTED" && variants.length === 0) {
+    completenessWarnings.push(
+      `variants expected for ${family} but unresolved (advisory)`,
+    );
+  }
+  checks.push(
+    check(
+      "VARIANT_EXPECTATION_RESOLVED",
+      !forbiddenVariantName && !variantRequiredUnresolved,
+      forbiddenVariantName
+        ? "forbidden Menu-as-variant name present"
+        : variantRequiredUnresolved
+          ? `variants unresolved for ${family} (REQUIRED, QUALITY_REVIEW)`
+          : undefined,
+    ),
+  );
+
   const pricedAdds = product.addOns.filter((a) => a.price != null || true);
   // Soft: missing price → review not hard block unless food burger with tilbehør
   const priceSupported =
@@ -275,6 +372,10 @@ function evaluateProduct(
     "ADDITION_PRICE_SUPPORTED",
     "PROVENANCE_SUFFICIENT",
     "COMBO_STRUCTURE_VALID",
+    // WP5: a REQUIRED addition/variant gap routes to REVIEW, never BLOCK. The
+    // forbidden-addition case is escalated to BLOCKED separately below.
+    "ADDITIONS_EXPECTATION_RESOLVED",
+    "VARIANT_EXPECTATION_RESOLVED",
   ]);
 
   let status: QualityStatus = "QUALITY_READY";
@@ -299,6 +400,11 @@ function evaluateProduct(
   if (comboUnresolved && status === "QUALITY_READY") {
     status = "QUALITY_REVIEW";
   }
+  // WP5: additions on a FORBIDDEN family (e.g. food extras on a drink) are a hard
+  // invariant violation (Constitution DRINKS_NO_FOOD_EXTRAS) → BLOCK, never READY.
+  if (forbiddenAdditionsViolated) {
+    status = "QUALITY_BLOCKED";
+  }
 
   return {
     productSourceId: product.sourceId,
@@ -312,6 +418,7 @@ function evaluateProduct(
     status,
     checks,
     blockers,
+    completenessWarnings,
   };
 }
 
@@ -444,6 +551,22 @@ export function evaluateMenuQualityContract(
     coherenceFailures: coherenceFail.length,
   };
 
+  // WP5 — advisory completeness accounting. EXPECTED-level gaps are recorded on
+  // each product's `completenessWarnings` but do NOT move status; this aggregate
+  // makes them visible to review tooling without changing the status boolean.
+  const warningCount = products.reduce(
+    (n, p) => n + p.completenessWarnings.length,
+    0,
+  );
+  const productsWithWarnings = products.filter(
+    (p) => p.completenessWarnings.length > 0,
+  ).length;
+  const completenessAccounting = {
+    productsWithWarnings,
+    warningCount,
+    reconciles: productsWithWarnings <= products.length,
+  };
+
   const blockers = [
     ...products.flatMap((p) =>
       p.blockers.map((b) => `${p.menuNumber || p.name}: ${b}`),
@@ -477,6 +600,7 @@ export function evaluateMenuQualityContract(
     blockedProductIds,
     statusAccounting,
     findingCounts,
+    completenessAccounting,
   };
 }
 

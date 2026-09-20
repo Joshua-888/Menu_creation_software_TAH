@@ -85,11 +85,15 @@ describe("WP2 field requirement matrix", () => {
     expect(m.variants).toBe("CONDITIONAL");
   });
 
-  it("COMBO_MENU requires combo components and forbids Menu-as-variant", () => {
+  it("COMBO_MENU requires combo components and does not forbid normal size variants", () => {
+    // WP5 correction (Architect ruling): MENU_IS_COMBO_NOT_VARIANT forbids a
+    // 'Menu' being offered as a variant NAME, not a combo having legitimate size
+    // variants. The requirement level is CONDITIONAL; the forbidden-name
+    // invariant is enforced separately via isForbiddenMenuVariantName.
     const m = getFieldRequirements("COMBO_MENU");
     expect(m.comboComponents).toBe("REQUIRED");
     expect(m.productChoices).toBe("CONDITIONAL");
-    expect(m.variants).toBe("FORBIDDEN");
+    expect(m.variants).toBe("CONDITIONAL");
   });
 
   it("DURUM and PASTA are food families with REQUIRED ingredients", () => {
@@ -112,7 +116,10 @@ describe("WP2 field requirement matrix", () => {
         expect(m.ingredients).toBe("NOT_APPLICABLE");
       }
       if (family === "COMBO_MENU") {
-        expect(m.variants).toBe("FORBIDDEN");
+        // WP5 correction (Architect ruling): combo variants are CONDITIONAL (size
+        // variants are legitimate); the Menu-as-variant NAME invariant is enforced
+        // by isForbiddenMenuVariantName, not by the requirement level.
+        expect(m.variants).toBe("CONDITIONAL");
         expect(m.comboComponents).toBe("REQUIRED");
       }
     }

@@ -181,7 +181,9 @@ const FAMILY_REQUIREMENT_OVERRIDES: Record<
   PASTA: {
     ingredients: "REQUIRED",
     description: "REQUIRED",
-    additions: "EXPECTED",
+    // WP5 correction (Architect ruling): plated pasta is sold complete as-is in
+    // Danish takeaway convention; customer configuration lives in productChoices.
+    additions: "OPTIONAL",
     additionPrices: "CONDITIONAL",
     variants: "CONDITIONAL",
     productChoices: "OPTIONAL",
@@ -192,7 +194,10 @@ const FAMILY_REQUIREMENT_OVERRIDES: Record<
   INDIAN_MAIN: {
     ingredients: "REQUIRED",
     description: "REQUIRED",
-    additions: "EXPECTED",
+    // WP5 correction (Architect ruling): plated curry/wok/pad-thai dishes are
+    // sold complete as-is; customer configuration lives in productChoices
+    // (protein/starch choice), not a Tilbehør addition list.
+    additions: "OPTIONAL",
     additionPrices: "CONDITIONAL",
     variants: "CONDITIONAL",
     productChoices: "CONDITIONAL",
@@ -220,7 +225,10 @@ const FAMILY_REQUIREMENT_OVERRIDES: Record<
   SUSHI: {
     ingredients: "REQUIRED",
     description: "REQUIRED",
-    additions: "EXPECTED",
+    // WP5 correction (Architect ruling): plated sushi sets are sold complete
+    // as-is; there is no evidence-generation path for sushi additions, so an
+    // EXPECTED requirement would be an unfulfillable gap.
+    additions: "OPTIONAL",
     additionPrices: "CONDITIONAL",
     variants: "CONDITIONAL",
     productChoices: "CONDITIONAL",
@@ -244,7 +252,14 @@ const FAMILY_REQUIREMENT_OVERRIDES: Record<
     description: "EXPECTED",
     additions: "EXPECTED",
     additionPrices: "CONDITIONAL",
-    variants: "FORBIDDEN",
+    // WP5 correction (Architect ruling): MENU_IS_COMBO_NOT_VARIANT forbids a
+    // 'Menu'/'Menü' being offered as a variant NAME on another product — it does
+    // NOT forbid a combo having legitimate size variants (Alm./Familie). The
+    // forbidden-name invariant is enforced separately via
+    // `isForbiddenMenuVariantName` in MenuQualityContract, so the requirement
+    // level is CONDITIONAL rather than FORBIDDEN. (CONDITIONAL has no trigger
+    // evaluator yet; downstream treats it as non-gating — known limitation.)
+    variants: "CONDITIONAL",
     productChoices: "CONDITIONAL",
     comboComponents: "REQUIRED",
   },

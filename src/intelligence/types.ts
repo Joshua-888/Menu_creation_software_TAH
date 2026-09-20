@@ -211,6 +211,8 @@ export type QualityCheckId =
   | "ADDITIONS_VALID"
   | "ADDITION_SCOPE_VALID"
   | "ADDITION_PRICE_SUPPORTED"
+  | "ADDITIONS_EXPECTATION_RESOLVED"
+  | "VARIANT_EXPECTATION_RESOLVED"
   | "PRICE_SUPPORTED"
   | "NO_OCR_GARBAGE"
   | "GRAMMAR_VALID"
@@ -229,6 +231,12 @@ export type ProductQualityResult = {
   status: QualityStatus;
   checks: QualityCheckResult[];
   blockers: string[];
+  /**
+   * Non-gating completeness advisories (WP5). EXPECTED-level gaps (e.g. an
+   * addition list that is expected but unresolved) are surfaced here WITHOUT
+   * moving `status` off QUALITY_READY — they are review signal, not a gate.
+   */
+  completenessWarnings: string[];
 };
 
 export type MenuCoherenceCheck = {
@@ -260,6 +268,17 @@ export type MenuQualityContractResult = {
   findingCounts: {
     failedChecks: number;
     coherenceFailures: number;
+  };
+  /**
+   * WP5 completeness accounting — advisory (non-gating) completeness signal.
+   * EXPECTED-level gaps are counted here so review tooling can see them without
+   * the products being forced off QUALITY_READY. `reconciles` asserts that the
+   * per-product warning array and this aggregate agree.
+   */
+  completenessAccounting: {
+    productsWithWarnings: number;
+    warningCount: number;
+    reconciles: boolean;
   };
 };
 

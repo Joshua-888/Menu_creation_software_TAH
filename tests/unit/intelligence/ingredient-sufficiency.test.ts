@@ -120,6 +120,29 @@ describe("WP2 ingredient sufficiency", () => {
       );
     });
 
+    it("recognises Danish compound sauces (Kødsovs, Flødesovs) as the sauce slot", () => {
+      // WP2 correction (found during WP5 integration): the SAUCE_RE token set
+      // used a leading word boundary before "sovs", which never fires on Danish
+      // compound nouns because the boundary sits before the modifier, not the
+      // head noun "sovs". A structurally complete pasta was therefore falsely
+      // PARTIAL. The matcher now also accepts any word ending in "sovs".
+      expect(
+        assessIngredientSufficiency("PASTA", undefined, ["Spaghetti", "Kødsovs"], "Spaghetti Bolognese"),
+      ).toBe("SUFFICIENT");
+      expect(
+        assessIngredientSufficiency("PASTA", undefined, ["Penne", "Flødesovs"], "Pasta med fløde"),
+      ).toBe("SUFFICIENT");
+    });
+
+    it("does not overcorrect: a base with no sauce stays PARTIAL", () => {
+      expect(assessIngredientSufficiency("PASTA", undefined, ["Spaghetti"], "Pasta")).toBe(
+        "PARTIAL",
+      );
+      expect(assessIngredientSufficiency("PASTA", undefined, ["Kartofler"], "Pasta")).toBe(
+        "INSUFFICIENT",
+      );
+    });
+
     it("durum needs bread + filling", () => {
       expect(
         assessIngredientSufficiency("DURUM", undefined, ["Durumbrød", "Kebab"], "Durum Kebab"),
