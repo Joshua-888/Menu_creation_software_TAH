@@ -40,3 +40,4 @@ scripts/submit-smash-create.ts
 scripts/submit-smash-qa.ts
 scripts/smash-controlled-live-preflight.mts
 
+.a0proj/
