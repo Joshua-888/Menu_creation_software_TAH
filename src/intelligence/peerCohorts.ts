@@ -123,7 +123,10 @@ export function inferProductFamily(input: {
   }
   if (/burger/i.test(blob)) return "BURGER";
   if (/\bsalatpizza\b/i.test(blob)) return "SALATPIZZA";
-  if (/\bcalzone|indbagt\b/i.test(blob)) return "CALZONE";
+  // NOTE: "indbagt" (Danish for battered/deep-fried) is a generic cooking-method
+  // word used across cuisines; it is NOT a pizza/calzone signal. Only the
+  // product's own calzone naming may classify it. See WP-F.
+  if (/\bcalzone\b/i.test(blob)) return "CALZONE";
   if (/\bpizza\b/i.test(blob)) return "PIZZA";
   if (/\bdürüm|durum\b/i.test(blob)) return "DURUM";
   if (/\bpita\b/i.test(blob)) return "PITA";
