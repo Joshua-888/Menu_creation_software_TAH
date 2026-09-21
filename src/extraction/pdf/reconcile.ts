@@ -22,6 +22,7 @@ import {
   pickBaseMenuPair,
   stripMenuNumberFalsePrices,
 } from "./priceNormalize.js";
+import { applySectionGroupPriceInheritance } from "./sectionPriceInheritance.js";
 import { repairScandinavianOcrName } from "./scandinavianRepair.js";
 
 function normName(s: string): string {
@@ -262,7 +263,7 @@ function buildChoices(
   };
 }
 
-function buildPricing(c: SourceCandidate): {
+function buildPricingInner(c: SourceCandidate): {
   variants: SourceVariant[];
   sourcePriceOptions?: Array<{ label: string; sourceTotalPrice?: number }>;
   review: boolean;
@@ -382,6 +383,25 @@ function buildPricing(c: SourceCandidate): {
     ],
     review: true,
     reason: "ambiguous price/variant structure",
+  };
+}
+
+/**
+ * Build source pricing for a candidate, propagating the candidate's price
+ * provenance (e.g. DERIVED for group-inherited prices) onto every variant so
+ * the domain engine reports an honest `basePriceOrigin` downstream.
+ */
+function buildPricing(c: SourceCandidate): {
+  variants: SourceVariant[];
+  sourcePriceOptions?: Array<{ label: string; sourceTotalPrice?: number }>;
+  review: boolean;
+  reason?: string;
+} {
+  const built = buildPricingInner(c);
+  if (!c.priceOrigin) return built;
+  return {
+    ...built,
+    variants: built.variants.map((v) => ({ ...v, priceOrigin: c.priceOrigin }) as SourceVariant),
   };
 }
 
@@ -579,10 +599,17 @@ export function reconcileCandidatesToSourceMenu(input: {
     return a.candidateId.localeCompare(b.candidateId);
   });
 
+  // Structural group-price inheritance runs AFTER canonical dedup so a
+  // duplicate page read can never fabricate a group price that outranks the
+  // authoritative page. Some PDFs print one price on the leading dish of a
+  // sub-section and leave its siblings unpriced; boundary-safe and inert where
+  // no such uniform single-price sub-section exists.
+  const priced = applySectionGroupPriceInheritance(extracted);
+
   const categoryMap = new Map<string, SourceProduct[]>();
   let order = 0;
 
-  for (const c of extracted) {
+  for (const c of priced) {
     let catName = c.sectionHint || c.categoryHint || "UNCATEGORIZED";
     // Hard guard: never promote Menu price column to a category
     if (/^menu$/i.test(catName.trim())) {
