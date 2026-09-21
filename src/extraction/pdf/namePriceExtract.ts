@@ -11,6 +11,7 @@
 import type { SourceEvidence } from "../../domain/evidence.js";
 import { classifyProductKind } from "../../learning/categoryLikelihood.js";
 import { looksLikeOcrGarbageName } from "./renderedFallback.js";
+import { isBoilerplateFooterLine } from "./boilerplate.js";
 import type { ClassifiedPdfPage, SourceCandidate } from "./types.js";
 import { parseKronerToken } from "./prices.js";
 
@@ -409,7 +410,10 @@ export function detectNamePriceCandidates(
   const seen = new Set<string>();
 
   for (const page of pages) {
-    const rawLines = page.lines.map((l) => l.text.trim()).filter(Boolean);
+    const rawLines = page.lines
+      .map((l) => l.text.trim())
+      .filter(Boolean)
+      .filter((text) => !isBoilerplateFooterLine(text));
     const imageSource = page.sourceKind === "image";
     const lines = joinTitleFragments(
       imageSource ? joinImageTitleFragments(rawLines) : rawLines,
@@ -460,6 +464,25 @@ export function detectNamePriceCandidates(
         SECTION_HEADER_RE.test(rawT) &&
         pricesFromLine(line, imageSource).length === 0 &&
         rawT.split(/\s+/).length <= 3 &&
+        Array.from({ length: 3 }, (_, k) => lines[i + 1 + k]).some((next) =>
+          looksLikeNumberedDishLine(next),
+        )
+      ) {
+        i += 1;
+        continue;
+      }
+      // Structural guard: a descriptive tagline sitting directly under a
+      // recognised section header, carrying no price of its own and followed by
+      // numbered dish rows, is a section subtitle (e.g. "Mad til familiens
+      // yngste medlemmer" under "Børnemenu"), not a product. Creating a candidate
+      // here mis-steals the first following dish's price and spawns a phantom
+      // combo. Purely structural: header-above + unnumbered + numbered rows
+      // below — no merchant or language keywords.
+      if (
+        pricesFromLine(line, imageSource).length === 0 &&
+        i > 0 &&
+        isSectionHeaderText(lines[i - 1]!) &&
+        !looksLikeNumberedDishLine(line) &&
         Array.from({ length: 3 }, (_, k) => lines[i + 1 + k]).some((next) =>
           looksLikeNumberedDishLine(next),
         )

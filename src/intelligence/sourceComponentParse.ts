@@ -33,7 +33,9 @@ export function descriptionLinesFromEvidence(
   if (!rawText?.trim()) return "";
   const nameHead = productName.trim().toLowerCase().slice(0, 18);
   const lines = rawText
-    .split(/\r?\n/)
+    // Reconcile joins evidence fragments with " || " — that is a structural
+    // merge boundary, not dish content, so treat it as a line break.
+    .split(/\r?\n|\s\|\|\s*/)
     .map((l) => l.replace(/\s+/g, " ").trim())
     .filter(Boolean)
     .filter((l) => !/^kr\.?\s*\d/i.test(l))

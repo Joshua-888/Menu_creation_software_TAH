@@ -18,6 +18,7 @@ import {
   stripMenuNumberFalsePrices,
 } from "./priceNormalize.js";
 import { extractCommaPrices, parseKronerToken } from "./prices.js";
+import { isBoilerplateFooterLine } from "./boilerplate.js";
 import {
   applyRenderedPageFallback,
   looksLikeOcrGarbageName,
@@ -404,7 +405,12 @@ export function detectSourceCandidatesLayout(
     /** Consecutive single-price rows while Menu-column mode is active → column ended. */
     let consecutiveBaseMenuSingles = 0;
 
-    const lines = page.lines.map((l) => l.text);
+    // Drop page footer/navigation boilerplate (print URLs, embedded PDF paths,
+    // call-to-action banners) before any product grouping so it can never leak
+    // into a product name, bundle or evidence description.
+    const lines = page.lines
+      .map((l) => l.text)
+      .filter((text) => !isBoilerplateFooterLine(text));
     let i = 0;
     while (i < lines.length) {
       const line = lines[i]!;

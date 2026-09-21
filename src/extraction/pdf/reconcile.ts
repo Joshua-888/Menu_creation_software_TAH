@@ -67,17 +67,27 @@ function menuNumberSortKey(n: string): [number, string] {
   return [Number(m[1]), (m[2] ?? "").toLowerCase()];
 }
 
-function looksLikeBadProductName(n?: string): boolean {
+export function looksLikeBadProductName(n?: string): boolean {
   if (!n) return true;
   const t = n.trim().toLowerCase();
   if (t.length < 2) return true;
   if (/^\|\|/.test(t) || /\[(spatial-fallback|region-ocr|col-shift)/i.test(t)) {
     return true;
   }
+  // A leading ingredient/protein word is usually an OCR fragment of an
+  // ingredient list ("Tomat, ost, kebab, salat og"), never a dish title. But a
+  // plausible dish may legitimately start with a protein ("Kylling på spyd med
+  // pommes frites"): accept it only when it is a connected multi-word dish
+  // phrase with no list comma. Structural distinction — no merchant keywords.
   if (
     /^(tomat|ost|salat|dressing|og|champignon|kebab|kylling)\b/.test(t)
   ) {
-    return true;
+    const words = t.split(/\s+/).filter(Boolean);
+    const dishPhrase =
+      !t.includes(",") &&
+      words.length >= 3 &&
+      /\b(p[åa]|med|i|af|uden|til)\b/.test(t);
+    if (!dishPhrase) return true;
   }
   if (/,$/.test(t) && t.split(/\s+/).length <= 3) return true;
   if (/fries\s+inkl|re\s+fries|inkl\.\s*di\b/i.test(t)) return true;
