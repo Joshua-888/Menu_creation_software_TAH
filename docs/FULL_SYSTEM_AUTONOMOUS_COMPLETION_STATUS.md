@@ -146,11 +146,19 @@ Read-only audit performed on HEAD 56bd6cd. Key findings:
 - Zero regressions: 614/614 unit, 32/32 certification (Veroni exact parity, zero new coverage findings on any of the 4 golden fixtures), 26/26 extraction. Jin/Gaza blind-pilot re-runs: `coherenceFailures: 0` for both (no new false positives).
 - Documentation updated: `docs/architecture/QUALITY_CONTRACT_REGISTRY_V1.md` now accurately describes central evaluation, evidence shape, and the retained stricter portal hard-fail (independently verified accurate by Reviewer).
 
+### Architect audit: Sections 11+14 (live-write safety + security) — COMPLETE, ZERO BLOCKING FINDINGS
+Read-only audit performed on HEAD 6ac1049. Result: **both sections certified fail-closed/secure, no corrective WP required.**
+- **Live-write safety (Section 11)**: Traced the full 12-gate pipeline from operator-approval-click to real browser mutation (auth session → job-state → zero-open-questions → live-write-gate incl. kill-switch+credentials+allowlist+capability-cert → atomic status transition → lease → destination-write-lock → bundle/host/SHA binding → contract probe → fresh destination read-back+snapshot-hash comparison (rejects STALE_EXECUTION_BUNDLE) → pre-write gate → approved-plan-equals-executed-plan immutability check → dispatch). Kill-switch (`PORTAL_LIVE_WRITES=0`) is unambiguous and unbypassable (no debug endpoint, no test-flag leak). Deployment configs (railway.toml/nixpacks.toml/Procfile/.env.example) default to writes DISABLED unless explicit credentials + allowlist provided. Bella confirmed protected (not in default live-write host allowlist; separate hardcoded-authorization standalone scripts only).
+- **Security (Section 14)**: Zero committed secrets (8 grep hits, all dummy test-fixture strings). `.gitignore`/`.dockerignore` correctly exclude `.env`, `*.sqlite`, `playwright/.auth/`, `.a0proj/`, `data/`. `.env.example` contains only placeholders. Session cookies signed+HttpOnly+SameSite=Lax. `data/portal/portal.sqlite*` confirmed NOT tracked in git. GitHub Actions workflow has zero secret interpolation/leak risk.
+- **One non-blocking, optional hardening item** (explicitly deferred, not a defect): portal API routes rely on SameSite=Lax + signed session cookies for CSRF protection but lack an explicit Origin-header check. Architect assessed this as acceptable for an internal, credential-gated operator tool; recommended as optional defense-in-depth for a future hardening pass, not required now.
+
 ## Not Yet Started (per mission Section 5 onward)
 
 - Discovery cohort expansion beyond current 3 merchants + dedicated Validation Holdout cohort (Section 5) — requires user-supplied new merchant sources
 - Non-blocking Phase-2-audit doc-drift fix (AUTHORITATIVE_PRODUCTION_ENTRY_POINTS.md script paths) — low priority, zero functional impact
 - GAP-2/3/4 from Section 7 audit (deferred, unevidenced — see above)
+- Optional CSRF Origin-header hardening (Section 14, non-blocking, deferred)
+- Section 8 (semantic completeness re-audit), Section 9 (quality contract audit beyond WP-J), Section 10 (destination capabilities), Section 12 (ExecutionBundle/approval/verification — partially covered by Section 11 trace, formal audit still pending), Section 13 (recovery/durability), Section 15 (deployment readiness), Section 37 (docs alignment)
 - Semantic Completeness Engine full audit (Section 8)
 - Quality Contract audit (Section 9)
 - Destination capability matrix audit (Section 10)
