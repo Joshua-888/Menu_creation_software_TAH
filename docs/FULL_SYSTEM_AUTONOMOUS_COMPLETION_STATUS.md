@@ -22,6 +22,12 @@ only at explicit human-authorization boundaries (live customer mutation).
 
 **PHASE 1: NEW_MERCHANT_BLIND_PILOT_V1 completion** (mission Section 4)
 
+### Gevninge Pizza & Grill — FORMALLY DEFERRED (external blocker, not a repo defect)
+- Attempt 1 (original mission): direct HTTP fetch → HTTP 454/455 (Simply.com hosting WAF challenge page).
+- Attempt 2 (this session, final retry before formal deferral): `curl` with full browser User-Agent + Accept-Language headers → HTTP 403. Headless Chromium via Playwright (`{waitUntil:'domcontentloaded'}`) → HTTP 454, page title "Checking your browser..." (live JS bot-challenge, not a static block page). Wayback Machine (`archive.org/wayback/available`) → zero snapshots exist for this domain.
+- Conclusion: genuine, evidence-backed external blocker. Defeating a live WAF JS challenge would require bot-challenge circumvention, which is out of scope for legitimate source acquisition (distinct from the earlier Gaza-landing-page-vs-PDF and Jin-cookie-banner acquisition fixes, which only involved correctly locating/dismissing UI elements, not defeating anti-bot defenses).
+- Status: DEFERRED. Not counted in the Discovery cohort. If the owner can supply an alternative source (PDF export, photos, or a direct file) for this merchant, it can be added later.
+
 ## Work Package Ledger
 
 | WP | Description | Status | Commit | Reviewer | QA |
