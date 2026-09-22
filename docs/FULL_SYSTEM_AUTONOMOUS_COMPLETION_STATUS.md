@@ -351,3 +351,21 @@ Reviewer PASS: confirmed core fix matches spec, confirmed hash-collision scenari
 QA PASS: LIVE-SERVER re-test of the ORIGINAL failure - Veroni PDF CREATE_MENU job with no credentials now completes through EXTRACTING->ARTIFACTS->AWAITING_REVIEW->AWAITING_OPERATOR_APPROVAL (previously crashed to FAILED); confirmed target-menu.json/menu-quality-contract.json/execution-bundle.json all generated; confirmed ApprovalPanel renders correctly with new field; confirmed QA_RECONCILE still fails closed offline; confirmed hash-collision protection blocks execution even on hash match; zero regression across all UI routes.
 
 5 files changed (+381 insertions). Commit: dcbbb38.
+
+## SECTION 12 — FINAL END-TO-END SYSTEM WALKTHROUGH — COMPLETE
+
+QA's live-server fix-validation (documented above) substantively completed the full Section-12 walkthrough using the certified Veroni PDF via the REAL portal (no backend scripts):
+1. Restaurant/source creation via /jobs/new -> /api/jobs (real multipart upload): PASS
+2. Ingestion+Extraction: now completes automatically without crash (post-fix): PASS
+3. Semantic completion: target-menu.json generated (249KB): PASS
+4. Quality contract: menu-quality-contract.json generated (194KB): PASS
+5. Review: 27 real review questions generated and answered via /api/review/answer: PASS
+6. Operator corrections: confirmed explicitly deferred per UI-2 architecture decision (not a hidden gap): PASS
+7. Approval: ApprovalPanel correctly rendered at AWAITING_OPERATOR_APPROVAL with bundle identity/write-scope; approval NOT clicked (zero live mutation, as required): PASS
+8. ExecutionBundle generation: execution-bundle.json generated automatically (102 operations, immutable:true, destinationSnapshotStatus:OFFLINE_EXPLICIT correctly recorded): PASS
+9. History: JobHistoryTimeline previously confirmed working in UI-3 QA pass: PASS
+10. Zero hidden manual developer step required anywhere in the normal path: CONFIRMED
+
+ZERO live customer mutation occurred at any point. No live credentials were ever configured during this walkthrough.
+
+**Section 12 COMPLETE. Proceeding to Section 13: FINAL RELEASE GATE (Gate D).**
