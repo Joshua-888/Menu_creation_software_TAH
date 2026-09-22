@@ -338,3 +338,16 @@ All 3 UI milestones complete with Reviewer PASS + QA PASS:
 - UI-3: approval panel with bundle identity/write-scope disclosure, execution stepper, job history timeline, PLUS a critical safety fix (blocked-quality menus can no longer be approved/executed via any of 4 layers, verified via live HTTP 409 test).
 
 **Proceeding to Section 12: Final End-to-End System Walkthrough.**
+
+## CRITICAL FIX — CREATE_MENU offline planning (found during Section 12 walkthrough) — COMPLETE
+
+Section 12 end-to-end walkthrough (via QA, live portal server) found: CREATE_MENU jobs unconditionally crashed without live TAH admin credentials at the destination-snapshot check in `src/portal/worker.ts`, blocking the ENTIRE pipeline (extraction->TargetMenu->quality contract->review->ExecutionBundle->approval) in any non-live environment. Root cause: code comment said check should be conditional on credentials/allowlist, but implementation was unconditional. This path had ZERO prior test coverage (certification tests bypass worker.ts entirely; existing worker.test.ts only covered the early source_url branch).
+
+Architect-approved fix (commit dcbbb38): `requireLiveSnapshot = isQa || destLoad.status !== "OFFLINE_EXPLICIT"` - QA_RECONCILE always requires LIVE_COMPLETE (unchanged), CREATE_MENU may plan offline when genuinely no credentials/allowlist enable live load, but STILL fails closed if a live load was attempted and failed/partial.
+
+Builder additionally discovered and closed a related edge case (justified scope expansion, confirmed necessary by Reviewer): an offline-planned bundle's hash (from an empty simulated destination) could coincidentally MATCH a genuinely-empty REAL live destination's hash, defeating STALE_EXECUTION_BUNDLE hash-comparison protection. Fixed by adding required `destinationSnapshotStatus` provenance field to ExecutionBundleV1, validated as LIVE_COMPLETE BEFORE hash comparison in validateExecutionBundle.
+
+Reviewer PASS: confirmed core fix matches spec, confirmed hash-collision scenario is real/exploitable without the closure, confirmed zero changes to tah/domain/intelligence/auth/UI files.
+QA PASS: LIVE-SERVER re-test of the ORIGINAL failure - Veroni PDF CREATE_MENU job with no credentials now completes through EXTRACTING->ARTIFACTS->AWAITING_REVIEW->AWAITING_OPERATOR_APPROVAL (previously crashed to FAILED); confirmed target-menu.json/menu-quality-contract.json/execution-bundle.json all generated; confirmed ApprovalPanel renders correctly with new field; confirmed QA_RECONCILE still fails closed offline; confirmed hash-collision protection blocks execution even on hash match; zero regression across all UI routes.
+
+5 files changed (+381 insertions). Commit: dcbbb38.
