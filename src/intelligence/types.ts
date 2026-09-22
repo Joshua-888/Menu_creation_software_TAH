@@ -9,6 +9,7 @@ import type { IngredientLikelihoodPolicy } from "../learning/ingredientLikelihoo
 import type { AdditionLikelihoodPolicy } from "../learning/additionLikelihood.js";
 import type { DecisionStore } from "../decisions/store.js";
 import type { CompletenessBenchmark } from "./completenessBenchmark.js";
+import type { SourceCoverageEvidence } from "./sourceCoverage.js";
 
 export type IntelligenceMode = "CREATE_MENU" | "QA_RECONCILE";
 
@@ -344,6 +345,14 @@ export type MenuIntelligenceInput = {
   ingredientLikelihood?: IngredientLikelihoodPolicy | null;
   additionLikelihood?: AdditionLikelihoodPolicy | null;
   constitutionVersion?: string;
+  /**
+   * RAW extraction-side coverage evidence. When supplied (CREATE from raw
+   * source), the central MenuQualityContract surfaces
+   * `SOURCE_PRODUCT_COVERAGE_SUSPICIOUS` as a menu-level REVIEW coherence
+   * finding for every caller of the intelligence spine. Omitted for QA/live
+   * paths, where there is no raw source to measure.
+   */
+  sourceCoverage?: SourceCoverageEvidence | null;
 };
 
 export type TargetMenu = CanonicalMenu;

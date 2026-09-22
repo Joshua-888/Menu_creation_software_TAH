@@ -30,6 +30,19 @@ Menu roll-up: `MENU_QUALITY_READY` / review / blocked accounting → READY / REV
 | `PRICE_SUPPORTED` / unresolved 0 | Unsupported 0 / missing price | product | BLOCK | BELLA-003 |
 | `PROVENANCE_SUFFICIENT` | Invented fields without provenance | product | REVIEW | quality-contract |
 | `SOURCE_PRODUCT_COVERAGE_SUSPICIOUS` | Sparse extraction vs dense evidence (e.g. 12→1) | menu | fail-closed / REVIEW | source-coverage, BELLA-001 |
+
+`SOURCE_PRODUCT_COVERAGE_SUSPICIOUS` is evaluated centrally by
+`evaluateMenuQualityContract` whenever the caller supplies raw extraction
+evidence (`SourceCoverageEvidence`, composed via
+`sourceCoverageEvidenceFromExtraction`). Every caller of the intelligence spine
+(`runMenuIntelligence`) therefore receives the coherence finding — portal Create,
+QA, certification and the blind-pilot harness — rather than only
+`src/portal/worker.ts`. Extraction evidence is currency-marked price rows plus
+candidate overage; bare integers are not price evidence. A menu-only evaluation
+(no source evidence, e.g. tests or live destination snapshots) emits no coverage
+finding and is byte-identical to before. The portal production pipeline keeps an
+intentionally stricter hard-fail at ingestion (`src/portal/worker.ts`) on top of
+the universal REVIEW-severity finding.
 | `INGREDIENT` validity (via FOOD_COMPLETENESS) | Empty food cards | product | REVIEW | constitution |
 | `PRODUCT_CHOICES_VALID` (explain path) | Malformed choices | product | REVIEW | domain validation |
 

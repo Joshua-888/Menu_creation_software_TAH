@@ -10,6 +10,7 @@ import { runDomainEngine } from "../domain/engine.js";
 import { normalizeSourceCategoriesByKind } from "../learning/categoryKindNaming.js";
 import { loadPeerSnapshots } from "../learning/peerArtifacts.js";
 import { runMenuIntelligence } from "../intelligence/menuIntelligenceEngine.js";
+import { sourceCoverageEvidenceFromExtraction } from "../intelligence/sourceCoverage.js";
 import type { MenuIntelligenceResult } from "../intelligence/types.js";
 import type { CanonicalMenu } from "../domain/schema/canonical.js";
 import type { SemanticMenu, SemanticProduct } from "./semanticComparator.js";
@@ -100,6 +101,7 @@ export async function runRawSourceCertification(
     restaurantName: input.restaurantName,
     restaurantKey: input.restaurantKey,
     canonicalMenu: domain.menu,
+    sourceCoverage: sourceCoverageEvidenceFromExtraction(extraction),
   });
 
   const targetMenu = intelligence.targetMenu;
