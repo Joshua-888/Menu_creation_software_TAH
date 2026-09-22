@@ -198,7 +198,24 @@ export function fanOutRestaurantAdditions(input: {
           const family = inferProductFamily({
             name: p.name,
             categoryName: cat.name,
+            ...(p.description ? { description: p.description } : {}),
           });
+
+          // Category/restaurant ingredient-union facts are generic structural
+          // fan-out and must never turn combo components into paid extras.
+          // Example: "Durum menu" contains kebab+sodavand+pomfritter; those are
+          // contents, not evidence that the combo should inherit every Durum
+          // category ingredient as an add-on. Exact-product facts remain allowed.
+          if (
+            family === "COMBO_MENU" &&
+            resolved.origin === "RESTAURANT_CATEGORY_OR_RESTAURANT_FACT"
+          ) {
+            notes.push(
+              `#${menuNumber ?? p.sourceId}: skip generic Tilbehør fan-out for COMBO_MENU`,
+            );
+            return p;
+          }
+
           const pool = buildAdditionCandidatePool({
             productName: p.name,
             categoryName: cat.name,
