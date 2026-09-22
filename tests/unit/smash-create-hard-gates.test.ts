@@ -7,6 +7,7 @@ import {
   ingredientTextFromLines,
   detectNamePriceCandidates,
 } from "../../src/extraction/pdf/namePriceExtract.js";
+import { extractCommaPrices } from "../../src/extraction/pdf/prices.js";
 import {
   normalizeSourceCategoriesByKind,
   peerModalCategoryForKind,
@@ -98,6 +99,61 @@ describe("namePrice OCR helpers (merchant-agnostic)", () => {
     expect(burger?.ingredientText ?? burger?.description ?? "").toMatch(
       /pomfritter/i,
     );
+  });
+});
+
+describe("DKK currency-suffix price recognition (merchant-agnostic)", () => {
+  it("recognizes 'NNN DKK' suffix prices case-insensitively", () => {
+    expect(extractCommaPrices("FALAFEL 85 DKK")).toEqual([85]);
+    expect(extractCommaPrices("BEEF SHAWARMA 105 DKK")).toEqual([105]);
+    expect(extractCommaPrices("BEEF SHAWARMA 105 Dkk")).toEqual([105]);
+    expect(extractCommaPrices("BEEF SHAWARMA 105 dkk")).toEqual([105]);
+  });
+
+  it("still recognizes legacy comma / '-' kroner forms unchanged", () => {
+    expect(extractCommaPrices("99,-")).toEqual([99]);
+    expect(extractCommaPrices("99,")).toEqual([99]);
+    expect(extractCommaPrices("I15, 220,")).toEqual([115, 220]);
+  });
+
+  it("does not treat a bare number without a currency marker as a price", () => {
+    expect(extractCommaPrices("65")).toEqual([]);
+    expect(extractCommaPrices("Menu 65")).toEqual([]);
+  });
+
+  it("pairs an unnumbered title with a 'NNN DKK' price line", () => {
+    const found = detectNamePriceCandidates(
+      [
+        {
+          pageNumber: 1,
+          width: 800,
+          height: 1000,
+          rawText: "Falafel 85 DKK",
+          items: [],
+          lines: [
+            {
+              y: 500,
+              text: "Falafel 85 DKK",
+              items: [
+                {
+                  str: "Falafel 85 DKK",
+                  x: 40,
+                  y: 500,
+                  width: 200,
+                  height: 20,
+                },
+              ],
+            },
+          ],
+          classification: "MENU_CONTENT",
+          classificationReason: "test",
+          sourceKind: "pdf",
+        },
+      ],
+      "fixture.pdf",
+    );
+    const falafel = found.find((c) => /falafel/i.test(c.name ?? ""));
+    expect(falafel?.rawPrices).toContain(85);
   });
 });
 

@@ -142,7 +142,13 @@ export function submitReviewAnswer(
   const remaining = store.listOpenQuestions(question.jobId).length;
   if (remaining === 0) {
     const job = store.getJob(question.jobId);
-    if (job?.workflow === "CREATE_MENU") {
+    // Safety: never promote a BLOCKED MenuQualityContract to operator approval.
+    // STATE_MACHINE_V1 defines no blocked-pending-approval status, so blocked
+    // jobs settle on READY_DRY_RUN (the same state answerQuestion selects).
+    const qualityBlocked =
+      job?.workflow === "CREATE_MENU" &&
+      store.isMenuQualityBlocked(question.jobId);
+    if (job?.workflow === "CREATE_MENU" && !qualityBlocked) {
       store.updateJobStatus(question.jobId, "AWAITING_OPERATOR_APPROVAL", {
         remainingQuestions: 0,
         errorMessage: null,

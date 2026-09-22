@@ -28,6 +28,7 @@ import type {
   QualityCheckResult,
   QualityStatus,
 } from "./types.js";
+import type { SourceCoverageDiagnostic } from "./sourceCoverage.js";
 
 function check(
   id: QualityCheckResult["id"],
@@ -430,7 +431,10 @@ function coherence(
   return detail ? { id, pass, detail } : { id, pass };
 }
 
-function evaluateMenuCoherence(menu: CanonicalMenu): MenuCoherenceCheck[] {
+function evaluateMenuCoherence(
+  menu: CanonicalMenu,
+  sourceCoverage?: SourceCoverageDiagnostic | null,
+): MenuCoherenceCheck[] {
   const checks: MenuCoherenceCheck[] = [];
   const allProducts = menu.categories.flatMap((c) =>
     c.products.map((p) => ({ ...p, categoryName: c.name })),
@@ -503,14 +507,40 @@ function evaluateMenuCoherence(menu: CanonicalMenu): MenuCoherenceCheck[] {
     ),
   );
 
+  // Source→product coverage coherence (universal, menu level). Only surfaced when
+  // the caller supplies extraction evidence, so a menu-only evaluation (tests,
+  // live destination snapshots) is unchanged. Severity is REVIEW: dense source
+  // evidence with suspiciously few extracted products is a review signal, never
+  // an automatic BLOCK. The portal production pipeline additionally hard-fails at
+  // ingestion (see src/portal/worker.ts) — that is an intentionally stricter
+  // production-safety stop on top of this universal default, not a replacement.
+  // The check is only emitted when suspicious so non-suspicious menus keep an
+  // identical coherence array (zero drift for golden fixtures).
+  if (sourceCoverage?.suspicious) {
+    checks.push(
+      coherence(
+        "SOURCE_PRODUCT_COVERAGE_SUSPICIOUS",
+        false,
+        sourceCoverage.detail,
+      ),
+    );
+  }
+
   return checks;
 }
 
 /**
  * Evaluate MenuQualityContract for an entire target menu.
+ *
+ * `sourceCoverage` is optional extraction-side evidence. When supplied, the
+ * central contract surfaces `SOURCE_PRODUCT_COVERAGE_SUSPICIOUS` as a menu-level
+ * REVIEW coherence finding for every caller — not only the portal worker. When
+ * omitted (menu-only callers, live destination snapshots), behaviour is
+ * identical to before: no coverage finding is emitted.
  */
 export function evaluateMenuQualityContract(
   menu: CanonicalMenu,
+  sourceCoverage?: SourceCoverageDiagnostic | null,
 ): MenuQualityContractResult {
   const products: ProductQualityResult[] = [];
   for (const cat of menu.categories) {
@@ -518,7 +548,7 @@ export function evaluateMenuQualityContract(
       products.push(evaluateProduct(p, cat.name));
     }
   }
-  const coherence = evaluateMenuCoherence(menu);
+  const coherence = evaluateMenuCoherence(menu, sourceCoverage);
   const coherenceFail = coherence.filter((c) => !c.pass);
 
   const readyProductIds = products

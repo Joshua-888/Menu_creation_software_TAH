@@ -2,8 +2,8 @@
  * Portal SQLite store — employees, sessions, migration jobs, review queue.
  */
 
-import { mkdirSync } from "node:fs";
-import { dirname } from "node:path";
+import { existsSync, mkdirSync, readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 import { randomUUID } from "node:crypto";
 import { DatabaseSync } from "node:sqlite";
 import {
@@ -515,6 +515,31 @@ export class PortalStore {
     return rows.map((r) => this.mapJob(r));
   }
 
+  /** All jobs for one restaurant_key, newest first. */
+  listJobsForRestaurant(restaurantKey: string): MigrationJob[] {
+    const rows = this.db
+      .prepare(
+        `SELECT id, merchant_name, restaurant_key, destination_host, source_type,
+                source_url, workflow, status, created_by_employee_id, error_message,
+                remaining_questions, created_at, updated_at
+         FROM jobs WHERE restaurant_key = ? ORDER BY created_at DESC`,
+      )
+      .all(restaurantKey) as Record<string, unknown>[];
+    return rows.map((r) => this.mapJob(r));
+  }
+
+  /** Distinct restaurant keys known to the portal, newest activity first. */
+  listRestaurantKeys(): string[] {
+    const rows = this.db
+      .prepare(
+        `SELECT restaurant_key, MAX(updated_at) AS last_updated
+         FROM jobs GROUP BY restaurant_key
+         ORDER BY last_updated DESC`,
+      )
+      .all() as Array<{ restaurant_key: string }>;
+    return rows.map((r) => String(r.restaurant_key));
+  }
+
   private mapJob(row: Record<string, unknown>): MigrationJob {
     const workflowRaw = String(row.workflow ?? "CREATE_MENU");
     const workflow: JobWorkflow =
@@ -635,6 +660,10 @@ export class PortalStore {
       )
       .get(jobId) as Record<string, unknown> | undefined;
     if (!row) return null;
+    return this.mapRun(row);
+  }
+
+  private mapRun(row: Record<string, unknown>): JobRun {
     return {
       id: String(row.id),
       jobId: String(row.job_id),
@@ -644,6 +673,81 @@ export class PortalStore {
       status: row.status as JobStatus,
       metricsJson: (row.metrics_json as string | null) ?? null,
       errorMessage: (row.error_message as string | null) ?? null,
+    };
+  }
+
+  /**
+   * True when the job's latest run wrote a BLOCKED MenuQualityContract.
+   *
+   * Safety gate: a menu whose quality contract reports
+   * `MENU_QUALITY_BLOCKED` must never reach operator approval or live
+   * execution. Reads `menu-quality-contract.json`, falling back to
+   * `quality-report.json`, using the same precedence as the job page.
+   *
+   * STATE_MACHINE_V1.md defines no distinct "blocked-pending-approval" status,
+   * so blocked jobs stay out of AWAITING_OPERATOR_APPROVAL and settle on the
+   * existing READY_DRY_RUN state — the same non-writable state already used
+   * when the create-card gate is not ok.
+   *
+   * Missing/unreadable artifacts return `false` for older jobs; this does not
+   * widen approval scope because AWAITING_OPERATOR_APPROVAL itself requires an
+   * approving create-card gate artifact.
+   */
+  isMenuQualityBlocked(jobId: string): boolean {
+    const run = this.latestJobRun(jobId);
+    if (!run?.runDir) return false;
+    for (const name of [
+      "menu-quality-contract.json",
+      "quality-report.json",
+    ]) {
+      const path = join(run.runDir, name);
+      if (!existsSync(path)) continue;
+      try {
+        const parsed = JSON.parse(readFileSync(path, "utf8")) as {
+          menuStatus?: unknown;
+        };
+        return parsed?.menuStatus === "MENU_QUALITY_BLOCKED";
+      } catch {
+        return false;
+      }
+    }
+    return false;
+  }
+
+  /** All runs for a job, newest first (history timeline source). */
+  listJobRuns(jobId: string): JobRun[] {
+    const rows = this.db
+      .prepare(
+        `SELECT id, job_id, run_dir, started_at, finished_at, status, metrics_json, error_message
+         FROM job_runs WHERE job_id = ? ORDER BY started_at DESC`,
+      )
+      .all(jobId) as Record<string, unknown>[];
+    return rows.map((r) => this.mapRun(r));
+  }
+
+  /** All review answers for a job, newest first (history timeline source). */
+  listReviewAnswers(jobId: string): ReviewAnswer[] {
+    const rows = this.db
+      .prepare(
+        `SELECT id, question_id, job_id, employee_id, selected_option_id, resolution,
+                scope_preference, comment, created_at
+         FROM review_answers WHERE job_id = ? ORDER BY created_at DESC`,
+      )
+      .all(jobId) as Record<string, unknown>[];
+    return rows.map((r) => this.mapReviewAnswer(r));
+  }
+
+  private mapReviewAnswer(r: Record<string, unknown>): ReviewAnswer {
+    return {
+      id: String(r.id),
+      questionId: String(r.question_id),
+      jobId: String(r.job_id),
+      employeeId: String(r.employee_id),
+      selectedOptionId: String(r.selected_option_id),
+      resolution: String(r.resolution),
+      scopePreference: r.scope_preference as ReviewAnswer["scopePreference"],
+      comment: (r.comment as string | null) ?? null,
+      createdAt: String(r.created_at),
     };
   }
 
@@ -821,9 +925,14 @@ export class PortalStore {
 
     const remaining = this.listOpenQuestions(q.jobId).length;
     const workflow = this.getJob(q.jobId)?.workflow;
+    // Safety: a BLOCKED MenuQualityContract must never reach operator approval.
+    // STATE_MACHINE_V1 defines no blocked-pending-approval status, so blocked
+    // jobs settle on READY_DRY_RUN (same non-writable state as a failed card gate).
+    const qualityBlocked =
+      workflow === "CREATE_MENU" && this.isMenuQualityBlocked(q.jobId);
     const nextStatus: JobStatus = remaining
       ? "AWAITING_REVIEW"
-      : workflow === "CREATE_MENU"
+      : workflow === "CREATE_MENU" && !qualityBlocked
         ? "AWAITING_OPERATOR_APPROVAL"
         : "READY_DRY_RUN";
     this.updateJobStatus(q.jobId, nextStatus, {

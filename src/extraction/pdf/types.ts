@@ -1,4 +1,5 @@
 import type { SourceEvidence } from "../../domain/evidence.js";
+import type { ValueOrigin } from "../../domain/provenance.js";
 
 export type PageClass =
   | "COVER"
@@ -65,6 +66,12 @@ export type SourceCandidate = {
   rawPrices: number[];
   rawVariantNames: string[];
   rawVariantPrices: number[];
+  /**
+   * Provenance of the bound price. Set to DERIVED when the price was inherited
+   * from a uniform sub-section group price rather than read on the dish's own
+   * line. Absent means the price was read directly (SOURCE).
+   */
+  priceOrigin?: ValueOrigin;
   /** Spatial price-column mode for this product row. */
   priceMode?:
     | "alm_familie"

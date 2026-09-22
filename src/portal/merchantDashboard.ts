@@ -92,6 +92,27 @@ export function workflowLabel(workflow: JobWorkflow): string {
   return workflow === "QA_RECONCILE" ? "Quality check" : "Create menu";
 }
 
+/** Options for selecting an existing restaurant when creating a new job. */
+export type RestaurantOption = {
+  restaurantKey: string;
+  merchantName: string;
+  destinationHost: string;
+  lastUpdatedAt: string;
+};
+
+/**
+ * Distinct restaurants derived from the job list, most recently active first.
+ * Purely presentational — reuses already-computed dashboard rows.
+ */
+export function restaurantOptions(jobs: MigrationJob[]): RestaurantOption[] {
+  return buildMerchantDashboard(jobs).map((row) => ({
+    restaurantKey: row.restaurantKey,
+    merchantName: row.merchantName,
+    destinationHost: row.destinationHost,
+    lastUpdatedAt: row.updatedAt,
+  }));
+}
+
 /** One row per restaurant_key — latest job wins for status. */
 export function buildMerchantDashboard(
   jobs: MigrationJob[],

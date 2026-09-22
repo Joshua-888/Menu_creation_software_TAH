@@ -25,11 +25,19 @@ export function parseKronerToOre(raw: string): MoneyMinor | null {
   return kronerToOre(k);
 }
 
+/**
+ * Currency suffix forms are merchant-agnostic. Danish menus print prices as
+ * "95,-", "95,00", or "95 DKK" (case-insensitive). "kr" is intentionally not
+ * treated as a bare suffix here — the layout pipeline already anchors comma /
+ * "kr"-prefix forms and adding a bare "kr" suffix would widen detection.
+ */
+const DKK_SUFFIX = String.raw`dkk\b`;
+
 /** Extract kroner-looking tokens from a text blob, in order. */
 export function extractKronerValues(text: string): number[] {
   const repaired = repairOcrPriceText(text);
   const out: number[] = [];
-  for (const m of repaired.matchAll(/\b(\d{1,4})\s*,-?(?!\d)/g)) {
+  for (const m of repaired.matchAll(new RegExp(String.raw`\b(\d{1,4})\s*(?:,-?(?!\d)|${DKK_SUFFIX})`, "gi"))) {
     const v = parseKronerToken(m[1]!);
     if (v !== null && v >= 5 && v <= 500) out.push(v);
   }
@@ -46,8 +54,9 @@ export function extractKronerValues(text: string): number[] {
 export function extractCommaPrices(text: string): number[] {
   const repaired = repairOcrPriceText(text);
   const out: number[] = [];
-  for (const m of repaired.matchAll(/\b(\d{1,4})\s*,-?/g)) {
-    const v = parseKronerToken(`${m[1]},`);
+  const re = new RegExp(String.raw`\b(\d{1,4})\s*(?:,-?|${DKK_SUFFIX})`, "gi");
+  for (const m of repaired.matchAll(re)) {
+    const v = parseKronerToken(m[1]!);
     if (v !== null && v >= 5 && v <= 500) out.push(v);
   }
   return out;

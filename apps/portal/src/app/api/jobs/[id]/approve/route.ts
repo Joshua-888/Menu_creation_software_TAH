@@ -33,6 +33,16 @@ export async function POST(
       { status: 409 },
     );
   }
+  // Safety: never approve a TargetMenu whose quality contract is BLOCKED.
+  if (store.isMenuQualityBlocked(id)) {
+    return NextResponse.json(
+      {
+        error:
+          "MENU_QUALITY_BLOCKED: TargetMenu quality is BLOCKED. Cannot approve blocked menus.",
+      },
+      { status: 409 },
+    );
+  }
   if (!schedulePostReviewLiveIfReady(id)) {
     return NextResponse.json(
       { error: "Approval could not be scheduled" },

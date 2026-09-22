@@ -20,6 +20,11 @@ export const SourceVariantSchema = z.object({
   sourceTotalPrice: MoneyMinorSchema.optional(),
   /** Explicit surcharge like "+80" already expressed as surcharge. */
   sourceExplicitSurcharge: MoneyMinorSchema.optional(),
+  /**
+   * Provenance of `sourceTotalPrice`. Absent/`SOURCE` means the price was read
+   * directly; `DERIVED` marks a group-inherited price (uniform sub-section).
+   */
+  priceOrigin: ValueOriginSchema.optional(),
   evidence: SourceEvidenceSchema.optional(),
 });
 

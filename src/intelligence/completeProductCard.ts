@@ -236,8 +236,13 @@ function inferDomainIngredientsFromName(input: {
     input.family === "PIZZA" ||
     input.family === "CALZONE" ||
     input.family === "SALATPIZZA" ||
-    /pizza|calzone|ufo|indbagt|bambino/i.test(name) ||
-    /pizza|calzone|ufo|indbagt/i.test(input.categoryName)
+    // NOTE: "indbagt" (Danish for battered/deep-fried) is a generic cooking
+    // method word, NOT a pizza/calzone signal. Bare name/category matching on
+    // it fabricated pizza toppings on unrelated fried dishes (WP-F). Pizza
+    // topping injection now requires a real pizza/calzone family or an
+    // unambiguous pizza-shop token/category.
+    /pizza|calzone|ufo|bambino/i.test(name) ||
+    /pizza|calzone|ufo/i.test(input.categoryName)
   ) {
     push("Tomat");
     push("Ost");
@@ -252,7 +257,7 @@ function inferDomainIngredientsFromName(input: {
       push("Paprika");
       push("Løg");
     }
-    if (/calzone|indbagt/i.test(name) || input.family === "CALZONE") {
+    if (/calzone/i.test(name) || input.family === "CALZONE") {
       push("Skinke");
     }
     if (/\bufo\b/i.test(name)) {

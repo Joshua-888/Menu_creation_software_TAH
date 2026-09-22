@@ -48,7 +48,9 @@ export {
 } from "./completenessBenchmark.js";
 export {
   diagnoseSourceProductCoverage,
+  sourceCoverageEvidenceFromExtraction,
   type SourceCoverageDiagnostic,
+  type SourceCoverageEvidence,
 } from "./sourceCoverage.js";
 export { applyApprovedFactsToMenu } from "./applyApprovedFacts.js";
 export {

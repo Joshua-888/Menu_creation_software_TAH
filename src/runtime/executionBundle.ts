@@ -1,8 +1,12 @@
 import type { WritePlanOperation } from "../runner/writePlan.js";
 import { sha256Canonical } from "./sha.js";
 import { normalizeDestinationHost } from "../tah/write/hostAllowlist.js";
+import type { DestinationSnapshotResult } from "./destinationSnapshot.js";
 
 export const EXECUTION_BUNDLE_VERSION = "ExecutionBundleV1" as const;
+
+/** Provenance of the destination snapshot the bundle was planned against. */
+export type DestinationSnapshotProvenance = DestinationSnapshotResult["status"];
 
 export type ExecutionBundleV1 = {
   bundleVersion: typeof EXECUTION_BUNDLE_VERSION;
@@ -14,6 +18,13 @@ export type ExecutionBundleV1 = {
   contractFingerprint: string;
   targetMenuHash: string;
   destinationSnapshotHash: string;
+  /**
+   * Status of the destination snapshot used to plan this bundle. Execution may
+   * only trust a bundle whose provenance is LIVE_COMPLETE: an OFFLINE_EXPLICIT
+   * plan can hash-match a genuinely empty live destination, so the hash alone
+   * must never authorize a live write.
+   */
+  destinationSnapshotStatus: DestinationSnapshotProvenance;
   writePlanHash: string;
   createdAt: string;
   operations: readonly WritePlanOperation[];
@@ -29,6 +40,7 @@ export type ExecutionBundleApprovalBinding = {
   productionSha: string;
   targetMenuHash: string;
   destinationSnapshotHash: string;
+  destinationSnapshotStatus: DestinationSnapshotProvenance;
   writePlanHash: string;
 };
 
@@ -47,6 +59,7 @@ export function freezeExecutionBundle(input: {
   contractFingerprint: string;
   targetMenuHash: string;
   destinationSnapshotHash: string;
+  destinationSnapshotStatus: DestinationSnapshotProvenance;
   operations: readonly WritePlanOperation[];
   qualityStatus: string;
   createdAt?: string;
@@ -67,6 +80,7 @@ export function freezeExecutionBundle(input: {
     contractFingerprint: input.contractFingerprint,
     targetMenuHash: input.targetMenuHash,
     destinationSnapshotHash: input.destinationSnapshotHash,
+    destinationSnapshotStatus: input.destinationSnapshotStatus,
     writePlanHash,
     createdAt: input.createdAt ?? new Date().toISOString(),
     operations,
@@ -93,6 +107,7 @@ export function approvalBindingFromBundle(
     productionSha: bundle.productionSha,
     targetMenuHash: bundle.targetMenuHash,
     destinationSnapshotHash: bundle.destinationSnapshotHash,
+    destinationSnapshotStatus: bundle.destinationSnapshotStatus,
     writePlanHash: bundle.writePlanHash,
   };
 }
@@ -114,6 +129,13 @@ export function validateExecutionBundle(input: {
       ok: false,
       code: "APPROVAL_INVALIDATED",
       reason: `bundleVersion ${bundle.bundleVersion}`,
+    };
+  }
+  if (bundle.destinationSnapshotStatus !== "LIVE_COMPLETE") {
+    return {
+      ok: false,
+      code: "STALE_EXECUTION_BUNDLE",
+      reason: `bundle was planned against destinationSnapshotStatus=${bundle.destinationSnapshotStatus}; only LIVE_COMPLETE provenance is live-executable (regenerate/reapprove against a live snapshot)`,
     };
   }
   if (hashWritePlanOperations(bundle.operations) !== bundle.writePlanHash) {

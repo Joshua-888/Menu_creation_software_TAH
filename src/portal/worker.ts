@@ -50,8 +50,10 @@ import { normalizeSourceCategoriesByKind } from "../learning/categoryKindNaming.
 import { assertCreateCardQuality } from "../domain/menuCardQuality.js";
 import {
   diagnoseSourceProductCoverage,
+  sourceCoverageEvidenceFromExtraction,
   runMenuIntelligence,
   MENU_CONSTITUTION_VERSION,
+  type SourceCoverageEvidence,
 } from "../intelligence/index.js";
 import { buildAndWritePolicyApplicationReport } from "../learning/policyApplicationReport.js";
 import type { StructurePatternSummary } from "../learning/peerMenuStructure.js";
@@ -302,6 +304,10 @@ export async function runMigrationJob(
       .run("EXTRACTING", runStub.id);
 
     let recovered: ReturnType<typeof applyPizzaToppingRecovery>;
+    // RAW extraction-side coverage evidence, computed once in the Create branch
+    // and passed into the central intelligence spine so the quality contract can
+    // surface SOURCE_PRODUCT_COVERAGE_SUSPICIOUS for every caller (not only here).
+    let sourceCoverageEvidence: SourceCoverageEvidence | null = null;
 
     if (isQaJob) {
       const destLoad = await loadDestinationSnapshotForDryRun({
@@ -359,14 +365,13 @@ export async function runMigrationJob(
       });
       metrics.pageCount = extraction.pageCount;
       metrics.uniqueProducts = extraction.uniqueProducts;
-      const sourceCoverage = diagnoseSourceProductCoverage({
-        accounting: extraction.accounting,
-        uniqueProducts: extraction.uniqueProducts,
-        rawText: extraction.pages.map((page) => page.rawText).join("\n"),
-        ocrRows: extraction.pages.flatMap((page) =>
-          page.lines.map((line) => line.text),
-        ),
-      });
+      // Build coverage evidence once (shared with the central quality contract)
+      // and derive the diagnostic. The portal keeps a STRICTER production-safety
+      // hard-fail here: ingestion stops on suspicious coverage rather than only
+      // surfacing the universal REVIEW coherence finding that the contract
+      // emits for every caller (certification/pilot included).
+      sourceCoverageEvidence = sourceCoverageEvidenceFromExtraction(extraction);
+      const sourceCoverage = diagnoseSourceProductCoverage(sourceCoverageEvidence);
       writeJson(outDir, "source-coverage.json", sourceCoverage);
       if (sourceCoverage.suspicious) {
         throw new Error(sourceCoverage.detail);
@@ -535,6 +540,7 @@ export async function runMigrationJob(
       ingredientLikelihood: ingredientLikelihoodEarly,
       additionLikelihood,
       probabilityPolicy: probabilityPolicyEarly,
+      sourceCoverage: sourceCoverageEvidence,
     });
     recovered.menu = intelligence.targetMenu;
     writeJson(outDir, "target-menu.json", recovered.menu);
@@ -583,9 +589,18 @@ export async function runMigrationJob(
         destinationHost: job.destinationHost,
         deep: isQa,
       }));
-    // Always require a real live catalog whenever credentials/allowlist enable it
-    // (and always for QA). Never plan against an empty fake destination.
-    if (destLoad.source !== "live" || destLoad.status !== "LIVE_COMPLETE") {
+    // Require a real live catalog whenever credentials/allowlist enable it (and
+    // always for QA). An OFFLINE_EXPLICIT load means live planning was simply not
+    // attempted/enabled (no credentials or host not allowlisted), so CREATE_MENU may
+    // plan against the empty snapshot. Any other non-LIVE_COMPLETE status means a live
+    // load WAS attempted but failed/partial — that must still fail closed rather than
+    // silently plan against an empty catalog.
+    const requireLiveSnapshot =
+      isQa || destLoad.status !== "OFFLINE_EXPLICIT";
+    if (
+      requireLiveSnapshot &&
+      (destLoad.source !== "live" || destLoad.status !== "LIVE_COMPLETE")
+    ) {
       const detail = destLoad.error ?? `snapshot status=${destLoad.status}`;
       const chromiumHint = /BROWSER_RUNTIME_UNAVAILABLE|Executable doesn't exist|playwright install/i.test(
         detail,
@@ -600,6 +615,7 @@ export async function runMigrationJob(
     writeJson(outDir, "dry-destination-snapshot.json", destination);
     writeJson(outDir, "destination-snapshot-meta.json", {
       source: destLoad.source,
+      status: destLoad.status,
       host: destination.host,
       categoryCount: destination.categories.length,
       productCount: destination.products.length,
@@ -659,6 +675,7 @@ export async function runMigrationJob(
       contractFingerprint: fingerprint.fingerprint,
       targetMenuHash: sha256Canonical(recovered.menu),
       destinationSnapshotHash,
+      destinationSnapshotStatus: destLoad.status,
       operations: plan.operations,
       qualityStatus: intelligence.quality.menuStatus,
     });
@@ -973,6 +990,9 @@ export function schedulePostReviewLiveIfReady(jobId: string): boolean {
   const store = getPortalStore();
   const job = store.getJob(jobId);
   if (!job || job.status !== "AWAITING_OPERATOR_APPROVAL") return false;
+  // Safety (defense-in-depth): a BLOCKED MenuQualityContract must never be
+  // scheduled for live execution even if a caller bypasses the approval API.
+  if (store.isMenuQualityBlocked(jobId)) return false;
   if (store.listOpenQuestions(jobId).length > 0) return false;
   const liveGate = evaluatePortalLiveWriteGate({
     destinationHost: job.destinationHost,

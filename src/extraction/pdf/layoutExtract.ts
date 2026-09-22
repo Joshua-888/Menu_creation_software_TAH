@@ -18,6 +18,7 @@ import {
   stripMenuNumberFalsePrices,
 } from "./priceNormalize.js";
 import { extractCommaPrices, parseKronerToken } from "./prices.js";
+import { isBoilerplateFooterLine } from "./boilerplate.js";
 import {
   applyRenderedPageFallback,
   looksLikeOcrGarbageName,
@@ -37,8 +38,24 @@ export type PriceColumnMode =
   | "single"
   | "none";
 
+/**
+ * Course-level dividers that stand for a course *within* an enclosing
+ * cuisine/section (e.g. Veroni's `INDISK` → `Forretter` → `INDISK / Forretter`).
+ * The words themselves are generic Danish menu vocabulary — never a cuisine.
+ */
+const COURSE_SUB_HEADINGS = new Set(["Forretter", "Hovedretter"]);
+
+/**
+ * Enclosing cuisine/kitchen headings that may qualify a following course
+ * divider. Cuisine words are generic domain vocabulary (INDISK = Indian), not
+ * a merchant-specific mapping.
+ */
+const PARENT_SECTION_HEADINGS = new Set(["INDISK"]);
+
 type SectionState = {
   section: string;
+  /** Last enclosing cuisine/section heading, used to qualify course dividers. */
+  parentSection: string | null;
   priceMode: PriceColumnMode;
   /** One-shot Lille/Stor for the next product only. */
   pendingLocalVariants: string[] | null;
@@ -57,8 +74,17 @@ const SECTION_HEADINGS: Array<{ re: RegExp; name: string }> = [
   { re: /^sandwich\b.*hjemmelavet/i, name: "Sandwich - hjemmelavet inkl. pommes frites" },
   { re: /^nachos$/i, name: "Nachos" },
   { re: /^indisk$/i, name: "INDISK" },
-  { re: /^forretter$/i, name: "INDISK / Forretter" },
-  { re: /^hovedretter$/i, name: "INDISK / Hovedretter" },
+  { re: /^supper?$/i, name: "Supper" },
+  { re: /^forretter$/i, name: "Forretter" },
+  { re: /^hovedretter$/i, name: "Hovedretter" },
+  { re: /^seafood$/i, name: "Seafood" },
+  { re: /^and$/i, name: "And" },
+  { re: /^oksek[øo]d$/i, name: "Oksekød" },
+  { re: /^kylling$/i, name: "Kylling" },
+  { re: /^svinek[øo]d$/i, name: "Svinekød" },
+  { re: /^ris\s+og\s+nudler$/i, name: "Ris og nudler" },
+  { re: /^b[øo]rnemenu(?:er)?$/i, name: "Børnemenu" },
+  { re: /^dessert(?:er)?$/i, name: "Dessert" },
   { re: /^drikkevarer$/i, name: "DRIKKEVARER" },
   { re: /^pizza$/i, name: "PIZZA" },
 ];
@@ -353,10 +379,20 @@ export function detectSourceCandidatesLayout(
     }
 
     const imageSource = page.sourceKind === "image";
+    // A page starts in PIZZA only when it actually carries a pizza heading
+    // signal; the previous page-number prior ("pages 1-4 are pizza") silently
+    // miscategorised non-pizza content such as soups. Photos must earn a
+    // category from visible evidence; otherwise sections remain unresolved.
+    const pageHasPizzaHeading = page.lines.some((l) => {
+      const t = l.text.trim();
+      return (
+        detectSectionHeading(t) === "PIZZA" ||
+        /^pizza\s+(alm\.?|familie)\b/i.test(t)
+      );
+    });
     let state: SectionState = {
-      // Page-number defaults are a legacy PDF layout prior. Photos must earn a
-      // category from visible evidence; otherwise they remain unresolved.
-      section: !imageSource && page.pageNumber <= 4 ? "PIZZA" : "UNKNOWN",
+      section: !imageSource && pageHasPizzaHeading ? "PIZZA" : "UNKNOWN",
+      parentSection: !imageSource && pageHasPizzaHeading ? "PIZZA" : null,
       priceMode:
         imageSource
           ? "single"
@@ -369,21 +405,47 @@ export function detectSourceCandidatesLayout(
     /** Consecutive single-price rows while Menu-column mode is active → column ended. */
     let consecutiveBaseMenuSingles = 0;
 
-    const lines = page.lines.map((l) => l.text);
+    // Drop page footer/navigation boilerplate (print URLs, embedded PDF paths,
+    // call-to-action banners) before any product grouping so it can never leak
+    // into a product name, bundle or evidence description.
+    const lines = page.lines
+      .map((l) => l.text)
+      .filter((text) => !isBoilerplateFooterLine(text));
     let i = 0;
     while (i < lines.length) {
       const line = lines[i]!;
 
       const heading = detectSectionHeading(line);
       if (heading) {
+        // A generic course divider ("Forretter"/"Hovedretter") is qualified by
+        // the enclosing cuisine/section when one is active (e.g. Veroni's
+        // `INDISK` heading → `INDISK / Forretter`); without a qualifying parent
+        // it stays the plain generic course name. This is what removes the
+        // restaurant-specific hardcoded `Forretter → INDISK / Forretter` map.
+        const parent = state.parentSection;
+        const composed =
+          COURSE_SUB_HEADINGS.has(heading) &&
+          parent &&
+          PARENT_SECTION_HEADINGS.has(parent)
+            ? `${parent} / ${heading}`
+            : heading;
+        const nextParent = PARENT_SECTION_HEADINGS.has(heading)
+          ? heading
+          : COURSE_SUB_HEADINGS.has(heading)
+            ? parent
+            : heading;
         state = {
-          section: heading,
+          section: composed,
+          parentSection:
+            nextParent && PARENT_SECTION_HEADINGS.has(nextParent)
+              ? nextParent
+              : null,
           priceMode:
-            heading === "PIZZA" ||
-            heading.startsWith("Salat") ||
-            heading.startsWith("Vegetar")
+            composed === "PIZZA" ||
+            composed.startsWith("Salat") ||
+            composed.startsWith("Vegetar")
               ? "alm_familie"
-              : heading === "GRILL"
+              : composed === "GRILL"
                 ? "base_menu"
                 : "single",
           pendingLocalVariants: null,

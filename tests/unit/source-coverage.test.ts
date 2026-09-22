@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { diagnoseSourceProductCoverage } from "../../src/intelligence/sourceCoverage.js";
+import {
+  diagnoseSourceProductCoverage,
+  evaluateMenuQualityContract,
+} from "../../src/intelligence/index.js";
 import type { SourceAccounting } from "../../src/extraction/pdf/types.js";
+import {
+  CANONICAL_MENU_SCHEMA_VERSION,
+  DOMAIN_RULE_ENGINE_VERSION,
+} from "../../src/domain/versions.js";
+import type { CanonicalMenu } from "../../src/domain/schema/canonical.js";
 
 function accounting(candidatesDetected: number): SourceAccounting {
   return {
@@ -15,6 +23,39 @@ function accounting(candidatesDetected: number): SourceAccounting {
       blocked: 0,
       nonProduct: 0,
     },
+  };
+}
+
+function singleProductMenu(name = "Cheese Burger"): CanonicalMenu {
+  return {
+    restaurantName: "Coverage Fixture",
+    categories: [
+      {
+        sourceId: "c1",
+        name: "Burgers",
+        sourceOrder: 0,
+        commonIngredients: [],
+        products: [
+          {
+            sourceId: "p1",
+            categorySourceId: "c1",
+            name,
+            sourceOrder: 0,
+            ingredients: [],
+            variants: [],
+            addOns: [],
+            productChoices: [],
+            isCombo: false,
+            status: "READY",
+            issues: [],
+          },
+        ],
+      },
+    ],
+    schemaVersion: CANONICAL_MENU_SCHEMA_VERSION,
+    domainRulesVersion: DOMAIN_RULE_ENGINE_VERSION,
+    status: "READY",
+    issues: [],
   };
 }
 
@@ -41,5 +82,56 @@ describe("source product coverage", () => {
       rawText: "Burger 75 Kr.\nKebab 90 Kr.",
     });
     expect(result.suspicious).toBe(false);
+  });
+
+  it("central contract does NOT flag low product count with low source evidence", () => {
+    const menu = singleProductMenu();
+    const evidence = {
+      accounting: accounting(1),
+      uniqueProducts: 1,
+      rawText: "Cheese Burger 75 kr.",
+    };
+    const coverage = diagnoseSourceProductCoverage(evidence);
+    expect(coverage.suspicious).toBe(false);
+
+    const quality = evaluateMenuQualityContract(menu, coverage);
+    expect(
+      quality.coherence.some(
+        (c) => c.id === "SOURCE_PRODUCT_COVERAGE_SUSPICIOUS",
+      ),
+    ).toBe(false);
+  });
+
+  it("central contract surfaces coverage suspicion for ANY caller", () => {
+    const menu = singleProductMenu();
+    const evidence = {
+      accounting: accounting(1),
+      uniqueProducts: 1,
+      rawText: [
+        "Burger 75 kr.",
+        "Cheese burger 85 kr.",
+        "Kebab 90 kr.",
+        "Durum 95 kr.",
+      ].join("\n"),
+    };
+    const coverage = diagnoseSourceProductCoverage(evidence);
+    expect(coverage.suspicious).toBe(true);
+
+    const quality = evaluateMenuQualityContract(menu, coverage);
+    const finding = quality.coherence.find(
+      (c) => c.id === "SOURCE_PRODUCT_COVERAGE_SUSPICIOUS",
+    );
+    expect(finding).toBeDefined();
+    expect(finding?.pass).toBe(false);
+  });
+
+  it("central contract without source evidence emits no coverage finding", () => {
+    const menu = singleProductMenu();
+    const quality = evaluateMenuQualityContract(menu);
+    expect(
+      quality.coherence.some(
+        (c) => c.id === "SOURCE_PRODUCT_COVERAGE_SUSPICIOUS",
+      ),
+    ).toBe(false);
   });
 });

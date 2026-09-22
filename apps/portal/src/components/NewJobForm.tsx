@@ -1,17 +1,32 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import type { RestaurantOption } from "@engine/portal/merchantDashboard.js";
+
+type Mode = "existing" | "new";
 
 export function NewJobForm({
   workflow = "CREATE_MENU",
+  restaurants = [],
 }: {
   workflow?: "CREATE_MENU" | "QA_RECONCILE";
+  restaurants?: RestaurantOption[];
 }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const isQa = workflow === "QA_RECONCILE";
+  const hasExisting = restaurants.length > 0;
+  const [mode, setMode] = useState<Mode>(hasExisting ? "existing" : "new");
+  const [selectedKey, setSelectedKey] = useState(
+    hasExisting ? restaurants[0]!.restaurantKey : "",
+  );
+
+  const selected = useMemo(
+    () => restaurants.find((r) => r.restaurantKey === selectedKey) ?? null,
+    [restaurants, selectedKey],
+  );
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -20,6 +35,15 @@ export function NewJobForm({
     const form = e.currentTarget;
     const fd = new FormData(form);
     fd.set("workflow", workflow);
+    if (mode === "existing") {
+      if (!selected) {
+        setError("Select a restaurant");
+        setBusy(false);
+        return;
+      }
+      fd.set("merchantName", selected.merchantName);
+      fd.set("destinationHost", selected.destinationHost);
+    }
     try {
       const res = await fetch("/api/jobs", { method: "POST", body: fd });
       const data = (await res.json()) as { error?: string; id?: string };
@@ -38,21 +62,75 @@ export function NewJobForm({
   return (
     <form className="form-grid" onSubmit={onSubmit}>
       <input type="hidden" name="workflow" value={workflow} />
-      <div className="field">
-        <label htmlFor="merchantName">Merchant name</label>
-        <input id="merchantName" name="merchantName" required />
-      </div>
-      <div className="field">
-        <label htmlFor="destinationHost">
-          Destination TakeAwayHero ordering URL / host
-        </label>
-        <input
-          id="destinationHost"
-          name="destinationHost"
-          placeholder="https://merchant.example"
-          required
-        />
-      </div>
+
+      {hasExisting ? (
+        <div className="field">
+          <label>Restaurant</label>
+          <div className="choice-row">
+            <label className="choice">
+              <input
+                type="radio"
+                name="restaurantMode"
+                value="existing"
+                checked={mode === "existing"}
+                onChange={() => setMode("existing")}
+              />
+              Existing restaurant
+            </label>
+            <label className="choice">
+              <input
+                type="radio"
+                name="restaurantMode"
+                value="new"
+                checked={mode === "new"}
+                onChange={() => setMode("new")}
+              />
+              New restaurant
+            </label>
+          </div>
+        </div>
+      ) : null}
+
+      {mode === "existing" && hasExisting ? (
+        <div className="field">
+          <label htmlFor="restaurantKey">Select restaurant</label>
+          <select
+            id="restaurantKey"
+            value={selectedKey}
+            onChange={(e) => setSelectedKey(e.target.value)}
+          >
+            {restaurants.map((r) => (
+              <option key={r.restaurantKey} value={r.restaurantKey}>
+                {r.merchantName} — {r.destinationHost}
+              </option>
+            ))}
+          </select>
+          {selected ? (
+            <span className="muted">
+              Destination host: {selected.destinationHost}
+            </span>
+          ) : null}
+        </div>
+      ) : (
+        <>
+          <div className="field">
+            <label htmlFor="merchantName">Merchant name</label>
+            <input id="merchantName" name="merchantName" required />
+          </div>
+          <div className="field">
+            <label htmlFor="destinationHost">
+              Destination TakeAwayHero ordering URL / host
+            </label>
+            <input
+              id="destinationHost"
+              name="destinationHost"
+              placeholder="https://merchant.example"
+              required
+            />
+          </div>
+        </>
+      )}
+
       {isQa ? (
         <p className="muted">
           Quality check reads the live admin menu and improves it in place

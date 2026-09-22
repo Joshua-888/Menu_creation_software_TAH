@@ -90,7 +90,9 @@ export function priceVariants(
 
   if (base.sourceTotalPrice !== undefined) {
     basePrice = base.sourceTotalPrice;
-    basePriceOrigin = "SOURCE";
+    // Preserve an explicit provenance tag (e.g. DERIVED for a group-inherited
+    // price) instead of always claiming a direct SOURCE read.
+    basePriceOrigin = base.priceOrigin ?? "SOURCE";
   } else if (base.sourceExplicitSurcharge !== undefined) {
     // Explicit surcharge on base without total: treat base total as 0+surcharge only if surcharge is 0
     if (base.sourceExplicitSurcharge === 0) {

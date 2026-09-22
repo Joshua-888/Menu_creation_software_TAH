@@ -12,6 +12,7 @@ import {
   evaluateMenuQualityContract,
   qualityContractBlocksWrite,
 } from "./qualityContract.js";
+import { diagnoseSourceProductCoverage } from "./sourceCoverage.js";
 import {
   MENU_CONSTITUTION_VERSION,
   MENU_AS_VARIANT_SUPERSESSION,
@@ -55,7 +56,10 @@ export function runMenuIntelligence(
   });
   menu = completed.menu;
 
-  const quality = evaluateMenuQualityContract(menu);
+  const sourceCoverage = input.sourceCoverage
+    ? diagnoseSourceProductCoverage(input.sourceCoverage)
+    : null;
+  const quality = evaluateMenuQualityContract(menu, sourceCoverage);
   const writeGate = qualityContractBlocksWrite(quality);
 
   const policyTraces = completed.traces.map((card, idx) => {
