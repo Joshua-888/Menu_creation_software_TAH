@@ -270,3 +270,18 @@ All 4 CORE grouped milestones complete with zero HIGH-severity defects:
 Blind-pilot phase closed with zero HIGH-severity defects. Gate A and Gate B both fully green.
 
 **Per master directive Section 8: DO NOT STOP. Proceeding immediately to UI/UX (AUTONOMOUS_MENU_OPERATOR_UX_V2, starting with UI-1).**
+
+## UI-1 — INFORMATION ARCHITECTURE + RESTAURANT WORKFLOW — COMPLETE
+
+Architect audit confirmed portal is NOT greenfield: nav shell, merchant dashboard, job creation, review queue, policy panel, live-write gates, approval API already existed and working. Genuine gaps closed by Builder (commit 596f59b):
+1. Design-system primitives (`apps/portal/src/components/ui/`: Badge, Button, Panel, StatTile, Table) - thin wrappers over existing CSS classes, no redesign.
+2. Restaurant-centric dashboard on `/jobs` - one row per restaurant via existing restaurantKey grouping.
+3. New `/restaurants/[key]` history page backed by new `store.listJobsForRestaurant()` (plain parameterized SELECT).
+4. Streamlined `/jobs/new` + `/jobs/qa` with existing-restaurant selection dropdown.
+
+Reviewer PASS: confirmed no backend/worker/domain/auth changes, parameterized SQL, thin CSS wrappers, no regressions.
+QA PASS: independently re-ran typecheck/lint/portal:build/vitest (all green, 25/25 portal tests), PLUS live-server end-to-end validation - GET /restaurants/veronipizza.dk returned HTTP 200 with correct content, GET /restaurants/nonexistent.dk returned HTTP 404 via graceful notFound(). Test-diff inspection confirmed pure additions, zero weakened assertions.
+
+17 files changed, 664 insertions. Zero regressions. Commit: 596f59b.
+
+**Proceeding to UI-2 (Menu + QA + Review) per master directive continuation mandate.**
