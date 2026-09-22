@@ -16,6 +16,10 @@ import { DeleteJobButton } from "../../../components/DeleteJobButton";
 import { QaFindingsPanel } from "../../../components/QaFindingsPanel";
 import { ApproveCreateMenuButton } from "../../../components/ApproveCreateMenuButton";
 import { operatorExecutionSummary } from "@engine/runtime/operatorSummary.js";
+import { MenuView } from "../../../components/menu/MenuView";
+import type { CanonicalMenu } from "@engine/domain/schema/canonical.js";
+import type { SourceMenu } from "@engine/domain/schema/source.js";
+import type { MenuQualityContractResult } from "@engine/intelligence/types.js";
 
 export default async function JobDetailPage({
   params,
@@ -49,13 +53,17 @@ export default async function JobDetailPage({
     string,
     unknown
   > | null;
-  const targetMenu = readJobArtifact(id, "target-menu.json") as {
-    categories?: Array<{ name?: string; products?: unknown[] }>;
-  } | null;
-  const sourceMenu = readJobArtifact(id, "source-menu.json") as {
-    categories?: Array<{ products?: unknown[] }>;
-    productCount?: number;
-  } | null;
+  const targetMenu = readJobArtifact(id, "target-menu.json") as CanonicalMenu | null;
+  const sourceMenu = readJobArtifact(id, "source-menu.json") as
+    | (SourceMenu & { productCount?: number })
+    | null;
+  const qualityContract =
+    (readJobArtifact(id, "menu-quality-contract.json") as
+      | MenuQualityContractResult
+      | null) ??
+    (readJobArtifact(id, "quality-report.json") as
+      | MenuQualityContractResult
+      | null);
   const extractionAccounting = readJobArtifact(
     id,
     "extraction-accounting.json",
@@ -281,19 +289,12 @@ export default async function JobDetailPage({
         </div>
       </div>
 
-      {targetMenu ? (
-        <div className="panel">
-          <h2>TargetMenu preview</h2>
-          <p className="muted">
-            Source products: {sourceProducts ?? "—"} · Target products:{" "}
-            {targetProducts ?? "—"} · Categories:{" "}
-            {targetMenu.categories?.length ?? 0}
-          </p>
-          <pre style={{ whiteSpace: "pre-wrap", fontSize: "0.85rem", margin: 0 }}>
-            {JSON.stringify(targetMenu, null, 2)}
-          </pre>
-        </div>
-      ) : null}
+      <MenuView
+        targetMenu={targetMenu}
+        qualityContract={qualityContract}
+        sourceMenu={sourceMenu}
+        jobId={id}
+      />
 
       {policyApplication ? (
         <PolicyApplicationPanel report={policyApplication} />

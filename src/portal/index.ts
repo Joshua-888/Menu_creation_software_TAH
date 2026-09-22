@@ -24,6 +24,46 @@ export type {
   RestaurantOption,
 } from "./merchantDashboard.js";
 export {
+  formatDkk,
+  originLabel,
+  displayStatusLabel,
+  displayStatusTone,
+  validationStatusToDisplay,
+  qualityStatusToDisplay,
+  productDisplayStatus,
+  menuQualityLabel,
+  menuQualityTone,
+  menuNumberLabel,
+  productMatchesQuery,
+  productMatchesFilter,
+  buildSourceProductIndex,
+  lookupSourceProduct,
+  buildMenuSections,
+  buildProvenanceView,
+} from "./menuView.js";
+export type {
+  BadgeTone,
+  MenuDisplayStatus,
+  MenuStatusFilter,
+  MenuProductView,
+  MenuCategoryView,
+  SourceProductIndex,
+  ProvenanceView,
+  ProvenanceEvidenceView,
+  ProvenanceFieldView,
+  ProvenanceDiffView,
+  ProvenanceCheckView,
+  ProvenanceIssueView,
+} from "./menuView.js";
+export { buildQaDashboard, isQaAwaitingReview } from "./qaDashboard.js";
+export type {
+  QaDashboardModel,
+  QaDashboardStats,
+  QaFindingsByJob,
+  QaFindingsSummary,
+  QaJobRow,
+} from "./qaDashboard.js";
+export {
   openPortalDecisionStore,
   listOperatorFacingPolicies,
   createGlobalOperatorPolicy,
