@@ -116,10 +116,25 @@ Confirmed: WP-B (ghost sub-header products) is fully resolved — 0 residual hea
 ### Sequencing rationale
 WP-D (in flight) first: most severe architecture-invariant violation (explicit restaurant-specific hardcoding), contained/mechanical scope. WP-E next: highest failed-check count (16/49), moderate regression risk (price attribution logic) — needs isolated before/after scrutiny once WP-D's branch state is settled. WP-F: safety-critical hallucination fix, independent of WP-D/E files. WP-G: smallest/lowest-risk, same family as already-proven WP-B fix.
 
+## Phase 2 — Core Pipeline Audits (started)
+
+### Architect audit: Section 6 (extraction completeness) + Section 36 (side-door audit) — COMPLETE
+Read-only audit performed on HEAD 72474c7 (before WP-I). Key findings:
+- **PRODUCTION_SIDE_DOOR_BUSINESS_LOGIC = 0** confirmed: single authoritative `runMenuIntelligence` spine, zero parallel TargetMenu builders, zero legacy intelligence bypass, zero legacy direct-write routes, zero test-helpers-imported-by-production, zero undocumented CLI write paths. `scripts/archive/` historical scripts correctly classified per SCRIPT_CLASSIFICATION_V1 (host-locked/target-locked, non-production).
+- **1 blocking finding** (fixed as WP-I below): `src/extraction/pdf/classify.ts` COVER_HINTS regex hardcoded Veroni-specific tokens (street/city/merchant name) — architectural violation.
+- **Non-blocking findings** (logged, not yet actioned): minor doc drift in `docs/architecture/AUTHORITATIVE_PRODUCTION_ENTRY_POINTS.md` (script path descriptions stale vs actual `scripts/` layout — zero functional impact); a few extraction magic-number thresholds (`v >= 50 && v <= 400` price ranges, `x < 240` column-position assumption) flagged as POTENTIALLY fragile for edge-case merchants (very cheap/expensive items, non-standard layouts) but NOT proven defective by any evidence yet — deferred pending real blind-pilot evidence, per mission Section 10 guidance ("only address if real blind-pilot evidence demonstrates material blocking").
+
+| WP-I | `classify.ts` COVER_HINTS hardcoded merchant tokens (ladingsvej/nykøbing/weron/veroni) | EXTRACTION / STRUCTURAL MAPPING | **DONE** | d5e8612 | PASS | PASS |
+
+### WP-I outcome (final)
+- SHIPPED: generalized COVER_HINTS to generic vocabulary only (cvr/tlf/telefon/adresse/åbningstider/facebook/instagram/bestilling/www/https). Empirically verified Veroni's actual cover page still matches via generic tokens present on that page (facebook/buffet/www.) — zero classification change, no structural fallback needed.
+- Zero regressions: 611/611 unit, 32/32 certification (Veroni exact parity, page-1 COVER classification independently re-verified), 26/26 extraction, full check:ship gate green. Jin/Gaza blind-pilot re-run: zero drift (stash-based true before/after diff, 0 deltas).
+- Zero merchant-specific strings remain anywhere in `src/` (grep-confirmed).
+
 ## Not Yet Started (per mission Section 5 onward)
 
 - Discovery cohort expansion beyond current 3 merchants + dedicated Validation Holdout cohort (Section 5)
-- Extraction completeness / TODO-FIXME-HACK audit (Section 6)
+- Non-blocking Phase-2-audit doc-drift fix (AUTHORITATIVE_PRODUCTION_ENTRY_POINTS.md script paths) — low priority, zero functional impact
 - Source coverage fail-closed audit (Section 7)
 - Semantic Completeness Engine full audit (Section 8)
 - Quality Contract audit (Section 9)
