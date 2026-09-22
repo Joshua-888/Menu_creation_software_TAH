@@ -13,6 +13,7 @@ import {
 import type { AdditionLikelihoodPolicy } from "../../src/learning/additionLikelihood.js";
 import { upsertPeerAdditionFactsForMenu } from "../../src/learning/additionLikelihood.js";
 import { upsertVeroniTilbehorBusinessFact } from "../../src/learning/structurePolicy.js";
+import { inferProductFamily } from "../../src/intelligence/peerCohorts.js";
 
 const dirs: string[] = [];
 
@@ -130,6 +131,81 @@ function menu(): CanonicalMenu {
     ],
   } as unknown as CanonicalMenu;
 }
+
+describe("combo menu classification safety", () => {
+  it("classifies a menu containing sodavand as COMBO_MENU, not DRINK", () => {
+    expect(
+      inferProductFamily({
+        name: "Hamburger menu",
+        categoryName: "Menuer",
+        description: "Pomfritter og sodavand",
+      }),
+    ).toBe("COMBO_MENU");
+
+    expect(
+      inferProductFamily({
+        name: "Durum menu",
+        categoryName: "Durum",
+        description: "Kebab, sodavand og pomfritter",
+      }),
+    ).toBe("COMBO_MENU");
+  });
+
+  it("does not fan generic category additions onto combo menu products", () => {
+    const dir = mkdtempSync(join(tmpdir(), "combo-cat-ing-"));
+    dirs.push(dir);
+    const store = new DecisionStore(join(dir, "d.sqlite"));
+    const comboMenu = {
+      schemaVersion: "1",
+      domainRuleVersion: "1",
+      restaurant: "bella.test",
+      source: "test",
+      categories: [
+        {
+          sourceId: "cat-menuer",
+          name: "Menuer",
+          products: [
+            {
+              sourceId: "combo-11",
+              sourceMenuNumber: "11",
+              name: "Hamburger menu",
+              status: "READY",
+              description: "Pomfritter og sodavand",
+              ingredients: [
+                { display: "Pomfritter", origin: "SOURCE" },
+                { display: "Sodavand", origin: "SOURCE" },
+              ],
+              variants: [],
+              addOns: [],
+              productChoices: [],
+              isCombo: true,
+            },
+          ],
+        },
+      ],
+    } as unknown as CanonicalMenu;
+
+    try {
+      const seeded = upsertCategoryIngredientAdditionFacts({
+        store,
+        restaurantKey: "bella.test",
+        menu: comboMenu,
+      });
+      expect(seeded.categoriesWithUnion).toContain("Menuer");
+
+      const fan = fanOutRestaurantAdditions({
+        menu: comboMenu,
+        registry: store.facts,
+        restaurantKey: "bella.test",
+      });
+      const product = fan.menu.categories[0]!.products[0]!;
+      expect(product.addOns).toEqual([]);
+      expect(fan.fanOutMenus).not.toContain("11");
+    } finally {
+      store.close();
+    }
+  });
+});
 
 describe("category ingredient Tilbehør", () => {
   it("composes union from Beskrivelse + ingredients; skips dips drinks", () => {
