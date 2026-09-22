@@ -40,7 +40,7 @@ Implemented on this tree:
 - RecoveryPlan V2: never auto-delete; reuse verified objects
 - `npm run check:fast` + parallel CI + full `check:ship`
 
-`npm run check:ship` GREEN (domain 49, unit 328, contract 92, certification 31, extraction 26, portal 23; portal:build compiled).  
+`npm run check:ship` GREEN (as of FULL_SYSTEM_AUTONOMOUS_COMPLETION_V1 mission, commit fe70ae2: `npm test` 614/614 passing across domain+unit+contract, 79 files; `test:certification` 32/32 across 10 files, zero fixture drift; `test:extraction` 26/26; portal:build compiled). Note: granular per-suite counts above were last independently re-verified as aggregate totals; see `docs/FULL_SYSTEM_AUTONOMOUS_COMPLETION_STATUS.md` for the current mission's live checkpoint ledger.  
 `npm run lint` GREEN.
 
 ---

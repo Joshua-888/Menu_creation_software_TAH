@@ -40,6 +40,6 @@ Production `src/` must not import `scripts/m*` milestone files.
 
 ## Script classification (do not delete)
 
-- `scripts/production/` — documented start/build helpers (`portal-start.mjs`, `write-deploy-meta.mjs`, `ensure-playwright-chromium.mjs`)
+- `scripts/` (root) — documented start/build helpers (`portal-start.mjs`, `write-deploy-meta.mjs`, `ensure-playwright-chromium.mjs`); `scripts/production/` contains only a `README.md` classification note, not the scripts themselves
 - `scripts/diagnostics/` — read-only probes (future promotions only)
 - `scripts/archive/milestones/` — historical `m5*`–`m75*` evidence, physically relocated under `scripts/archive/milestones/` (see its `README.md`)
