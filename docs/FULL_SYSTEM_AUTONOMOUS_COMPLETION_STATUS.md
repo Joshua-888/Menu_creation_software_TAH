@@ -250,3 +250,23 @@ Architect audit at HEAD aaa0fc3. All 8 checks completed:
 Docs: `docs/PROJECT_STATUS.md` flagged stale by Architect (referenced prior mission/commit) - corrected by Supervisor to reflect current mission, HEAD, and CORE-1/2/3/4 completion.
 
 **Decision**: Zero HIGH-severity defects across all 8 checks. Two LOW-severity items explicitly deferred with documented reasoning (non-blocking for LIVE_TEST_READY). All 4 CORE grouped milestones (CORE-1 through CORE-4) now COMPLETE. Proceeding to GATE B (full release validation) per master directive Section 8.
+
+## GATE B — FULL RELEASE VALIDATION (CORE completion) — GREEN
+
+Run at HEAD 1334f53. Full chain: typecheck && lint && npm test && test:extraction && test:certification && test:portal && portal:build && check:ship.
+
+Results: typecheck PASS, lint PASS, `npm test` 614/614 (79 files: domain 56 + unit 466 + contract 92), `test:extraction` 26/26, `test:certification` 32/32 (zero fixture drift), `test:portal` 23/23 (6 files), `portal:build` compiled successfully (16/16 static pages, all routes built, Playwright Chromium confirmed present). `check:ship`'s internal re-run of typecheck/domain/unit/contract/certification/extraction/portal/build also 100% green with identical counts. Zero error/FAIL lines found anywhere in the full validation log.
+
+============================================================
+CORE STATUS: LIVE_TEST_READY
+============================================================
+
+All 4 CORE grouped milestones complete with zero HIGH-severity defects:
+- CORE-1 (Extraction + Source Coverage): zero hardcodes/side-doors, all pipeline stages sound, blind-pilot edge cases (Sachi multi-column, Amalie weight-table OCR) confirmed to fail closed safely.
+- CORE-2 (Semantics + Quality): field-requirement matrix confirmed consistent across all certified fixtures, evidence hierarchy/Menu-variant-invariant/CONDITIONAL-determinism/product-choice-safety all sound.
+- CORE-3 (Destination + Write Safety + Execution): credentials-alone cannot enable writes (12-gate pipeline airtight), partial-mutation correctly distinguished and recoverable, field-level readback confirmed (9 comparators), CREATE idempotency under ambiguity confirmed, ExecutionBundle hashing deterministic/canonical.
+- CORE-4 (Recovery + Security + Deployment + Docs): zero path-traversal/SSRF/XSS/SQLi findings, environment validation fails closed, version/SHA endpoint and readiness endpoint both sound, PROJECT_STATUS.md corrected. Two LOW-severity items deferred with documented reasoning (postcss build-time-only advisory; Railway healthcheck shallow-liveness vs. already-existing deep /api/ready).
+
+Blind-pilot phase closed with zero HIGH-severity defects. Gate A and Gate B both fully green.
+
+**Per master directive Section 8: DO NOT STOP. Proceeding immediately to UI/UX (AUTONOMOUS_MENU_OPERATOR_UX_V2, starting with UI-1).**
