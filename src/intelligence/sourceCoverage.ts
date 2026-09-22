@@ -71,16 +71,23 @@ export function diagnoseSourceProductCoverage(
   const priceBearingRows = rows.filter((row) => PRICE_LIKE_ROW.test(row)).length;
   const denominator = Math.max(input.uniqueProducts, 1);
   const candidateCount = input.accounting.summary.candidatesDetected;
-  const evidencePerProduct = Math.max(
-    priceLikeTokens,
-    priceBearingRows,
-    candidateCount,
-  ) / denominator;
+
+  // Structural product candidates are the authoritative coverage signal when
+  // available. Price rows/tokens are only a fallback because a single product
+  // can legitimately carry multiple prices (sizes/variants), and rawText +
+  // line-level OCR evidence can represent the same visual price more than once.
+  // Counting those as independent product evidence caused false positives on
+  // real multi-price menus (e.g. 24 candidates / 24 products but 148 price
+  // tokens). We still retain the price metrics for diagnostics/observability.
+  const evidenceCount =
+    candidateCount > 0
+      ? candidateCount
+      : Math.max(priceLikeTokens, priceBearingRows);
+  const evidencePerProduct = evidenceCount / denominator;
   const suspicious =
     input.uniqueProducts > 0 &&
     evidencePerProduct >= 3 &&
-    Math.max(priceLikeTokens, priceBearingRows, candidateCount) >
-      input.uniqueProducts;
+    evidenceCount > input.uniqueProducts;
   return {
     id: "SOURCE_PRODUCT_COVERAGE_SUSPICIOUS",
     suspicious,
