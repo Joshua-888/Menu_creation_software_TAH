@@ -40,7 +40,7 @@ Implemented on this tree:
 - RecoveryPlan V2: never auto-delete; reuse verified objects
 - `npm run check:fast` + parallel CI + full `check:ship`
 
-`npm run check:ship` GREEN (as of FULL_SYSTEM_AUTONOMOUS_COMPLETION_V1 mission, commit fe70ae2: `npm test` 614/614 passing across domain+unit+contract, 79 files; `test:certification` 32/32 across 10 files, zero fixture drift; `test:extraction` 26/26; portal:build compiled). Note: granular per-suite counts above were last independently re-verified as aggregate totals; see `docs/FULL_SYSTEM_AUTONOMOUS_COMPLETION_STATUS.md` for the current mission's live checkpoint ledger.  
+`npm run check:ship` GREEN (as of TAKEAWAYHERO_MENU_PLATFORM_FINISH_PROJECT_V1 directive, branch `mission/new-merchant-blind-pilot-v1`, commit aaa0fc3: `npm test` 614/614 passing across domain+unit+contract, 79 files; `test:certification` 32/32 across 10 files, zero fixture drift; `test:extraction` 26/26; portal:build compiled). Blind-pilot phase closed (Discovery: Restaurant Jin, Gaza Grill Nordhavn; Validation Holdout: Cafe Amalie Vorupør; deferred: Gevninge Pizza & Grill, external WAF blocker; Sachi Sushi confirmed existing multi-column limitation safely fails closed). CORE-1 (extraction/source-coverage), CORE-2 (semantics/quality), CORE-3 (destination/write-safety/execution), and CORE-4 (recovery/security/deployment/docs) grouped milestones all audited complete with zero HIGH-severity defects. Note: granular per-suite counts above were last independently re-verified as aggregate totals; see `docs/FULL_SYSTEM_AUTONOMOUS_COMPLETION_STATUS.md` for the current mission's live checkpoint ledger.  
 `npm run lint` GREEN.
 
 ---

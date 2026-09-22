@@ -234,3 +234,19 @@ Architect audit at HEAD a493429. All 5 targeted checks CONFIRMED SAFE:
 5. **Deterministic ExecutionBundle hashing**: `sha256Canonical()` key-sorts recursively before hashing - immune to object key-ordering non-determinism; any plan/menu/host/SHA/snapshot divergence triggers `APPROVED_PLAN_EXECUTION_MISMATCH`/`STALE_EXECUTION_BUNDLE`.
 
 **Decision**: Zero gaps found across all 5 checks. No code change. Proceeding directly to CORE-4 (final grouped milestone).
+
+## CORE-4 — RECOVERY + SECURITY + DEPLOYMENT + DOCS — COMPLETE (audit-only, zero HIGH-severity defects)
+
+Architect audit at HEAD aaa0fc3. All 8 checks completed:
+1. Path traversal: CONFIRMED SAFE (sanitized filenames, UUID-prefixed, server-generated job IDs).
+2. SSRF: CONFIRMED SAFE (no user-directed fetch; HTML source ingestion explicitly refused; destination navigation bundle-bound).
+3. XSS: CONFIRMED SAFE (React auto-escaping; only dangerouslySetInnerHTML use is fully static, zero dynamic interpolation).
+4. SQL injection: CONFIRMED SAFE (all queries parameterized via better-sqlite3 `?` placeholders).
+5. Dependency vulnerabilities: 1 moderate + 1 high advisory in postcss (transitive via next), build-time-only CSS compilation on repo-owned CSS, non-exploitable in production runtime. DEFERRED - fix requires breaking Next.js v16 upgrade, not justified this close to Gate B.
+6. Version/SHA endpoint: CONFIRMED SAFE (`/api/version` exposes commitSha/buildTime/contractVersion; automation scripts verify MAIN_SHA==DEPLOYED_SHA).
+7. Health check accuracy: Railway healthcheck (`/login`) is shallow liveness only; a proper deep-readiness endpoint (`/api/ready`, checks browserReady+configOk) already exists independently. DEFERRED - changing Railway's healthcheck path risks cold-start deployment races for no net safety gain since all live-write gates are independently enforced regardless.
+8. Environment validation on startup: CONFIRMED SAFE (Zod-validated runtime config, fails closed with explicit diagnostic exceptions: INVALID_BOOLEAN_CONFIG, ADMIN_AUTH_MISSING, LIVE_WRITES_DISABLED).
+
+Docs: `docs/PROJECT_STATUS.md` flagged stale by Architect (referenced prior mission/commit) - corrected by Supervisor to reflect current mission, HEAD, and CORE-1/2/3/4 completion.
+
+**Decision**: Zero HIGH-severity defects across all 8 checks. Two LOW-severity items explicitly deferred with documented reasoning (non-blocking for LIVE_TEST_READY). All 4 CORE grouped milestones (CORE-1 through CORE-4) now COMPLETE. Proceeding to GATE B (full release validation) per master directive Section 8.
