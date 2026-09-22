@@ -1,7 +1,10 @@
 import type { ClassifiedPdfPage, IngestedPdfPage, PageClass } from "./types.js";
 
+// Generic cover/contact signals only. Never add merchant-specific tokens
+// (restaurant names, street names, city names); a cover page must be
+// recognisable from generic vocabulary or structure alone.
 const COVER_HINTS =
-  /åbningstider|åbning|facebook|bestilling|buffet|ladingsvej|nykøbing|weron|veroni/i;
+  /cvr\b|tlf\.?\s*\d|telefon|adresse\b|åbningstider|åbning|facebook|instagram|bestilling|bestil online|order online|buffet|www\.|https?:\/\//i;
 const MENU_HINTS =
   /\b(pizza|pasta|grill|menu|dürüm|durum|sandwich|nachos|indisk|sodavand|alm\.?|familie|forretter|hovedretter)\b/i;
 const INFO_HINTS =
