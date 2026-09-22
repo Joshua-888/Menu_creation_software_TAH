@@ -131,11 +131,26 @@ Read-only audit performed on HEAD 72474c7 (before WP-I). Key findings:
 - Zero regressions: 611/611 unit, 32/32 certification (Veroni exact parity, page-1 COVER classification independently re-verified), 26/26 extraction, full check:ship gate green. Jin/Gaza blind-pilot re-run: zero drift (stash-based true before/after diff, 0 deltas).
 - Zero merchant-specific strings remain anywhere in `src/` (grep-confirmed).
 
+### Architect audit: Section 7 (source coverage fail-closed) — COMPLETE
+Read-only audit performed on HEAD 56bd6cd. Key findings:
+- **HTML/URL/JSON sources**: already fully fail-closed — no extractor exists, unsupported types explicitly throw or transition to `SOURCE_URL_PENDING` with an informative message. No action needed (verified via `src/portal/worker.ts` and `src/extraction/pdf/adapter.ts`).
+- **Corrupt files, zero-product extraction, high-evidence-density-vs-low-product-count**: already fail-closed in `src/portal/worker.ts` (production path) via explicit throws.
+- **GAP-1 (fixed as WP-J below)**: `SOURCE_PRODUCT_COVERAGE_SUSPICIOUS` was documented in `QUALITY_CONTRACT_REGISTRY_V1.md` as a universal quality-contract check but was only enforced ad-hoc in `portal/worker.ts` — NOT in the central `evaluateMenuQualityContract`, and NOT in the certification/blind-pilot harness. Architecture-vs-implementation inconsistency, low-risk to fix.
+- **GAP-2/3/4 (deferred, NOT actioned)**: PDF raster/OCR-hydration page-skip heuristic, image-OCR-degradation-with-failed-vision-fallback, and per-page-yield tracking are all precautionary/theoretical findings with NO supporting evidence from actual blind-pilot runs (Jin/Gaza/all 4 golden fixtures are text-based PDFs; no scanned/mixed-page merchant has been tested). Per mission Section 10 ('only address if real evidence demonstrates material blocking'), correctly left unactioned pending real evidence — logged as known architecture debt for a future milestone if a scanned/photo-based merchant is ever added to the pilot cohort.
+
+| WP-J | `SOURCE_PRODUCT_COVERAGE_SUSPICIOUS` documented as universal but only enforced in portal/worker.ts, not central quality contract or certification harness | QUALITY CONTRACT / OBSERVABILITY | **DONE** | 0bf8397 | PASS (2 rounds) | PASS |
+
+### WP-J outcome (final)
+- SHIPPED: `evaluateMenuQualityContract` now accepts optional pre-computed coverage evidence and surfaces `SOURCE_PRODUCT_COVERAGE_SUSPICIOUS` as a REVIEW-severity coherence finding (never auto-BLOCK) for ANY caller of the intelligence spine. `runMenuIntelligence` derives this via new `sourceCoverageEvidenceFromExtraction()`. Both `src/certification/runRawCertification.ts` (and thus the blind-pilot harness) and `src/portal/worker.ts` now share one evidence-composition path; portal worker RETAINS its stricter production hard-fail throw.
+- JUDGMENT CALL (independently verified safe by Reviewer across 2 rounds + QA): recalibrated the underlying evidence-density predicate from bare 2-3 digit integers to currency-marked tokens only ('kr.'/'kr'/'DKK') — the old predicate would have false-flagged 5/6 real menus (Veroni 6.4x, Smash 10.2x, third-merchant 5.3x, Jin 4.7x, Gaza 6.5x) if applied universally. Verified as a strict narrowing (fewer false positives), not a weakening — production hard-fail in `portal/worker.ts` confirmed still intact and unbypassed.
+- Zero regressions: 614/614 unit, 32/32 certification (Veroni exact parity, zero new coverage findings on any of the 4 golden fixtures), 26/26 extraction. Jin/Gaza blind-pilot re-runs: `coherenceFailures: 0` for both (no new false positives).
+- Documentation updated: `docs/architecture/QUALITY_CONTRACT_REGISTRY_V1.md` now accurately describes central evaluation, evidence shape, and the retained stricter portal hard-fail (independently verified accurate by Reviewer).
+
 ## Not Yet Started (per mission Section 5 onward)
 
-- Discovery cohort expansion beyond current 3 merchants + dedicated Validation Holdout cohort (Section 5)
+- Discovery cohort expansion beyond current 3 merchants + dedicated Validation Holdout cohort (Section 5) — requires user-supplied new merchant sources
 - Non-blocking Phase-2-audit doc-drift fix (AUTHORITATIVE_PRODUCTION_ENTRY_POINTS.md script paths) — low priority, zero functional impact
-- Source coverage fail-closed audit (Section 7)
+- GAP-2/3/4 from Section 7 audit (deferred, unevidenced — see above)
 - Semantic Completeness Engine full audit (Section 8)
 - Quality Contract audit (Section 9)
 - Destination capability matrix audit (Section 10)
