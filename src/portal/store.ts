@@ -2,8 +2,8 @@
  * Portal SQLite store — employees, sessions, migration jobs, review queue.
  */
 
-import { mkdirSync } from "node:fs";
-import { dirname } from "node:path";
+import { existsSync, mkdirSync, readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 import { randomUUID } from "node:crypto";
 import { DatabaseSync } from "node:sqlite";
 import {
@@ -672,6 +672,44 @@ export class PortalStore {
     };
   }
 
+  /**
+   * True when the job's latest run wrote a BLOCKED MenuQualityContract.
+   *
+   * Safety gate: a menu whose quality contract reports
+   * `MENU_QUALITY_BLOCKED` must never reach operator approval or live
+   * execution. Reads `menu-quality-contract.json`, falling back to
+   * `quality-report.json`, using the same precedence as the job page.
+   *
+   * STATE_MACHINE_V1.md defines no distinct "blocked-pending-approval" status,
+   * so blocked jobs stay out of AWAITING_OPERATOR_APPROVAL and settle on the
+   * existing READY_DRY_RUN state — the same non-writable state already used
+   * when the create-card gate is not ok.
+   *
+   * Missing/unreadable artifacts return `false` for older jobs; this does not
+   * widen approval scope because AWAITING_OPERATOR_APPROVAL itself requires an
+   * approving create-card gate artifact.
+   */
+  isMenuQualityBlocked(jobId: string): boolean {
+    const run = this.latestJobRun(jobId);
+    if (!run?.runDir) return false;
+    for (const name of [
+      "menu-quality-contract.json",
+      "quality-report.json",
+    ]) {
+      const path = join(run.runDir, name);
+      if (!existsSync(path)) continue;
+      try {
+        const parsed = JSON.parse(readFileSync(path, "utf8")) as {
+          menuStatus?: unknown;
+        };
+        return parsed?.menuStatus === "MENU_QUALITY_BLOCKED";
+      } catch {
+        return false;
+      }
+    }
+    return false;
+  }
+
   replaceOpenQuestions(jobId: string, questions: Omit<ReviewQuestion, "id" | "createdAt" | "status" | "jobId">[]): ReviewQuestion[] {
     this.db
       .prepare(`DELETE FROM review_questions WHERE job_id = ? AND status = 'open'`)
@@ -846,9 +884,14 @@ export class PortalStore {
 
     const remaining = this.listOpenQuestions(q.jobId).length;
     const workflow = this.getJob(q.jobId)?.workflow;
+    // Safety: a BLOCKED MenuQualityContract must never reach operator approval.
+    // STATE_MACHINE_V1 defines no blocked-pending-approval status, so blocked
+    // jobs settle on READY_DRY_RUN (same non-writable state as a failed card gate).
+    const qualityBlocked =
+      workflow === "CREATE_MENU" && this.isMenuQualityBlocked(q.jobId);
     const nextStatus: JobStatus = remaining
       ? "AWAITING_REVIEW"
-      : workflow === "CREATE_MENU"
+      : workflow === "CREATE_MENU" && !qualityBlocked
         ? "AWAITING_OPERATOR_APPROVAL"
         : "READY_DRY_RUN";
     this.updateJobStatus(q.jobId, nextStatus, {

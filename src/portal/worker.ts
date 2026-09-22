@@ -979,6 +979,9 @@ export function schedulePostReviewLiveIfReady(jobId: string): boolean {
   const store = getPortalStore();
   const job = store.getJob(jobId);
   if (!job || job.status !== "AWAITING_OPERATOR_APPROVAL") return false;
+  // Safety (defense-in-depth): a BLOCKED MenuQualityContract must never be
+  // scheduled for live execution even if a caller bypasses the approval API.
+  if (store.isMenuQualityBlocked(jobId)) return false;
   if (store.listOpenQuestions(jobId).length > 0) return false;
   const liveGate = evaluatePortalLiveWriteGate({
     destinationHost: job.destinationHost,
