@@ -369,3 +369,22 @@ QA's live-server fix-validation (documented above) substantively completed the f
 ZERO live customer mutation occurred at any point. No live credentials were ever configured during this walkthrough.
 
 **Section 12 COMPLETE. Proceeding to Section 13: FINAL RELEASE GATE (Gate D).**
+
+## GATE D — FINAL RELEASE VALIDATION — GREEN
+
+Run at HEAD b9ee59c. Full chain: typecheck && lint && npm test && test:extraction && test:certification && test:portal && portal:build && check:ship.
+
+Results: typecheck PASS, lint PASS, `npm test` 675/675 (86 files, up from 670 - includes new offline-planning-safety tests), `test:extraction` 26/26, `test:certification` 32/32 (zero fixture drift across Bella/Smash/Veroni/third-merchant), `test:portal` 84/84 (13 files), `portal:build` compiled successfully (all routes incl. UI-1/2/3 components). check:ship's internal re-run (domain 56, unit 527, contract 92, certification 32, extraction 26, portal 84) also 100% green. Zero FAIL/error markers anywhere in the full log.
+
+============================================================
+MISSION STATUS: ALL GATES COMPLETE
+============================================================
+
+- CORE STATUS: LIVE_TEST_READY (earned at Gate B)
+- UI STATUS: OPERATOR_UX_V2_READY (earned at Gate C)
+- Section 12 end-to-end walkthrough: COMPLETE (discovered and fixed a critical CREATE_MENU offline-planning blocker along the way)
+- Gate D (final release validation): GREEN
+
+AUTONOMOUS ENGINEERING STATUS: COMPLETE
+
+No further autonomous work packages remain within the authorized scope of this mission. Remaining items (Gevninge external WAF blocker, postcss build-time-only advisory, Railway shallow healthcheck, multi-column PDF reconstruction) are documented known limitations, not defects requiring further autonomous action.
