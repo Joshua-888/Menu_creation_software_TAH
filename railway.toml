@@ -1,9 +1,17 @@
 # Railway — TakeAwayHero Menu Operator Portal
-# Railpack (DOCKERFILE Metal builds were unstable). Chromium is installed during
-# portal:build via scripts/ensure-playwright-chromium.mjs so Create ARTIFACTS
-# does not wait on a cold playwright download. portal-start still self-heals.
+# DOCKERFILE builder: Railpack does not run Dockerfile.portal's apt-get step,
+# so Chromium's OS shared libraries (e.g. libglib2.0-0) were never installed,
+# causing "libglib-2.0.so.0: cannot open shared object file" at browser launch.
+# Dockerfile.portal bakes both the correct system libs AND the Chromium binary
+# at build time (see scripts/ensure-playwright-chromium.mjs), so portal-start
+# still self-heals if Chromium is ever missing, but should not need to.
+# NOTE: an earlier attempt at DOCKERFILE builds hit Railway "Metal" build
+# infra instability (2026-09-15, unrelated to this Dockerfile's correctness).
+# If that recurs, revert to RAILPACK and add apt deps via a Railpack-native
+# mechanism instead.
 [build]
-builder = "RAILPACK"
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile.portal"
 
 [deploy]
 startCommand = "npm run portal:start"
