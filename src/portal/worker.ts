@@ -589,9 +589,18 @@ export async function runMigrationJob(
         destinationHost: job.destinationHost,
         deep: isQa,
       }));
-    // Always require a real live catalog whenever credentials/allowlist enable it
-    // (and always for QA). Never plan against an empty fake destination.
-    if (destLoad.source !== "live" || destLoad.status !== "LIVE_COMPLETE") {
+    // Require a real live catalog whenever credentials/allowlist enable it (and
+    // always for QA). An OFFLINE_EXPLICIT load means live planning was simply not
+    // attempted/enabled (no credentials or host not allowlisted), so CREATE_MENU may
+    // plan against the empty snapshot. Any other non-LIVE_COMPLETE status means a live
+    // load WAS attempted but failed/partial — that must still fail closed rather than
+    // silently plan against an empty catalog.
+    const requireLiveSnapshot =
+      isQa || destLoad.status !== "OFFLINE_EXPLICIT";
+    if (
+      requireLiveSnapshot &&
+      (destLoad.source !== "live" || destLoad.status !== "LIVE_COMPLETE")
+    ) {
       const detail = destLoad.error ?? `snapshot status=${destLoad.status}`;
       const chromiumHint = /BROWSER_RUNTIME_UNAVAILABLE|Executable doesn't exist|playwright install/i.test(
         detail,
@@ -606,6 +615,7 @@ export async function runMigrationJob(
     writeJson(outDir, "dry-destination-snapshot.json", destination);
     writeJson(outDir, "destination-snapshot-meta.json", {
       source: destLoad.source,
+      status: destLoad.status,
       host: destination.host,
       categoryCount: destination.categories.length,
       productCount: destination.products.length,
@@ -665,6 +675,7 @@ export async function runMigrationJob(
       contractFingerprint: fingerprint.fingerprint,
       targetMenuHash: sha256Canonical(recovered.menu),
       destinationSnapshotHash,
+      destinationSnapshotStatus: destLoad.status,
       operations: plan.operations,
       qualityStatus: intelligence.quality.menuStatus,
     });

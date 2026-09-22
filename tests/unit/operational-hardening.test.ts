@@ -70,6 +70,7 @@ function bundle(overrides?: Partial<ExecutionBundleV1>): ExecutionBundleV1 {
     contractFingerprint: "fp-1",
     targetMenuHash: "tm-1",
     destinationSnapshotHash: "ds-1",
+    destinationSnapshotStatus: "LIVE_COMPLETE",
     operations: [op("1")],
     qualityStatus: "MENU_QUALITY_READY",
     ...overrides,
@@ -153,6 +154,7 @@ describe("ExecutionBundleV1 approval binding", () => {
       contractFingerprint: "fp",
       targetMenuHash: "t",
       destinationSnapshotHash: "d",
+      destinationSnapshotStatus: "LIVE_COMPLETE",
       operations,
       qualityStatus: "READY",
     });
