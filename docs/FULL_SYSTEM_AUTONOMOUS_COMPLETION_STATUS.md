@@ -223,3 +223,14 @@ Architect audit at HEAD c152463. Findings:
 - **Cafe Amalie OTHER_FOOD ingredient-REQUIRED finding**: traced exact code path (fieldRequirements.ts -> ingredientSufficiency.ts -> qualityContract.ts). Cross-checked ALL 4 certified golden fixtures (Bella, Smash, Veroni, third-merchant/Thai) - NONE has an analogous single-token/self-descriptive meat-cut product resolving to READY under OTHER_FOOD; Veroni's 17 OTHER_FOOD products all have >=2 real ingredients. **Verdict: SAFE CONSERVATIVE BEHAVIOR, not a false positive** - current REQUIRED level correctly and consistently fails closed to QUALITY_REVIEW across the whole system. Weakening OTHER_FOOD globally would risk silently passing genuinely-incomplete dishes across all unclassified cuisines for zero evidenced benefit. DEFERRED - no fix warranted. (Separately, Amalie's underlying extraction produced garbled names like "2009 kr." due to the CORE-1 weight-table OCR issue, which is the primary/real cause of Amalie's BLOCKED status, not the ingredient-requirement logic itself.)
 - **Broader sanity check** (evidence hierarchy, Menu-as-variant invariant, CONDITIONAL field-requirement determinism, no unsupported product-choice assumptions): all confirmed sound, zero gaps found.
 - **Decision**: No code change. Proceeding directly to CORE-3.
+
+## CORE-3 — DESTINATION + WRITE SAFETY + EXECUTION — COMPLETE (audit-only, zero fixes required)
+
+Architect audit at HEAD a493429. All 5 targeted checks CONFIRMED SAFE:
+1. **Credentials-alone test**: airtight - requires credentials AND non-killed flag AND host-allowlist AND capability-certification AND signed operator session AND explicit approval click AND lease/lock AND fresh snapshot-hash match AND pre-write gate AND approved-plan-equals-executed-plan. No single-gate bypass exists.
+2. **Partial-mutation depth**: multi-op WritePlan failure after partial success produces distinct `PARTIAL_WRITE`/`RECOVERY_REQUIRED` state (not conflated with full success or no-mutation); recovery reads destination via `findByIdentity`/`listCategories` before any retry, preventing duplicates across the whole plan.
+3. **Field-level readback**: `verifyProductFields()` compares 9 distinct fields individually (menuNumber, name, description, price, categories, variants, ingredients, additions, visibility) - not just existence-by-name.
+4. **CREATE idempotency under ambiguity**: timeout/ambiguous-outcome creates always re-check destination state (`findByIdentity`) before any retry; `AMBIGUOUS` outcome with destination-not-found correctly BLOCKS rather than blindly retrying.
+5. **Deterministic ExecutionBundle hashing**: `sha256Canonical()` key-sorts recursively before hashing - immune to object key-ordering non-determinism; any plan/menu/host/SHA/snapshot divergence triggers `APPROVED_PLAN_EXECUTION_MISMATCH`/`STALE_EXECUTION_BUNDLE`.
+
+**Decision**: Zero gaps found across all 5 checks. No code change. Proceeding directly to CORE-4 (final grouped milestone).
