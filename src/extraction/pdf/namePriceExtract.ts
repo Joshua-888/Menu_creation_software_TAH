@@ -67,6 +67,53 @@ const VARIANT_OR_COLUMN_HEADER_RE =
   /^(alm\.?|familie|lille|stor|ekstra:?|menu)$/i;
 
 /**
+ * Short dietary-marker tokens that menus print beside/above a dish (VE, V, GL,
+ * VG, GF, LF, EV = vegan/vegetarian/gluten-free etc.). Generic menu vocabulary,
+ * never merchant-specific. They are metadata, not part of a dish title, so they
+ * must not be joined into a title or retained in a name.
+ */
+const DIETARY_MARKER_RE = /^(ve|v|vg|gl|gf|lf|ev)$/i;
+
+/**
+ * Price token that terminates an all-caps dish title on a single source line.
+ * Danish menus print "85 DKK", "85,-", "85.-" or "kr 85".
+ */
+const ALL_CAPS_TITLE_STOP_RE =
+  /(?:^|\s)(?:menu\s*)?\d{2,3}\s*(?:[,.°-]|dkk\b)|(?:^|\s)kr\.?\s*\d{2,3}\b/i;
+
+/**
+ * Extract a clean all-caps dish title from a single-price source line, or null.
+ *
+ * Merchant-agnostic structural signal: all-caps dish presentation is normal for
+ * many cuisines (Middle Eastern, Mediterranean, Asian). A line qualifies only
+ * when:
+ *   - it is entirely upper-case (bilingual / descriptive lines mix case),
+ *   - it carries exactly ONE price token, used as the title boundary
+ *     (merged multi-column rows carry two prices and cannot be safely split),
+ *   - the head before that price reduces to letters-only words with no digits,
+ *   - it is not a section/skip header and not a combo-contents line.
+ * Dietary markers (VE/V/GL…) are metadata, stripped from the title.
+ */
+function allCapsPricedDishTitle(line: string): string | null {
+  const t = line.trim().replace(/\s+/g, " ");
+  if (!t || /[a-zæøå]/.test(t)) return null;
+  if (pricesFromLine(t).length !== 1) return null;
+  const stop = t.search(ALL_CAPS_TITLE_STOP_RE);
+  if (stop < 0) return null;
+  const title = t
+    .slice(0, stop)
+    .split(/\s+/)
+    .filter((w) => w && !DIETARY_MARKER_RE.test(w))
+    .join(" ")
+    .trim();
+  if (title.length < 3 || /\d/.test(title)) return null;
+  if (SKIP_TITLE_RE.test(title) || isSectionHeaderText(title)) return null;
+  if (looksLikeContentsLine(title)) return null;
+  if (title.replace(/[^A-Za-zÆØÅæøå]/g, "").length < 4) return null;
+  return title;
+}
+
+/**
  * A short course/protein sub-section divider rather than a product.
  * A line carrying its own price is always a product, never a divider — this
  * preserves real dishes literally named after a protein ("Kylling 89,-").
@@ -106,7 +153,9 @@ function looksLikeTitle(line: string): boolean {
     return false;
   }
   if (/^\d/.test(t)) return false;
-  if (PRICE_LINE_RE.test(t) && !/[A-Za-zÆØÅæøå]{4,}/.test(t)) return false;
+  const hasPriceToken = PRICE_LINE_RE.test(t);
+  PRICE_LINE_RE.lastIndex = 0;
+  if (hasPriceToken && !/[A-Za-zÆØÅæøå]{4,}/.test(t)) return false;
   return TITLE_RE.test(t) && /[A-Za-zÆØÅæøå]{3,}/.test(t);
 }
 
@@ -147,8 +196,13 @@ export function looksLikeContentsLine(line: string): boolean {
 }
 
 function pricesFromLine(line: string, image = false): number[] {
+  const re = image ? IMAGE_PRICE_LINE_RE : PRICE_LINE_RE;
+  // These shared patterns carry the `g` flag, so `lastIndex` is stateful. A
+  // prior `.test()` on the same pattern advances it, and `matchAll` clones that
+  // stale index and silently skips real price tokens. Reset for determinism.
+  re.lastIndex = 0;
   const out: number[] = [];
-  for (const m of line.matchAll(image ? IMAGE_PRICE_LINE_RE : PRICE_LINE_RE)) {
+  for (const m of line.matchAll(re)) {
     const n = Number(m[1] ?? m[2]);
     if (n >= 10 && n <= 400) out.push(n);
   }
@@ -217,6 +271,11 @@ export function joinTitleFragments(lines: string[]): string[] {
       b &&
       aSingle &&
       bFirst &&
+      // Dietary markers (VE/V/GL…) are metadata that frequently sit on their
+      // own source line above a dish; they must never be glued onto the next
+      // title (doing so merges a marker into a name and can drop its price).
+      !DIETARY_MARKER_RE.test(a) &&
+      !DIETARY_MARKER_RE.test(bFirst) &&
       !SKIP_TITLE_RE.test(a) &&
       !SKIP_TITLE_RE.test(bFirst) &&
       !SECTION_HEADER_RE.test(a) &&
@@ -437,7 +496,12 @@ export function detectNamePriceCandidates(
         continue;
       }
 
-      const name = cleanTitle(line, imageSource);
+      // All-caps dish presentation is normal on many menus; when such a title
+      // carries its own printed price on the same line, use the structurally-
+      // extracted clean title. Otherwise fall back to the normal (mixed-case
+      // biased) title path.
+      const capsTitle = allCapsPricedDishTitle(line);
+      const name = capsTitle ?? cleanTitle(line, imageSource);
       if (name.length < 3 || seen.has(name.toLowerCase())) {
         i += 1;
         continue;
@@ -445,6 +509,7 @@ export function detectNamePriceCandidates(
       const strongPricedLine =
         imageSource && isStrongPricedProductLine(line);
       if (
+        !capsTitle &&
         (!looksLikeTitle(name) || !isCredibleDishTitle(name)) &&
         !strongPricedLine
       ) {
@@ -503,9 +568,16 @@ export function detectNamePriceCandidates(
 
       const bundle: string[] = [imageSource ? line : name];
       const descParts: string[] = [];
+      // A structurally-confirmed all-caps dish title carries exactly one price,
+      // printed on its own source line. Seed that as the dish price so the title
+      // is priced by its OWN row and never by a neighbouring column's price: in
+      // two-up PDF layouts an adjacent dish can bleed onto the following line and
+      // would otherwise be absorbed as this dish's price.
       const prices: number[] = imageSource
         ? pricesFromLine(line, true)
-        : [];
+        : capsTitle
+          ? pricesFromLine(line)
+          : [];
       if (
         imageSource &&
         prices.length === 0 &&
@@ -552,8 +624,10 @@ export function detectNamePriceCandidates(
       }
       const kind = classifyProductKind({ name });
       const knownKind = kind !== "other" && kind !== "drinks";
-      // Dual-column BASE+Menu cards: prefer page-dominant pair for known kinds
-      if (pagePair && (titleHasIngredientContext(bundle) || knownKind)) {
+      // Dual-column BASE+Menu cards: prefer page-dominant pair for known kinds.
+      // An anchored all-caps dish carries its own single printed price, so it is
+      // never a BASE+Menu card and must not be turned into a fabricated combo.
+      if (!capsTitle && pagePair && (titleHasIngredientContext(bundle) || knownKind)) {
         resolvedPrices = [...pagePair];
       }
       if (resolvedPrices.length === 0) {
