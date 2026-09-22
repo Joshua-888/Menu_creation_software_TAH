@@ -285,3 +285,18 @@ QA PASS: independently re-ran typecheck/lint/portal:build/vitest (all green, 25/
 17 files changed, 664 insertions. Zero regressions. Commit: 596f59b.
 
 **Proceeding to UI-2 (Menu + QA + Review) per master directive continuation mandate.**
+
+## UI-2 — MENU + QA + REVIEW — COMPLETE
+
+Architect produced implementation-ready spec (exact CanonicalMenu/CanonicalProduct/MenuQualityContractResult types, component breakdown). Builder implemented (commit 72dafc9):
+1. Real category>product tree view (MenuView/CategorySection/ProductCard/ProductProvenanceModal/MenuFilterBar) replacing raw JSON dump on /jobs/[id].
+2. Real QA dashboard (QaDashboardView) replacing bare-form alias on /jobs/qa.
+3. Pure presentation helpers (src/portal/menuView.ts, src/portal/qaDashboard.ts) - price formatting (øre/100), status filtering, source-target provenance matching, QA metric aggregation. Zero new business logic.
+4. Inline editing EXPLICITLY DEFERRED - Architect confirmed no backend mutation endpoint exists for product fields (TAH adapter blocks updateProduct); 'Review item' links to existing authoritative /review queue instead of fabricating parallel edit state.
+
+Reviewer PASS: confirmed pure presentation helpers, no client mutation, price is pure division, UI-1 primitive reuse, graceful degradation, existing panels preserved, zero backend/domain/auth changes.
+QA PASS: independently re-ran all validation (typecheck/lint/portal:build/47 portal tests), PLUS live-server HTML inspection confirming real category>product tree render (Margherita #1 69,00 kr. with ingredients/variants/addOns), QA dashboard stat tiles (QA jobs:1, Awaiting review:0, Products compared:25, Diffs found:3), graceful degradation at runtime for missing quality-contract.json (renders "Quality unknown" neutral badge, no crash), zero regression across /jobs, /jobs/new, /restaurants/[key], /review, /policies, /login.
+
+13 files changed, 2035 insertions. Zero regressions. Commit: 72dafc9.
+
+**Proceeding to UI-3 (Approval + Execution + Verification + History) - final UI milestone.**
