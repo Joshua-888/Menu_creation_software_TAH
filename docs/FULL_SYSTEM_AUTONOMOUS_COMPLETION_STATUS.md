@@ -323,3 +323,18 @@ QA PASS: live-server HTTP 409 proof for blocked-menu API bypass attempt, confirm
 18 files changed across 2 commits (+1898/-44 total). Commits: e311fe5 (safety fix), 4c3303f (features).
 
 **ALL THREE UI MILESTONES (UI-1, UI-2, UI-3) NOW COMPLETE. Proceeding to GATE C (full release validation).**
+
+## GATE C — FULL RELEASE VALIDATION (UI/UX completion) — GREEN
+
+Run at HEAD d91f11a. typecheck PASS, lint PASS, `npm test` 670/670 (84 files, up from 614/79 - UI-2/UI-3 added portal-adjacent unit tests), `test:extraction` 26/26, `test:certification` 32/32 (zero fixture drift), `test:portal` 79/79 (11 files, up from 23), `portal:build` compiled successfully (all routes incl. /restaurants/[key], updated /jobs/[id] 7.61kB reflecting new UI-2/UI-3 components). Zero FAIL/error markers.
+
+============================================================
+UI STATUS: OPERATOR_UX_V2_READY
+============================================================
+
+All 3 UI milestones complete with Reviewer PASS + QA PASS:
+- UI-1: restaurant-centric IA, design system primitives, /restaurants/[key] history page.
+- UI-2: real category>product menu tree, provenance modal, QA dashboard.
+- UI-3: approval panel with bundle identity/write-scope disclosure, execution stepper, job history timeline, PLUS a critical safety fix (blocked-quality menus can no longer be approved/executed via any of 4 layers, verified via live HTTP 409 test).
+
+**Proceeding to Section 12: Final End-to-End System Walkthrough.**
