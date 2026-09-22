@@ -60,9 +60,9 @@ function singleProductMenu(name = "Cheese Burger"): CanonicalMenu {
 }
 
 describe("source product coverage", () => {
-  it("blocks when price-row evidence greatly exceeds extracted products", () => {
+  it("blocks when structural product candidates greatly exceed extracted products", () => {
     const result = diagnoseSourceProductCoverage({
-      accounting: accounting(1),
+      accounting: accounting(4),
       uniqueProducts: 1,
       rawText: [
         "Burger 75 Kr.",
@@ -73,6 +73,23 @@ describe("source product coverage", () => {
     });
     expect(result.suspicious).toBe(true);
     expect(result.id).toBe("SOURCE_PRODUCT_COVERAGE_SUSPICIOUS");
+  });
+
+  it("does not flag a multi-price menu when candidate coverage matches products", () => {
+    const repeatedPrices = Array.from(
+      { length: 148 },
+      (_, i) => `Variant ${i + 1} 99 kr.`,
+    ).join("\n");
+    const result = diagnoseSourceProductCoverage({
+      accounting: accounting(24),
+      uniqueProducts: 24,
+      rawText: repeatedPrices,
+      ocrRows: repeatedPrices.split("\n"),
+    });
+    expect(result.candidateCount).toBe(24);
+    expect(result.priceLikeTokens).toBeGreaterThan(100);
+    expect(result.suspicious).toBe(false);
+    expect(result.evidencePerProduct).toBe(1);
   });
 
   it("does not require a fixed minimum product count", () => {
@@ -105,7 +122,7 @@ describe("source product coverage", () => {
   it("central contract surfaces coverage suspicion for ANY caller", () => {
     const menu = singleProductMenu();
     const evidence = {
-      accounting: accounting(1),
+      accounting: accounting(4),
       uniqueProducts: 1,
       rawText: [
         "Burger 75 kr.",

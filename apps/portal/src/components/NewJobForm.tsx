@@ -149,7 +149,7 @@ export function NewJobForm({
               accept=".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/*"
             />
             <span className="muted">
-              PDF preferred. Clear menu photos (JPEG/PNG) are OCR’d (max 25MB).
+              PDF preferred. Clear menu photos (JPEG/PNG) are OCR’d (max 100MB).
             </span>
           </div>
           <div className="field">
