@@ -1,4 +1,8 @@
 import { redirect } from "next/navigation";
+import {
+  getPortalStore,
+  restaurantOptions,
+} from "@engine/portal/index.js";
 import { getCurrentEmployee } from "../../../lib/session";
 import { AppShell } from "../../../components/AppShell";
 import { NewJobForm } from "../../../components/NewJobForm";
@@ -8,6 +12,8 @@ export default async function QaJobPage() {
   const emp = await getCurrentEmployee();
   if (!emp) redirect("/login");
 
+  const restaurants = restaurantOptions(getPortalStore().listJobs());
+
   return (
     <AppShell employeeName={emp.name}>
       <PageHeader
@@ -16,7 +22,7 @@ export default async function QaJobPage() {
         backHref="/jobs"
         backLabel="Dashboard"
       />
-      <NewJobForm workflow="QA_RECONCILE" />
+      <NewJobForm workflow="QA_RECONCILE" restaurants={restaurants} />
     </AppShell>
   );
 }

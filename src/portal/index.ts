@@ -14,11 +14,15 @@ export { submitReviewAnswer } from "./review.js";
 export { readJobArtifact, reconcileJobStatusFromArtifacts } from "./artifacts.js";
 export {
   buildMerchantDashboard,
+  restaurantOptions,
   statusLabel,
   statusTone,
   workflowLabel,
 } from "./merchantDashboard.js";
-export type { MerchantDashboardRow } from "./merchantDashboard.js";
+export type {
+  MerchantDashboardRow,
+  RestaurantOption,
+} from "./merchantDashboard.js";
 export {
   openPortalDecisionStore,
   listOperatorFacingPolicies,

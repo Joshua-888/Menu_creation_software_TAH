@@ -10,6 +10,12 @@ import {
 import { getCurrentEmployee } from "../../lib/session";
 import { AppShell } from "../../components/AppShell";
 import { BrandLogo } from "../../components/BrandLogo";
+import {
+  Badge,
+  StatGrid,
+  StatTile,
+  WorkflowBadge,
+} from "../../components/ui";
 
 export default async function JobsPage() {
   const emp = await getCurrentEmployee();
@@ -70,27 +76,15 @@ export default async function JobsPage() {
         </Link>
       </div>
 
-      <div className="dash-stats">
-        <div className="dash-stat">
-          <span className="dash-stat-value">{merchants.length}</span>
-          <span className="dash-stat-label">Merchants</span>
-        </div>
-        <div className="dash-stat">
-          <span className="dash-stat-value">{inFlight}</span>
-          <span className="dash-stat-label">In progress</span>
-        </div>
-        <div className="dash-stat">
-          <span className="dash-stat-value">{needsReview}</span>
-          <span className="dash-stat-label">Need review</span>
-        </div>
-        <div className="dash-stat">
-          <span className="dash-stat-value">{completed}</span>
-          <span className="dash-stat-label">Completed</span>
-        </div>
-      </div>
+      <StatGrid>
+        <StatTile value={merchants.length} label="Restaurants" />
+        <StatTile value={inFlight} label="In progress" />
+        <StatTile value={needsReview} label="Need review" />
+        <StatTile value={completed} label="Completed" />
+      </StatGrid>
 
       <div className="section-head">
-        <h2 className="section-title">Merchants</h2>
+        <h2 className="section-title">Restaurants</h2>
         <Link className="btn btn-secondary" href="/review">
           Review queue
         </Link>
@@ -98,42 +92,36 @@ export default async function JobsPage() {
 
       {merchants.length === 0 ? (
         <p className="muted">
-          No merchants yet. Start with Create menu or Quality check.
+          No restaurants yet. Start with Create menu or Quality check.
         </p>
       ) : (
         <div className="merchant-table">
           <div className="merchant-head">
-            <span>Merchant</span>
+            <span>Restaurant</span>
             <span>Latest workflow</span>
             <span>Status</span>
             <span>Jobs</span>
-            <span>Updated</span>
+            <span>Last activity</span>
           </div>
           {merchants.map((m) => (
             <Link
               key={m.restaurantKey}
               className="merchant-row"
-              href={`/jobs/${m.latestJobId}`}
+              href={`/restaurants/${encodeURIComponent(m.restaurantKey)}`}
             >
               <div>
                 <strong>{m.merchantName}</strong>
                 <div className="muted">{m.destinationHost}</div>
               </div>
               <div>
-                <span
-                  className={
-                    m.latestWorkflow === "QA_RECONCILE"
-                      ? "workflow-pill workflow-pill-qa"
-                      : "workflow-pill"
-                  }
-                >
+                <WorkflowBadge workflow={m.latestWorkflow}>
                   {workflowLabel(m.latestWorkflow)}
-                </span>
+                </WorkflowBadge>
               </div>
               <div>
-                <span className={`status-pill tone-${statusTone(m.latestStatus)}`}>
+                <Badge tone={statusTone(m.latestStatus)}>
                   {statusLabel(m.latestStatus)}
-                </span>
+                </Badge>
                 {m.remainingQuestions > 0 ? (
                   <div className="muted">{m.remainingQuestions} open questions</div>
                 ) : null}
@@ -166,9 +154,9 @@ export default async function JobsPage() {
                     {workflowLabel(job.workflow)} · {job.destinationHost}
                   </div>
                 </div>
-                <div className={`status-pill tone-${statusTone(job.status)}`}>
+                <Badge tone={statusTone(job.status)}>
                   {statusLabel(job.status)}
-                </div>
+                </Badge>
                 <div className="muted">
                   {job.remainingQuestions
                     ? `${job.remainingQuestions} questions`

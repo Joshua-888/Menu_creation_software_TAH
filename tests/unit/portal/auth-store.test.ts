@@ -78,6 +78,45 @@ describe("portal store + review", () => {
     expect(store.listJobs()).toHaveLength(0);
   });
 
+  it("lists jobs for one restaurant key, newest first", () => {
+    const emp = store.createEmployee({
+      email: "history@takeawayhero.test",
+      name: "History",
+      password: "s3cret-pass",
+      role: "operator",
+    });
+    const a = store.createJob({
+      merchantName: "Veroni Pizza",
+      destinationHost: "https://veronipizza.dk",
+      sourceType: "pdf_upload",
+      sourceUrl: null,
+      createdByEmployeeId: emp.id,
+    });
+    const b = store.createJob({
+      merchantName: "Veroni Pizza",
+      destinationHost: "https://veronipizza.dk/menu",
+      sourceType: "live_destination",
+      sourceUrl: null,
+      createdByEmployeeId: emp.id,
+      workflow: "QA_RECONCILE",
+    });
+    store.createJob({
+      merchantName: "Other",
+      destinationHost: "https://other.dk",
+      sourceType: "pdf_upload",
+      sourceUrl: null,
+      createdByEmployeeId: emp.id,
+    });
+    expect(a.restaurantKey).toBe("veronipizza.dk");
+    expect(b.restaurantKey).toBe("veronipizza.dk");
+    const history = store.listJobsForRestaurant("veronipizza.dk");
+    expect(history).toHaveLength(2);
+    expect(history.every((j) => j.restaurantKey === "veronipizza.dk")).toBe(
+      true,
+    );
+    expect(store.listJobsForRestaurant("unknown.dk")).toHaveLength(0);
+  });
+
   it("cancels a stale ARTIFACTS job without deleting it", () => {
     const emp = store.createEmployee({
       email: "cancel@takeawayhero.test",

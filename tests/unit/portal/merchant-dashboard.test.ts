@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildMerchantDashboard,
+  restaurantOptions,
   statusLabel,
   workflowLabel,
 } from "../../../src/portal/merchantDashboard.js";
@@ -58,5 +59,37 @@ describe("merchant dashboard", () => {
     expect(rows[0]!.qaJobCount).toBe(1);
     expect(workflowLabel("QA_RECONCILE")).toBe("Quality check");
     expect(statusLabel("AWAITING_REVIEW")).toBe("Needs review");
+  });
+
+  it("lists distinct restaurants for selection, most recent first", () => {
+    const options = restaurantOptions([
+      job({
+        id: "j2",
+        restaurantKey: "veronipizza.dk",
+        merchantName: "Veroni",
+        destinationHost: "https://veronipizza.dk",
+        status: "COMPLETED",
+        updatedAt: "2026-01-03T00:00:00.000Z",
+      }),
+      job({
+        id: "j1",
+        restaurantKey: "veronipizza.dk",
+        merchantName: "Veroni",
+        status: "COMPLETED",
+        updatedAt: "2026-01-01T00:00:00.000Z",
+      }),
+      job({
+        id: "j3",
+        restaurantKey: "other.dk",
+        merchantName: "Other",
+        destinationHost: "https://other.dk",
+        status: "QUEUED",
+        updatedAt: "2026-01-04T00:00:00.000Z",
+      }),
+    ]);
+    expect(options).toHaveLength(2);
+    expect(options[0]!.restaurantKey).toBe("other.dk");
+    expect(options[1]!.restaurantKey).toBe("veronipizza.dk");
+    expect(options[1]!.destinationHost).toBe("https://veronipizza.dk");
   });
 });

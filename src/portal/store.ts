@@ -515,6 +515,31 @@ export class PortalStore {
     return rows.map((r) => this.mapJob(r));
   }
 
+  /** All jobs for one restaurant_key, newest first. */
+  listJobsForRestaurant(restaurantKey: string): MigrationJob[] {
+    const rows = this.db
+      .prepare(
+        `SELECT id, merchant_name, restaurant_key, destination_host, source_type,
+                source_url, workflow, status, created_by_employee_id, error_message,
+                remaining_questions, created_at, updated_at
+         FROM jobs WHERE restaurant_key = ? ORDER BY created_at DESC`,
+      )
+      .all(restaurantKey) as Record<string, unknown>[];
+    return rows.map((r) => this.mapJob(r));
+  }
+
+  /** Distinct restaurant keys known to the portal, newest activity first. */
+  listRestaurantKeys(): string[] {
+    const rows = this.db
+      .prepare(
+        `SELECT restaurant_key, MAX(updated_at) AS last_updated
+         FROM jobs GROUP BY restaurant_key
+         ORDER BY last_updated DESC`,
+      )
+      .all() as Array<{ restaurant_key: string }>;
+    return rows.map((r) => String(r.restaurant_key));
+  }
+
   private mapJob(row: Record<string, unknown>): MigrationJob {
     const workflowRaw = String(row.workflow ?? "CREATE_MENU");
     const workflow: JobWorkflow =
