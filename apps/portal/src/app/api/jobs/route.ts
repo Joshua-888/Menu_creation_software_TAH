@@ -16,7 +16,7 @@ import {
 
 export const runtime = "nodejs";
 
-const MAX_BYTES = 25 * 1024 * 1024;
+const MAX_BYTES = 100 * 1024 * 1024;
 
 export async function GET() {
   const emp = await currentEmployee();
@@ -77,7 +77,7 @@ export async function POST(req: Request) {
 
   if (hasFile && file instanceof File) {
     if (file.size > MAX_BYTES) {
-      return NextResponse.json({ error: "File too large (max 25MB)" }, { status: 400 });
+      return NextResponse.json({ error: "File too large (max 100MB)" }, { status: 400 });
     }
     const mime = file.type || guessMime(file.name);
     const lower = file.name.toLowerCase();
