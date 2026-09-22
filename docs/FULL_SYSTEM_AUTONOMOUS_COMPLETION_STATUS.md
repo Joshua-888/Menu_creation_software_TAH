@@ -300,3 +300,26 @@ QA PASS: independently re-ran all validation (typecheck/lint/portal:build/47 por
 13 files changed, 2035 insertions. Zero regressions. Commit: 72dafc9.
 
 **Proceeding to UI-3 (Approval + Execution + Verification + History) - final UI milestone.**
+
+## UI-3 — APPROVAL + EXECUTION + VERIFICATION + HISTORY — COMPLETE (includes CRITICAL safety fix)
+
+### CRITICAL SAFETY FIX (commit e311fe5)
+Architect audit discovered a genuine safety gap: menus with `menuStatus === 'MENU_QUALITY_BLOCKED'` could be approved and live-executed because 4 layers (UI button, approve API route, worker's schedulePostReviewLiveIfReady, review-answer state transition) all failed to check quality-BLOCKED status. Fixed with defense-in-depth across all 4 layers:
+1. UI: approvalDisabledReason() checks menuStatus, disables button with explicit message.
+2. API: /api/jobs/[id]/approve returns HTTP 409 MENU_QUALITY_BLOCKED before scheduling.
+3. Worker: schedulePostReviewLiveIfReady() returns false if latest run's quality contract is BLOCKED.
+4. State transition: review.ts/store.ts - when last review question answered and quality is BLOCKED, job settles on READY_DRY_RUN instead of AWAITING_OPERATOR_APPROVAL (consulted docs/architecture/STATE_MACHINE_V1.md first - confirmed no explicit state defined for this case - reused EXISTING READY_DRY_RUN state, did not invent new enum value).
+
+Builder provided failing-then-passing test evidence (reverted to pre-fix code: 4/8 failed; restored fix: 8/8 passed). Reviewer independently reproduced this exact result. QA independently verified via LIVE-SERVER test: direct POST bypass to /api/jobs/[id]/approve on a BLOCKED job returned HTTP 409 (proving the guard works even if UI is bypassed entirely); confirmed non-blocked jobs still approve normally (no over-broadening).
+
+### UI-3 FEATURE WORK (commit 4c3303f)
+- ApprovalPanel/BundleIdentityCard/WriteScopeSummary (components/approval/): full write-scope disclosure, bundle identity (writePlanHash/targetMenuHash/destinationSnapshotHash/productionSha/contractFingerprint), public-creation implications, bind-exact-version disclosure.
+- ExecutionStepper/ExecutionResultPanel/FailureStateBadge (components/execution/): visual PREPARING->APPROVED->EXECUTING->VERIFYING->VERIFIED stepper, structured failure states (NO_MUTATION/PARTIAL_MUTATION/VERIFICATION_MISMATCH/DESTINATION_LOCKED/UNSUPPORTED_CAPABILITY/RECOVERY_REQUIRED).
+- JobHistoryTimeline (components/history/): chronological run/review-answer/approval/execution timeline via new listJobRuns()/listReviewAnswers() parameterized queries.
+
+Reviewer PASS: independently reproduced safety-fix test evidence, confirmed STATE_MACHINE_V1.md doesn't define this transition, confirmed no other safety gate weakened, confirmed zero changes to runner/tah/domain/intelligence/auth, full gate green.
+QA PASS: live-server HTTP 409 proof for blocked-menu API bypass attempt, confirmed enabled approval for non-blocked jobs, all UI-3 components render correctly, graceful degradation for missing execution-bundle.json, zero regression across all 7 routes, zero secret leaks. 11 files/79 portal tests (up from 47).
+
+18 files changed across 2 commits (+1898/-44 total). Commits: e311fe5 (safety fix), 4c3303f (features).
+
+**ALL THREE UI MILESTONES (UI-1, UI-2, UI-3) NOW COMPLETE. Proceeding to GATE C (full release validation).**
