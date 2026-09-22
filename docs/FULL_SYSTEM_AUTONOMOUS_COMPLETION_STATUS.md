@@ -152,13 +152,23 @@ Read-only audit performed on HEAD 6ac1049. Result: **both sections certified fai
 - **Security (Section 14)**: Zero committed secrets (8 grep hits, all dummy test-fixture strings). `.gitignore`/`.dockerignore` correctly exclude `.env`, `*.sqlite`, `playwright/.auth/`, `.a0proj/`, `data/`. `.env.example` contains only placeholders. Session cookies signed+HttpOnly+SameSite=Lax. `data/portal/portal.sqlite*` confirmed NOT tracked in git. GitHub Actions workflow has zero secret interpolation/leak risk.
 - **One non-blocking, optional hardening item** (explicitly deferred, not a defect): portal API routes rely on SameSite=Lax + signed session cookies for CSRF protection but lack an explicit Origin-header check. Architect assessed this as acceptable for an internal, credential-gated operator tool; recommended as optional defense-in-depth for a future hardening pass, not required now.
 
+### Architect audit: Section 13 (recovery / failure durability) — COMPLETE, ZERO BLOCKING FINDINGS
+Read-only audit performed on HEAD 640e381. Result: **recovery architecture certified robust, fail-closed, and fully compliant — no corrective WP required.**
+- **Crash/restart durability**: every operation transition persisted to SQLite (WAL mode) before progressing; `job_leases` tracks last-completed-checkpoint; lease TTL 120s with `reclaimExpiredLeases` + `expireStaleInFlightJobs` preventing permanent deadlock on worker crash (explicit `WORKER_LEASE_EXPIRED` state, no automatic replay).
+- **Read-before-retry**: `executePortalLiveWrites` always takes a fresh destination snapshot and validates bundle hash before continuing; `destination.findByIdentity()` checked before every create; `STALE_EXECUTION_BUNDLE`/`DESTINATION_SNAPSHOT_DRIFT` correctly halts on any live-state drift.
+- **Bounded, classification-aware retry**: deterministic failure classification (`TRANSIENT_NETWORK`, `AUTH_SESSION_EXPIRED`, etc.) with bounded max-attempts and circuit-breaker on deterministic rejections (prevents cascading failures).
+- **No destructive rollback**: verified — zero delete/reset calls reachable from any recovery/retry path; `neverAutoDelete: true` and `executeAutomatically: false` hardcoded in `RecoveryPlan`; empty-category compensation explicitly requires human approval (`autoDelete: false`).
+- **Verified-operation reuse**: `VERIFIED` operations always skipped on replay; category/product existence checked against live destination before every create — duplicate creation on double-submit/retry is architecturally impossible.
+- **One non-blocking operational note**: diagnostic-pack data is fully captured (blocker records + error JSON) but not serialized as one standalone `diagnostic-pack.json` file alongside `recovery-plan.json` — ergonomics only, not a safety gap.
+
 ## Not Yet Started (per mission Section 5 onward)
 
 - Discovery cohort expansion beyond current 3 merchants + dedicated Validation Holdout cohort (Section 5) — requires user-supplied new merchant sources
 - Non-blocking Phase-2-audit doc-drift fix (AUTHORITATIVE_PRODUCTION_ENTRY_POINTS.md script paths) — low priority, zero functional impact
 - GAP-2/3/4 from Section 7 audit (deferred, unevidenced — see above)
 - Optional CSRF Origin-header hardening (Section 14, non-blocking, deferred)
-- Section 8 (semantic completeness re-audit), Section 9 (quality contract audit beyond WP-J), Section 10 (destination capabilities), Section 12 (ExecutionBundle/approval/verification — partially covered by Section 11 trace, formal audit still pending), Section 13 (recovery/durability), Section 15 (deployment readiness), Section 37 (docs alignment)
+- Optional diagnostic-pack file serialization (Section 13, non-blocking, deferred)
+- Section 8 (semantic completeness re-audit), Section 9 (quality contract audit beyond WP-J), Section 10 (destination capabilities), Section 12 (ExecutionBundle/approval/verification — substantially covered by Section 11's 12-gate trace, remaining formal write-up optional), Section 15 (deployment readiness), Section 37 (docs alignment)
 - Semantic Completeness Engine full audit (Section 8)
 - Quality Contract audit (Section 9)
 - Destination capability matrix audit (Section 10)
