@@ -100,6 +100,19 @@ export function inferProductFamily(input: {
   description?: string;
 }): ProductFamily {
   const blob = `${input.name} ${input.categoryName ?? ""} ${input.description ?? ""}`;
+
+  // Product identity wins over included components. "Hamburger menu", "Durum
+  // menu", etc. remain COMBO_MENU even when their description contains
+  // "sodavand". Previously the DRINK check ran first and misclassified exactly
+  // these real combo products as drinks, which then made valid menu structure
+  // fail the DRINK no-additions invariant.
+  if (
+    /\bmenu\b/i.test(input.name) ||
+    /menu$/i.test(input.name.trim()) ||
+    /\bmenuer?\b/i.test(input.name)
+  ) {
+    return "COMBO_MENU";
+  }
   if (
     /\b(soda|sodavand|cola|fanta|sprite|øl|vin|juice|kaffe|\bte\b|iste|thai\s*iste|kildevand|\bvand\b)\b/i.test(
       blob,
@@ -109,13 +122,6 @@ export function inferProductFamily(input: {
     )
   ) {
     return "DRINK";
-  }
-  if (/\bmenu\b/i.test(input.name) || /menu$/i.test(input.name.trim()) || /\bmenuer?\b/i.test(input.name)) {
-    // "X Menu" / "Kebabmenu" combo naming
-    if (!/\bburger\b/i.test(input.name)) {
-      if (/burger|pizza|kebab|pita|durum/i.test(blob)) return "COMBO_MENU";
-      return "COMBO_MENU";
-    }
   }
   if (/\bbacon\s*burger|baconburger\b/i.test(blob) || /baconburger/i.test(blob)) return "BACON_BURGER";
   if (/\bcheese\s*burger|cheeseburger|osteburger\b/i.test(blob)) {
