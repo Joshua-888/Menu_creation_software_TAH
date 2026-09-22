@@ -14,9 +14,15 @@ import { PolicyApplicationPanel } from "../../../components/PolicyApplicationPan
 import { PageHeader } from "../../../components/PageHeader";
 import { DeleteJobButton } from "../../../components/DeleteJobButton";
 import { QaFindingsPanel } from "../../../components/QaFindingsPanel";
-import { ApproveCreateMenuButton } from "../../../components/ApproveCreateMenuButton";
 import { operatorExecutionSummary } from "@engine/runtime/operatorSummary.js";
 import { MenuView } from "../../../components/menu/MenuView";
+import { ApprovalPanel } from "../../../components/approval/ApprovalPanel";
+import type { ExecutionBundleView } from "../../../components/approval/approvalView.js";
+import { ExecutionStepper } from "../../../components/execution/ExecutionStepper";
+import { ExecutionResultPanel } from "../../../components/execution/ExecutionResultPanel";
+import { FailureStateBadge } from "../../../components/execution/FailureStateBadge";
+import type { LiveExecuteResultView } from "../../../components/execution/executionView.js";
+import { JobHistoryTimeline } from "../../../components/history/JobHistoryTimeline";
 import type { CanonicalMenu } from "@engine/domain/schema/canonical.js";
 import type { SourceMenu } from "@engine/domain/schema/source.js";
 import type { MenuQualityContractResult } from "@engine/intelligence/types.js";
@@ -53,6 +59,21 @@ export default async function JobDetailPage({
     string,
     unknown
   > | null;
+  // Read-only projection of the frozen ExecutionBundle that approval binds.
+  // Missing for older/dry-run-only jobs — the panel degrades gracefully.
+  const executionBundle = readJobArtifact(
+    id,
+    "execution-bundle.json",
+  ) as ExecutionBundleView | null;
+  const liveResultView = liveResult as LiveExecuteResultView | null;
+  const runs = store.listJobRuns(id);
+  const reviewAnswers = store.listReviewAnswers(id);
+  const employeeNames: Record<string, string> = {};
+  for (const answer of reviewAnswers) {
+    if (employeeNames[answer.employeeId]) continue;
+    employeeNames[answer.employeeId] =
+      store.getEmployeeById(answer.employeeId)?.name ?? answer.employeeId;
+  }
   const targetMenu = readJobArtifact(id, "target-menu.json") as CanonicalMenu | null;
   const sourceMenu = readJobArtifact(id, "source-menu.json") as
     | (SourceMenu & { productCount?: number })
@@ -155,54 +176,68 @@ export default async function JobDetailPage({
       ) : null}
 
       {job.status === "AWAITING_OPERATOR_APPROVAL" ? (
-        <div className="panel">
-          <h2>Operator approval required</h2>
-          <p>
-            Review the TargetMenu below before creating anything. Products are
-            staged hidden by default. TAH category creation is customer-facing
-            immediately.
-          </p>
-          <p className={coverageBlocked ? "error" : "muted"}>
-            Source candidates: {sourceCandidates ?? "—"} · Extracted source
-            products: {sourceProducts ?? "—"} · TargetMenu products:{" "}
-            {targetProducts ?? "—"} · Coverage:{" "}
-            {coverageBlocked ? "SUSPICIOUS — approval disabled" : "OK"}
-          </p>
-          <ApproveCreateMenuButton
-            jobId={job.id}
-            disabledReason={
-              coverageBlocked
-                ? sourceCoverage?.detail ??
-                  "Source coverage is suspicious; re-extract before approval."
-                : undefined
-            }
-          />
-        </div>
+        <ApprovalPanel
+          jobId={job.id}
+          merchantName={job.merchantName}
+          destinationHost={job.destinationHost}
+          workflow={job.workflow}
+          targetMenuVersion={executionBundle?.bundleVersion ?? null}
+          categoryCount={targetMenu?.categories?.length ?? null}
+          productCount={targetProducts}
+          unresolvedWarningCount={remaining.length}
+          bundle={executionBundle}
+          writeScope={{
+            writePlan: approval?.writePlan ?? null,
+            bundle: executionBundle,
+            targetMenu: {
+              categoryCount: targetMenu?.categories?.length ?? null,
+              productCount: targetProducts,
+            },
+          }}
+          coverageBlocked={coverageBlocked}
+          coverageDetail={sourceCoverage?.detail ?? null}
+          menuStatus={qualityContract?.menuStatus ?? null}
+        />
+      ) : null}
+
+      {job.status === "AWAITING_OPERATOR_APPROVAL" && coverageBlocked ? (
+        <p className="muted">
+          Source candidates: {sourceCandidates ?? "—"} · Extracted source
+          products: {sourceProducts ?? "—"} · TargetMenu products:{" "}
+          {targetProducts ?? "—"}
+        </p>
       ) : null}
 
       {liveGate.canLiveExecute ? (
         <div className="panel">
-          <h2>Live writes enabled</h2>
+          <h2>Execution</h2>
           <p className="muted">
-            Admin credentials configured and host allowlisted. When the last
-            review question is cleared, Create waits for explicit operator
-            approval. Products are hidden by default. Publish explicitly with{" "}
+            Admin credentials configured and host allowlisted. Products are
+            hidden by default. Publish explicitly with{" "}
             <code>PORTAL_STOREFRONT_PUBLISH=1</code>. Kill switch:{" "}
             <code>PORTAL_LIVE_WRITES=0</code>.
           </p>
+          <ExecutionStepper status={job.status} result={liveResultView} />
+          <FailureStateBadge
+            status={job.status}
+            result={liveResultView}
+            errorMessage={job.errorMessage ?? liveError?.message ?? null}
+          />
+          <ExecutionResultPanel result={liveResultView} />
           {liveResult ? (
-            <pre
-              style={{
-                whiteSpace: "pre-wrap",
-                fontSize: "0.85rem",
-                margin: 0,
-              }}
-            >
-              {JSON.stringify(liveResult, null, 2)}
-            </pre>
-          ) : (
-            <p className="muted">No live execute result yet for this job.</p>
-          )}
+            <details style={{ marginTop: "0.75rem" }}>
+              <summary className="muted">Raw live-execute-result.json</summary>
+              <pre
+                style={{
+                  whiteSpace: "pre-wrap",
+                  fontSize: "0.85rem",
+                  margin: 0,
+                }}
+              >
+                {JSON.stringify(liveResult, null, 2)}
+              </pre>
+            </details>
+          ) : null}
         </div>
       ) : (
         <div className="blocker">
@@ -359,6 +394,13 @@ export default async function JobDetailPage({
           </pre>
         </div>
       ) : null}
+
+      <JobHistoryTimeline
+        job={{ createdAt: job.createdAt, workflow: job.workflow, status: job.status }}
+        runs={runs}
+        reviewAnswers={reviewAnswers}
+        employeeNames={employeeNames}
+      />
 
       <div className="panel">
         <h2>Artifacts</h2>

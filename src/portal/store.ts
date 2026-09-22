@@ -660,6 +660,10 @@ export class PortalStore {
       )
       .get(jobId) as Record<string, unknown> | undefined;
     if (!row) return null;
+    return this.mapRun(row);
+  }
+
+  private mapRun(row: Record<string, unknown>): JobRun {
     return {
       id: String(row.id),
       jobId: String(row.job_id),
@@ -708,6 +712,43 @@ export class PortalStore {
       }
     }
     return false;
+  }
+
+  /** All runs for a job, newest first (history timeline source). */
+  listJobRuns(jobId: string): JobRun[] {
+    const rows = this.db
+      .prepare(
+        `SELECT id, job_id, run_dir, started_at, finished_at, status, metrics_json, error_message
+         FROM job_runs WHERE job_id = ? ORDER BY started_at DESC`,
+      )
+      .all(jobId) as Record<string, unknown>[];
+    return rows.map((r) => this.mapRun(r));
+  }
+
+  /** All review answers for a job, newest first (history timeline source). */
+  listReviewAnswers(jobId: string): ReviewAnswer[] {
+    const rows = this.db
+      .prepare(
+        `SELECT id, question_id, job_id, employee_id, selected_option_id, resolution,
+                scope_preference, comment, created_at
+         FROM review_answers WHERE job_id = ? ORDER BY created_at DESC`,
+      )
+      .all(jobId) as Record<string, unknown>[];
+    return rows.map((r) => this.mapReviewAnswer(r));
+  }
+
+  private mapReviewAnswer(r: Record<string, unknown>): ReviewAnswer {
+    return {
+      id: String(r.id),
+      questionId: String(r.question_id),
+      jobId: String(r.job_id),
+      employeeId: String(r.employee_id),
+      selectedOptionId: String(r.selected_option_id),
+      resolution: String(r.resolution),
+      scopePreference: r.scope_preference as ReviewAnswer["scopePreference"],
+      comment: (r.comment as string | null) ?? null,
+      createdAt: String(r.created_at),
+    };
   }
 
   replaceOpenQuestions(jobId: string, questions: Omit<ReviewQuestion, "id" | "createdAt" | "status" | "jobId">[]): ReviewQuestion[] {
